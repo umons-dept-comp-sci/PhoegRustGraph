@@ -1,16 +1,17 @@
 extern crate libc;
-use self::libc::{uint8_t, uint32_t};
-use ::Graph;
+use self::libc::{uint32_t, uint8_t};
+use Graph;
 
-#[link(name="nautywrapper")]
 extern "C" {
-    fn nauty_wrapper(n: uint32_t,
-                     m: uint32_t,
-                     g: *const uint8_t,
-                     or: *mut uint32_t,
-                     fixed: *const uint32_t,
-                     nfixed: uint32_t,
-                     orbits: *mut uint32_t);
+    fn nauty_wrapper(
+        n: uint32_t,
+        m: uint32_t,
+        g: *const uint8_t,
+        or: *mut uint32_t,
+        fixed: *const uint32_t,
+        nfixed: uint32_t,
+        orbits: *mut uint32_t,
+    );
 }
 
 /// Given a graph and a set of fixed vertices, returns the canonical form of the graph, the order
@@ -36,15 +37,17 @@ pub fn canon_graph_fixed(g: &Graph, fixed: &Vec<u32>) -> (Graph, Vec<usize>, Vec
         let n = g.order();
         let m = g.size();
         let mut or: Vec<u32> = vec![0; n];
-        let mut orbits: Vec<u32> = vec![0;n];
+        let mut orbits: Vec<u32> = vec![0; n];
 
-        nauty_wrapper(n as u32,
-                      m as u32,
-                      g.graph.to_bytes().as_slice().as_ptr(),
-                      or.as_mut_slice().as_mut_ptr(),
-                      fixed.as_slice().as_ptr(),
-                      fixed.len() as u32,
-                      orbits.as_mut_slice().as_mut_ptr());
+        nauty_wrapper(
+            n as u32,
+            m as u32,
+            g.graph.to_bytes().as_slice().as_ptr(),
+            or.as_mut_slice().as_mut_ptr(),
+            fixed.as_slice().as_ptr(),
+            fixed.len() as u32,
+            orbits.as_mut_slice().as_mut_ptr(),
+        );
 
         let mut ng = Graph::new(n);
         for i in 1..n {
@@ -54,11 +57,11 @@ pub fn canon_graph_fixed(g: &Graph, fixed: &Vec<u32>) -> (Graph, Vec<usize>, Vec
                 }
             }
         }
-        (ng,
-         or.iter().map(|&x| x as usize).collect(),
-         orbits.iter()
-             .map(|&x| x as usize)
-             .collect())
+        (
+            ng,
+            or.iter().map(|&x| x as usize).collect(),
+            orbits.iter().map(|&x| x as usize).collect(),
+        )
     }
 }
 
