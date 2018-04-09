@@ -319,7 +319,7 @@ pub fn diametral_paths(g: &Graph) -> Vec<Vec<usize>> {
     println!("{:?}", extms);
     for e in extms {
         let (dsts, pths) = bfs(&g, e);
-        for (i, dst) in dsts.iter().enumerate().filter(|&(x, y)| y == &diam) {
+        for (i, _dst) in dsts.iter().enumerate().filter(|&(_x, y)| y == &diam) {
             let mut tres = construct_paths(&pths, e, i);
             res.append(&mut tres);
         }

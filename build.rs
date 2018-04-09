@@ -1,7 +1,5 @@
-use std::process::Command;
+extern crate cc;
 
 fn main() {
-    Command::new("make").current_dir("nauty-wrapper").output().expect("Failed to build");
-    println!("cargo:rustc-link-lib=nauty");
-    println!("cargo:rustc-link-search=./nauty-wrapper")
+    cc::Build::new().file("nauty-wrapper.c").compile("foo")
 }

@@ -4,7 +4,9 @@ version = "0.1.0"
 authors = ["Gauvain Devillez <gauvain.devillez@umons.ac.be>"]
 build = "build.rs"
 
+[build-dependencies]
+cc = "1.0"
+
 [dependencies]
 bit-vec = "0.4"
 libc = "0.2"
-#error-chain = "0.11"
