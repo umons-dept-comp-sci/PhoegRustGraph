@@ -51,7 +51,6 @@ pub fn rotation(g: &Graph) -> Vec<Graph> {
                 .iter()
                 .filter(|&x| *x != j && *x != i && !g.is_edge(*x, i))
             {
-                println!("i : {}, j : {}, k : {}", i, j, k);
                 let mut ng = g.clone();
                 ng.remove_edge(i, j);
                 ng.add_edge(i, k);
