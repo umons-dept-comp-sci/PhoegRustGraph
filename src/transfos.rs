@@ -1,6 +1,7 @@
 use Graph;
 use nauty::orbits;
 
+/// Adds edges to v
 pub fn add_edge_fixed(g: &Graph, v: usize) -> Vec<Graph> {
     let mut res = vec![];
     let fixed = vec![v];
