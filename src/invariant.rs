@@ -333,9 +333,9 @@ pub fn diametral_paths(g: &Graph) -> Vec<Vec<usize>> {
 ///
 /// ```
 /// use graph::Graph;
-/// use graph::invariant::connected_componenents;
+/// use graph::invariant::connected_components;
 /// let mut g = Graph::new(0);
-/// assert!(connected_componenents(&g).len() == 0);
+/// assert!(connected_components(&g).len() == 0);
 /// for _ in 0..10
 /// {
 ///     g.add_node();
@@ -347,12 +347,12 @@ pub fn diametral_paths(g: &Graph) -> Vec<Vec<usize>> {
 /// }
 /// g.add_edge(4,0);
 /// g.add_edge(9,5);
-/// let comps = connected_componenents(&g);
+/// let comps = connected_components(&g);
 /// assert!(comps.len() == 2);
 /// assert!(comps[0].len() == 5);
 /// assert!(comps[1].len() == 5);
 /// ```
-pub fn connected_componenents(g: &Graph) -> Vec<Vec<usize>> {
+pub fn connected_components(g: &Graph) -> Vec<Vec<usize>> {
     let mut comps = vec![];
     let mut visited = vec![false; g.order()];
     for u in g.nodes_iter() {
@@ -364,7 +364,7 @@ pub fn connected_componenents(g: &Graph) -> Vec<Vec<usize>> {
 }
 
 pub fn is_connected(g: &Graph) -> bool {
-    connected_componenents(g).len() < 2
+    connected_components(g).len() < 2
 }
 
 fn shortests_paths_length(p: &Vec<Vec<usize>>) -> usize {
