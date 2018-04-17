@@ -9,7 +9,9 @@ pub struct InvalidGraph6 {
 
 impl InvalidGraph6 {
     pub fn new(msg: &str) -> InvalidGraph6 {
-        InvalidGraph6 { details: msg.to_string() }
+        InvalidGraph6 {
+            details: msg.to_string(),
+        }
     }
 }
 
@@ -38,7 +40,9 @@ pub struct DisconnectedGraph {
 
 impl DisconnectedGraph {
     pub fn new(msg: &str) -> DisconnectedGraph {
-        DisconnectedGraph { details: msg.to_string() }
+        DisconnectedGraph {
+            details: msg.to_string(),
+        }
     }
 }
 

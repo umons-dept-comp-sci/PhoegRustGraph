@@ -130,7 +130,6 @@ impl Graph {
         i < n && j < n && i != j && (self.graph.get(get_position(i, j)).unwrap())
     }
 
-
     /// Adds an edge between the vertices i and j.
     ///
     /// # Examples
@@ -356,7 +355,35 @@ impl<'a> Iterator for NeighborIterator<'a> {
         while self.u < n && !self.g.is_edge(self.u, self.n) {
             self.u += 1;
         }
-        if self.u >= n { None } else { Some(self.u) }
+        if self.u >= n {
+            None
+        } else {
+            Some(self.u)
+        }
+    }
+}
+
+impl ::std::cmp::Ord for Graph {
+    fn cmp(&self, other: &Graph) -> ::std::cmp::Ordering {
+        let gf = format::to_g6(&self);
+        let of = format::to_g6(&self);
+        gf.cmp(&of)
+    }
+}
+
+impl ::std::cmp::Eq for Graph {}
+
+impl ::std::cmp::PartialOrd for Graph {
+    fn partial_cmp(&self, other: &Graph) -> Option<::std::cmp::Ordering> {
+        Some(self.cmp(&other))
+    }
+}
+
+impl ::std::cmp::PartialEq for Graph {
+    fn eq(&self, other: &Graph) -> bool {
+        let gf = format::to_g6(&self);
+        let of = format::to_g6(&self);
+        gf.eq(&of)
     }
 }
 

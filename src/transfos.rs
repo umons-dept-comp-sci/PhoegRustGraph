@@ -4,13 +4,13 @@ use nauty::orbits;
 /// Adds edges to v
 pub fn add_edge_fixed(g: &Graph, v: usize) -> Vec<Graph> {
     let mut res = vec![];
-    let fixed = vec![v];
+    let fixed = vec![v as u32];
     for &j in orbits(&g, &fixed)
         .iter()
-        .filter(|&x| *x > i && !g.is_edge(*x, i))
+        .filter(|&x| *x > v && !g.is_edge(*x, v))
     {
         let mut ng = g.clone();
-        ng.add_edge(i, j);
+        ng.add_edge(v, j);
         res.push(ng);
     }
     res
@@ -37,13 +37,13 @@ pub fn add_edge(g: &Graph) -> Vec<Graph> {
 /// Removes edges adjacent to v
 pub fn remove_edge_fixed(g: &Graph, v: usize) -> Vec<Graph> {
     let mut res = vec![];
-    let fixed = vec![v];
+    let fixed = vec![v as u32];
     for &j in orbits(&g, &fixed)
         .iter()
-        .filter(|&x| *x > i && g.is_edge(*x, i))
+        .filter(|&x| *x > v && g.is_edge(*x, v))
     {
         let mut ng = g.clone();
-        ng.remove_edge(i, j);
+        ng.remove_edge(v, j);
         res.push(ng);
     }
     res
