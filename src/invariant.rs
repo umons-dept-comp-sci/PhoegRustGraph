@@ -693,3 +693,31 @@ pub fn deg_min(g: &Graph) -> usize {
         .min()
         .unwrap()
 }
+
+/// Computes the irregularity of a graph. This invariant is defined as the sum for all edges of the
+/// absolute value of the difference between the degrees of its extremities.
+/// If the graph has no edges, 0 is returned.
+///
+/// # Examples
+/// ```
+/// use graph::Graph;
+/// use graph::invariant::irregularity;
+/// use graph::format::from_g6;
+///
+/// let mut g = from_g6(&"C^".to_string()).unwrap();
+/// assert!(irregularity(&g) == 4);
+///
+/// g = from_g6(&"DDW".to_string()).unwrap();
+/// assert!(irregularity(&g) == 2);
+///
+/// g = from_g6(&"D??".to_string()).unwrap();
+/// assert!(irregularity(&g) == 0);
+/// ```
+pub fn irregularity(g: &Graph) -> usize {
+    let degrees = g.nodes_iter()
+        .map(|x| g.neighbors_iter(x).count() as isize)
+        .collect::<Vec<isize>>();
+    g.edges_iter()
+        .map(|(x, y)| (degrees[x] - degrees[y]).abs() as usize)
+        .sum()
+}
