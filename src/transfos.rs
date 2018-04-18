@@ -1,5 +1,6 @@
 use Graph;
 use nauty::orbits;
+use std::collections::VecDeque;
 
 /// Adds edges to v
 pub fn add_edge_fixed(g: &Graph, v: usize) -> Vec<Graph> {
@@ -87,6 +88,70 @@ pub fn rotation(g: &Graph) -> Vec<Graph> {
                 res.push(ng);
             }
             fixed.pop();
+        }
+        fixed.pop();
+    }
+    res
+}
+
+//TODO tests for the two following transfos
+
+///Removes k edges from the graph such that the filter returns true for the edges.
+///The two graphs returned are the resulting graph and a graph containing only the removed vertices
+pub fn remove_k_edges<F>(g: &Graph, k: usize, filter: F) -> Vec<(Graph, Graph)>
+where
+    F: Fn(&Graph, usize, usize) -> bool,
+{
+    let mut queue = VecDeque::new();
+    queue.push_back((g.clone(), Graph::new(g.order()), 0, 0, 0));
+    let mut res = vec![];
+    let mut fixed = Vec::with_capacity(1);
+    while queue.len() > 0 {
+        let (cg, vg, cx, mut cy, ck) = queue.pop_front().unwrap();
+        if ck == k {
+            res.push((cg.clone(), vg.clone()));
+        } else {
+            for &x in orbits(&cg, &fixed).iter().skip_while(|&x| *x < cx) {
+                fixed.push(x as u32);
+                for &y in orbits(&cg, &fixed)
+                    .iter()
+                    .skip_while(|&y| *y <= cy || *y <= x)
+                    .filter(|&y| cg.is_edge(x, *y) && filter(&cg, x, *y))
+                {
+                    let mut ng = cg.clone();
+                    ng.remove_edge(x, y);
+                    let mut nv = vg.clone();
+                    nv.add_edge(x, y);
+                    if ck + 1 == k {
+                        res.push((ng, nv));
+                    } else {
+                        queue.push_back((ng, nv, x, y, ck + 1));
+                    }
+                }
+                cy = 0;
+            }
+        }
+    }
+    res
+}
+
+/// Adds one edge that isn't present in v and adds the same edge to a. This allows to add
+/// restrictions on the edges to add (by putting them in v) and to know which edges have been added
+/// by giving an empty graph on n vertices for a (n being the order of g)
+pub fn add_edge_const(g: &Graph, v: &Graph, a: &Graph) -> Vec<(Graph, Graph)> {
+    let mut res = vec![];
+    let mut fixed = Vec::with_capacity(1);
+    for i in orbits(&g, &fixed) {
+        fixed.push(i as u32);
+        for &j in orbits(&g, &fixed)
+            .iter()
+            .filter(|&x| *x > i && !g.is_edge(*x, i) && !v.is_edge(*x, i))
+        {
+            let mut ng = g.clone();
+            let mut nv = a.clone();
+            ng.add_edge(i, j);
+            nv.add_edge(i, j);
+            res.push((ng, nv));
         }
         fixed.pop();
     }
