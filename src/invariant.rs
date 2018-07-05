@@ -29,6 +29,15 @@ pub enum Distance {
     Val(usize),
 }
 
+impl Distance {
+    pub fn get_val(&self) -> usize {
+        match self {
+            &Distance::Inf => panic!("Unwrapping Inf value"),
+            &Distance::Val(x) => x,
+        }
+    }
+}
+
 impl ::std::fmt::Display for Distance {
     fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
         match self {
@@ -316,7 +325,7 @@ pub fn diametral_paths(g: &Graph) -> Vec<Vec<usize>> {
     let diam = eccs.iter().max().unwrap().clone();
     let extms: Vec<usize> = (0..g.order()).filter(|&x| eccs[x] == diam).collect();
     let mut res = vec![];
-    println!("{:?}", extms);
+    //println!("{:?}", extms);
     for e in extms {
         let (dsts, pths) = bfs(&g, e);
         for (i, _dst) in dsts.iter().enumerate().filter(|&(_x, y)| y == &diam) {
@@ -333,9 +342,9 @@ pub fn diametral_paths(g: &Graph) -> Vec<Vec<usize>> {
 ///
 /// ```
 /// use graph::Graph;
-/// use graph::invariant::connected_componenents;
+/// use graph::invariant::connected_components;
 /// let mut g = Graph::new(0);
-/// assert!(connected_componenents(&g).len() == 0);
+/// assert!(connected_components(&g).len() == 0);
 /// for _ in 0..10
 /// {
 ///     g.add_node();
@@ -347,12 +356,12 @@ pub fn diametral_paths(g: &Graph) -> Vec<Vec<usize>> {
 /// }
 /// g.add_edge(4,0);
 /// g.add_edge(9,5);
-/// let comps = connected_componenents(&g);
+/// let comps = connected_components(&g);
 /// assert!(comps.len() == 2);
 /// assert!(comps[0].len() == 5);
 /// assert!(comps[1].len() == 5);
 /// ```
-pub fn connected_componenents(g: &Graph) -> Vec<Vec<usize>> {
+pub fn connected_components(g: &Graph) -> Vec<Vec<usize>> {
     let mut comps = vec![];
     let mut visited = vec![false; g.order()];
     for u in g.nodes_iter() {
@@ -364,7 +373,7 @@ pub fn connected_componenents(g: &Graph) -> Vec<Vec<usize>> {
 }
 
 pub fn is_connected(g: &Graph) -> bool {
-    connected_componenents(g).len() < 2
+    connected_components(g).len() < 2
 }
 
 fn shortests_paths_length(p: &Vec<Vec<usize>>) -> usize {
@@ -692,4 +701,32 @@ pub fn deg_min(g: &Graph) -> usize {
         .map(|x| g.neighbors_iter(x).count())
         .min()
         .unwrap()
+}
+
+/// Computes the irregularity of a graph. This invariant is defined as the sum for all edges of the
+/// absolute value of the difference between the degrees of its extremities.
+/// If the graph has no edges, 0 is returned.
+///
+/// # Examples
+/// ```
+/// use graph::Graph;
+/// use graph::invariant::irregularity;
+/// use graph::format::from_g6;
+///
+/// let mut g = from_g6(&"C^".to_string()).unwrap();
+/// assert!(irregularity(&g) == 4);
+///
+/// g = from_g6(&"DDW".to_string()).unwrap();
+/// assert!(irregularity(&g) == 2);
+///
+/// g = from_g6(&"D??".to_string()).unwrap();
+/// assert!(irregularity(&g) == 0);
+/// ```
+pub fn irregularity(g: &Graph) -> usize {
+    let degrees = g.nodes_iter()
+        .map(|x| g.neighbors_iter(x).count() as isize)
+        .collect::<Vec<isize>>();
+    g.edges_iter()
+        .map(|(x, y)| (degrees[x] - degrees[y]).abs() as usize)
+        .sum()
 }
