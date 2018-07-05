@@ -3,15 +3,49 @@ use self::libc::{uint32_t, uint8_t};
 use Graph;
 
 extern "C" {
-    fn nauty_wrapper(
-        n: uint32_t,
-        m: uint32_t,
-        g: *const uint8_t,
-        or: *mut uint32_t,
-        fixed: *const uint32_t,
-        nfixed: uint32_t,
-        orbits: *mut uint32_t,
-    );
+    fn nauty_wrapper(n: uint32_t,
+                     m: uint32_t,
+                     g: *const uint8_t,
+                     or: *mut uint32_t,
+                     fixed: *const uint32_t,
+                     nfixed: uint32_t,
+                     orbits: *mut uint32_t);
+}
+
+fn init_fixed(n: usize, fixed: &Vec<u32>) -> (Vec<u32>, Vec<u32>) {
+    let mut lab = vec![0; n];
+    let mut ptn = vec![0; n];
+    let mut cols = vec![0; n];
+    let mut c = n + 1;
+    for &i in fixed {
+        cols[i as usize] = c;
+        c += 1;
+    }
+    for i in 0..n {
+        if cols[i] == n + 1 {
+            cols[i] = c;
+        }
+    }
+    let mut nfixed = Vec::with_capacity(c + 1);
+    for i in 0..n {
+        c = cols[i];
+        while nfixed.len() <= c {
+            nfixed.push(vec![]);
+        }
+        nfixed[c].push(i);
+    }
+    c = 0;
+    for s in nfixed {
+        for &i in s.iter().take(s.len() - 1) {
+            lab[c] = i as u32;
+            ptn[c] = 1;
+            c += 1;
+        }
+        lab[c] = s[s.len() - 1] as u32;
+        ptn[c] = 0;
+        c += 1;
+    }
+    (lab, ptn)
 }
 
 /// Given a graph and a set of fixed vertices, returns the canonical form of the graph, the order
@@ -39,15 +73,13 @@ pub fn canon_graph_fixed(g: &Graph, fixed: &Vec<u32>) -> (Graph, Vec<usize>, Vec
         let mut or: Vec<u32> = vec![0; n];
         let mut orbits: Vec<u32> = vec![0; n];
 
-        nauty_wrapper(
-            n as u32,
-            m as u32,
-            g.graph.to_bytes().as_slice().as_ptr(),
-            or.as_mut_slice().as_mut_ptr(),
-            fixed.as_slice().as_ptr(),
-            fixed.len() as u32,
-            orbits.as_mut_slice().as_mut_ptr(),
-        );
+        nauty_wrapper(n as u32,
+                      m as u32,
+                      g.graph.to_bytes().as_slice().as_ptr(),
+                      or.as_mut_slice().as_mut_ptr(),
+                      fixed.as_slice().as_ptr(),
+                      fixed.len() as u32,
+                      orbits.as_mut_slice().as_mut_ptr());
 
         let mut ng = Graph::new(n);
         for i in 1..n {
@@ -57,11 +89,7 @@ pub fn canon_graph_fixed(g: &Graph, fixed: &Vec<u32>) -> (Graph, Vec<usize>, Vec
                 }
             }
         }
-        (
-            ng,
-            or.iter().map(|&x| x as usize).collect(),
-            orbits.iter().map(|&x| x as usize).collect(),
-        )
+        (ng, or.iter().map(|&x| x as usize).collect(), orbits.iter().map(|&x| x as usize).collect())
     }
 }
 
