@@ -52,39 +52,7 @@ void init_fixed(int *lab, int *ptn, int n, int *fixed, int nfixed)
     }
 }
 
-void nauty_wrapper(int n, int m, unsigned char *g, int * or, int *fixed, int nfixed, int *orbits)
-{
-    int ptn[n];
-    init_fixed( or, ptn, n, fixed, nfixed);
-    if (m > 0) {
-        static DEFAULTOPTIONS_GRAPH(options);
-        options.getcanon = 1;
-        options.defaultptn = 0;
-        statsblk stats;
-        graph tab[n * m];
-        init_graph(tab, n, m, g);
-        graph cannon[n * m];
-        densenauty(tab, or, ptn, orbits, &options, &stats, m, n, cannon);
-    }
-    else {
-        int mi = 0;
-        for (int i = 0; i < n; ++i) {
-            if (i < nfixed && mi == or [i]) {
-                ++mi;
-            }
-        }
-        for (int i = 0; i < n; ++i) {
-            if (i < nfixed) {
-                orbits[i] = or [i];
-            }
-            else {
-                orbits[i] = mi;
-            }
-        }
-    }
-}
-
-void nauty_wrapper_new(int n, int m, unsigned char *g, int *lab, int *ptn, int *orbits)
+void nauty_wrapper(int n, int m, unsigned char *g, int *lab, int *ptn, int *orbits)
 {
     if (m > 0) {
         static DEFAULTOPTIONS_GRAPH(options);

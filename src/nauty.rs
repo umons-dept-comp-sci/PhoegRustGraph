@@ -6,17 +6,16 @@ extern "C" {
     fn nauty_wrapper(n: uint32_t,
                      m: uint32_t,
                      g: *const uint8_t,
-                     or: *mut uint32_t,
-                     fixed: *const uint32_t,
-                     nfixed: uint32_t,
+                     lab: *mut uint32_t,
+                     ptn: *mut uint32_t,
                      orbits: *mut uint32_t);
 }
 
 fn init_fixed(n: usize, fixed: &Vec<u32>) -> (Vec<u32>, Vec<u32>) {
     let mut lab = vec![0; n];
     let mut ptn = vec![0; n];
-    let mut cols = vec![0; n];
-    let mut c = n + 1;
+    let mut cols = vec![n+1; n];
+    let mut c = 0;
     for &i in fixed {
         cols[i as usize] = c;
         c += 1;
@@ -60,6 +59,7 @@ fn init_fixed(n: usize, fixed: &Vec<u32>) -> (Vec<u32>, Vec<u32>) {
 /// g.add_edge(1,0);
 /// g.add_edge(2,0);
 /// let (_,_,orbits) = canon_graph_fixed(&g, &vec![1]);
+/// println!("ORBITS {:?}", orbits);
 /// let exp_orbits = vec![0,1,2,3,3];
 /// assert!(orbits.len() == exp_orbits.len());
 /// for i in 0..orbits.len() {
@@ -70,26 +70,27 @@ pub fn canon_graph_fixed(g: &Graph, fixed: &Vec<u32>) -> (Graph, Vec<usize>, Vec
     unsafe {
         let n = g.order();
         let m = g.size();
-        let mut or: Vec<u32> = vec![0; n];
         let mut orbits: Vec<u32> = vec![0; n];
+        let (mut lab, mut ptn) = init_fixed(n, &fixed);
 
         nauty_wrapper(n as u32,
                       m as u32,
                       g.graph.to_bytes().as_slice().as_ptr(),
-                      or.as_mut_slice().as_mut_ptr(),
-                      fixed.as_slice().as_ptr(),
-                      fixed.len() as u32,
+                      lab.as_mut_slice().as_mut_ptr(),
+                      ptn.as_mut_slice().as_mut_ptr(),
                       orbits.as_mut_slice().as_mut_ptr());
 
         let mut ng = Graph::new(n);
         for i in 1..n {
             for j in 0..i {
-                if g.is_edge(or[i] as usize, or[j] as usize) {
+                if g.is_edge(lab[i] as usize, lab[j] as usize) {
                     ng.add_edge(i, j);
                 }
             }
         }
-        (ng, or.iter().map(|&x| x as usize).collect(), orbits.iter().map(|&x| x as usize).collect())
+        (ng,
+         lab.iter().map(|&x| x as usize).collect(),
+         orbits.iter().map(|&x| x as usize).collect())
     }
 }
 
