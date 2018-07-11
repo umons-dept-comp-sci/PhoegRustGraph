@@ -24,34 +24,6 @@ void init_graph(graph *tab, unsigned long n, unsigned long m, unsigned char *g)
     }
 }
 
-void init_fixed(int *lab, int *ptn, int n, int *fixed, int nfixed)
-{
-    for (long p = 0; p < n; ++p) {
-        lab[p] = n;
-    }
-    for (long f = 0; f < nfixed; ++f) {
-        lab[fixed[f]] = fixed[f];
-    }
-    long p = 0;
-    for (long i = 0; i < n; ++i) {
-        if (lab[i] == n) {
-            lab[i] = i;
-        }
-        else {
-            long tmp = lab[p];
-            lab[p] = lab[i];
-            lab[i] = tmp;
-            ++p;
-        }
-        if (i < nfixed || i == n - 1) {
-            ptn[i] = 0;
-        }
-        else {
-            ptn[i] = 1;
-        }
-    }
-}
-
 void nauty_wrapper(int n, int m, unsigned char *g, int *lab, int *ptn, int *orbits)
 {
     if (m > 0) {

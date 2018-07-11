@@ -11,13 +11,15 @@ extern "C" {
                      orbits: *mut uint32_t);
 }
 
-fn init_fixed(n: usize, fixed: &Vec<u32>) -> (Vec<u32>, Vec<u32>) {
+fn init_fixed(n: usize, fixed: &Vec<Vec<u32>>) -> (Vec<u32>, Vec<u32>) {
     let mut lab = vec![0; n];
     let mut ptn = vec![0; n];
     let mut cols = vec![n+1; n];
     let mut c = 0;
-    for &i in fixed {
-        cols[i as usize] = c;
+    for s in fixed {
+        for &i in s {
+            cols[i as usize] = c;
+        }
         c += 1;
     }
     for i in 0..n {
@@ -58,15 +60,26 @@ fn init_fixed(n: usize, fixed: &Vec<u32>) -> (Vec<u32>, Vec<u32>) {
 /// let mut g = Graph::new(5);
 /// g.add_edge(1,0);
 /// g.add_edge(2,0);
-/// let (_,_,orbits) = canon_graph_fixed(&g, &vec![1]);
+/// let (_,_,orbits) = canon_graph_fixed(&g, &vec![vec![1]]);
 /// println!("ORBITS {:?}", orbits);
 /// let exp_orbits = vec![0,1,2,3,3];
 /// assert!(orbits.len() == exp_orbits.len());
 /// for i in 0..orbits.len() {
 ///     assert!(orbits[i] == exp_orbits[i]);
 /// }
+/// g.add_edge(1,2);
+/// g.add_edge(1,3);
+/// g.add_edge(2,4);
+/// g.add_edge(3,4);
+/// let (_,_,orbits) = canon_graph_fixed(&g, &vec![vec![1,2]]);
+/// println!("ORBITS {:?}", orbits);
+/// let exp_orbits = vec![0,1,1,3,3];
+/// assert!(orbits.len() == exp_orbits.len());
+/// for i in 0..orbits.len() {
+///     assert!(orbits[i] == exp_orbits[i]);
+/// }
 /// ```
-pub fn canon_graph_fixed(g: &Graph, fixed: &Vec<u32>) -> (Graph, Vec<usize>, Vec<usize>) {
+pub fn canon_graph_fixed(g: &Graph, fixed: &Vec<Vec<u32>>) -> (Graph, Vec<usize>, Vec<usize>) {
     unsafe {
         let n = g.order();
         let m = g.size();
@@ -120,7 +133,7 @@ fn orbits_sample(orbits: &Vec<usize>) -> Vec<usize> {
 /// use graph::Graph;
 /// use graph::nauty::orbits;
 /// let mut g = Graph::new(5);
-/// let fixed: Vec<u32> = vec![];
+/// let fixed: Vec<Vec<u32>> = vec![];
 /// let orbsexp = vec![0,1,3];
 /// g.add_edge(0,1);
 /// g.add_edge(2,1);
@@ -130,7 +143,7 @@ fn orbits_sample(orbits: &Vec<usize>) -> Vec<usize> {
 ///     assert!(orbs[i] == orbsexp[i]);
 /// }
 /// ```
-pub fn orbits(g: &Graph, fixed: &Vec<u32>) -> Vec<usize> {
+pub fn orbits(g: &Graph, fixed: &Vec<Vec<u32>>) -> Vec<usize> {
     let (_, _, orbits) = canon_graph_fixed(g, fixed);
     orbits_sample(&orbits)
 }
