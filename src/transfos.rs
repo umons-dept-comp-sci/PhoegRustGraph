@@ -59,7 +59,6 @@ pub fn rotation(g: &Graph) -> Vec<Graph> {
     res
 }
 
-// TODO write tests
 pub fn slide(g: &Graph) -> Vec<Graph> {
     let mut res = vec![];
     let mut fixed = Vec::with_capacity(2);
@@ -87,17 +86,13 @@ pub fn slide(g: &Graph) -> Vec<Graph> {
 pub fn move_distinct(g: &Graph) -> Vec<Graph> {
     let mut res = vec![];
     let mut fixed = Vec::with_capacity(2);
-    let mut fixed2 = Vec::with_capacity(1);
     for i in orbits(&g, &fixed) {
-        println!("i {} {:?}", i, orbits(&g, &fixed));
         fixed.push(vec![i as u32]);
         for &j in orbits(&g, &fixed).iter().filter(|&x| *x > i && g.is_edge(*x, i)) {
-            println!("j {} {:?}", j, orbits(&g, &fixed));
             fixed[0].push(j as u32);
-            for &k in orbits(&g, &fixed2).iter().filter(|&x| *x != i && *x != j) {
-                println!("k {} {:?}", k, orbits(&g, &fixed2));
-                fixed2.push(vec![k as u32]);
-                for &l in orbits(&g, &fixed2)
+            for &k in orbits(&g, &fixed).iter().filter(|&x| *x != i && *x != j) {
+                fixed.push(vec![k as u32]);
+                for &l in orbits(&g, &fixed)
                     .iter()
                     .filter(|&x| *x != i && *x != j && *x > k && !g.is_edge(*x, k)) {
                     let mut ng = g.clone();
@@ -105,9 +100,9 @@ pub fn move_distinct(g: &Graph) -> Vec<Graph> {
                     ng.add_edge(k, l);
                     res.push(ng);
                 }
-                fixed2.pop();
+                fixed.pop();
             }
-            fixed.pop();
+            fixed[0].pop();
         }
         fixed.pop();
     }
@@ -117,22 +112,18 @@ pub fn move_distinct(g: &Graph) -> Vec<Graph> {
 pub fn two_opt(g: &Graph) -> Vec<Graph> {
     let mut res = vec![];
     let mut fixed = Vec::with_capacity(2);
-    let mut fixed2 = Vec::with_capacity(1);
     for i in orbits(&g, &fixed) {
-        println!("i {} {:?}", i, orbits(&g, &fixed));
         fixed.push(vec![i as u32]);
         for &j in orbits(&g, &fixed).iter().filter(|&x| *x > i && g.is_edge(*x, i)) {
-            println!("j {} {:?}", j, orbits(&g, &fixed));
             fixed[0].push(j as u32);
-            for &k in orbits(&g, &fixed2)
+            for &k in orbits(&g, &fixed)
                 .iter()
-                .filter(|&x| *x != i && *x != j && !g.is_edge(*x, i)) {
-                println!("k {} {:?}", k, orbits(&g, &fixed2));
-                fixed2.push(vec![k as u32]);
-                for &l in orbits(&g, &fixed2)
+                .filter(|&x| *x > i && *x != j && !g.is_edge(*x, i)) {
+                fixed.push(vec![k as u32]);
+                for &l in orbits(&g, &fixed)
                     .iter()
                     .filter(|&x| {
-                        *x != i && *x != j && *x > k && g.is_edge(*x, k) && !g.is_edge(*x, j)
+                        *x > i && *x != j && *x != k && g.is_edge(*x, k) && !g.is_edge(*x, j)
                     }) {
                     let mut ng = g.clone();
                     ng.remove_edge(i, j);
@@ -141,9 +132,55 @@ pub fn two_opt(g: &Graph) -> Vec<Graph> {
                     ng.add_edge(j, l);
                     res.push(ng);
                 }
-                fixed2.pop();
+                fixed.pop();
             }
-            fixed.pop();
+            fixed[0].pop();
+        }
+        fixed.pop();
+    }
+    res
+}
+
+pub fn detour(g: &Graph) -> Vec<Graph> {
+    let mut res = vec![];
+    let mut fixed = Vec::with_capacity(1);
+    for i in orbits(&g, &fixed) {
+        fixed.push(vec![i as u32]);
+        for &j in orbits(&g, &fixed).iter().filter(|&x| *x > i && g.is_edge(*x, i)) {
+            fixed[0].push(j as u32);
+            for &k in orbits(&g, &fixed)
+                .iter()
+                .filter(|&x| *x != i && *x != j && !g.is_edge(*x, i) && !g.is_edge(*x, j)) {
+                let mut ng = g.clone();
+                ng.remove_edge(i, j);
+                ng.add_edge(i, k);
+                ng.add_edge(j, k);
+                res.push(ng);
+            }
+            fixed[0].pop();
+        }
+        fixed.pop();
+    }
+    res
+}
+
+pub fn shortcut(g: &Graph) -> Vec<Graph> {
+    let mut res = vec![];
+    let mut fixed = Vec::with_capacity(1);
+    for i in orbits(&g, &fixed) {
+        fixed.push(vec![i as u32]);
+        for &j in orbits(&g, &fixed).iter().filter(|&x| *x > i && !g.is_edge(*x, i)) {
+            fixed[0].push(j as u32);
+            for &k in orbits(&g, &fixed)
+                .iter()
+                .filter(|&x| *x != i && *x != j && g.is_edge(*x, i) && g.is_edge(*x, j)) {
+                let mut ng = g.clone();
+                ng.remove_edge(i, k);
+                ng.remove_edge(j, k);
+                ng.add_edge(i, j);
+                res.push(ng);
+            }
+            fixed[0].pop();
         }
         fixed.pop();
     }
@@ -199,5 +236,29 @@ mod tests {
     fn test_move_distinct() {
         let mut expected = vec!["DJk", "Dd[", "DB{"];
         test_transfo("Dd[", super::move_distinct, &mut expected);
+    }
+
+    #[test]
+    fn test_slide() {
+        let mut expected = vec!["DFw", "Dd[", "DJk", "Dd[", "D`{", "DB{"];
+        test_transfo("Dd[", super::slide, &mut expected);
+    }
+
+    #[test]
+    fn test_two_opt() {
+        let mut expected = vec!["E@hO", "E@N?", "E@hO", "E`GW", "E@hO", "E@hO"];
+        test_transfo("E@hO", super::two_opt, &mut expected);
+    }
+
+    #[test]
+    fn test_detour() {
+        let mut expected = vec!["DR{", "DR{"];
+        test_transfo("Dd[", super::detour, &mut expected);
+    }
+
+    #[test]
+    fn test_shortcut() {
+        let mut expected = vec!["DBw", "DB[", "D`["];
+        test_transfo("Dd[", super::shortcut, &mut expected);
     }
 }
