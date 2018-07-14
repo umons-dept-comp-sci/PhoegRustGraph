@@ -8,16 +8,21 @@ void init_graph(graph *tab, unsigned long n, unsigned long m, unsigned char *g)
 {
     EMPTYGRAPH(tab, n, m);
     unsigned char d = 7;
-    for (unsigned long i = 1; i < n; ++i) {
-        for (unsigned long j = 0; j < i; ++j) {
-            if ((*g >> d) % 2) {
+    for (unsigned long i = 1; i < n; ++i)
+    {
+        for (unsigned long j = 0; j < i; ++j)
+        {
+            if ((*g >> d) % 2)
+            {
                 ADDONEEDGE(tab, i, j, m);
             }
-            if (d == 0) {
+            if (d == 0)
+            {
                 d = 7;
                 ++g;
             }
-            else {
+            else
+            {
                 --d;
             }
         }
@@ -26,7 +31,8 @@ void init_graph(graph *tab, unsigned long n, unsigned long m, unsigned char *g)
 
 void nauty_wrapper(int n, int m, unsigned char *g, int *lab, int *ptn, int *orbits)
 {
-    if (m > 0) {
+    if (m > 0)
+    {
         static DEFAULTOPTIONS_GRAPH(options);
         options.getcanon = 1;
         options.defaultptn = 0;
@@ -36,20 +42,25 @@ void nauty_wrapper(int n, int m, unsigned char *g, int *lab, int *ptn, int *orbi
         graph cannon[n * m];
         densenauty(tab, lab, ptn, orbits, &options, &stats, m, n, cannon);
     }
-    else {
+    else
+    {
         int p = 0;
         int s = 0;
         int mi = n;
-        for (int i = 0; i < n; ++i) {
-            if (mi > lab[i]) {
+        for (int i = 0; i < n; ++i)
+        {
+            if (mi > lab[i])
+            {
                 mi = lab[i];
             }
-            if (ptn[i] == 0) {
-                for (int j = s; i <= p; ++j) {
+            if (ptn[i] == 0)
+            {
+                for (int j = s; j <= p; ++j)
+                {
                     orbits[lab[j]] = mi;
                 }
                 mi = n;
-                s = p+1;
+                s = p + 1;
             }
             ++p;
         }

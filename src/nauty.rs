@@ -57,6 +57,13 @@ fn init_fixed(n: usize, fixed: &[Vec<u32>]) -> (Vec<u32>, Vec<u32>) {
 /// use graph::nauty::canon_graph_fixed;
 /// use graph::Graph;
 /// let mut g = Graph::new(5);
+/// let (_,_,orbits) = canon_graph_fixed(&g, &vec![vec![1]]);
+/// println!("ORBITS {:?}", orbits);
+/// let exp_orbits = vec![0,1,0,0,0];
+/// assert!(orbits.len() == exp_orbits.len());
+/// for i in 0..orbits.len() {
+///     assert!(orbits[i] == exp_orbits[i]);
+/// }
 /// g.add_edge(1,0);
 /// g.add_edge(2,0);
 /// let (_,_,orbits) = canon_graph_fixed(&g, &vec![vec![1]]);
