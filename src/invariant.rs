@@ -31,18 +31,18 @@ pub enum Distance {
 
 impl Distance {
     pub fn get_val(&self) -> usize {
-        match self {
-            &Distance::Inf => panic!("Unwrapping Inf value"),
-            &Distance::Val(x) => x,
+        match *self {
+            Distance::Inf => panic!("Unwrapping Inf value"),
+            Distance::Val(x) => x,
         }
     }
 }
 
 impl ::std::fmt::Display for Distance {
     fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
-        match self {
-            &Distance::Val(x) => write!(f, "{}", x),
-            &Distance::Inf => write!(f, "Inf"),
+        match *self {
+            Distance::Val(x) => write!(f, "{}", x),
+            Distance::Inf => write!(f, "Inf"),
         }
     }
 }
@@ -175,8 +175,7 @@ pub fn floyd_warshall(g: &Graph) -> Vec<Vec<Distance>> {
 pub fn diameter(g: &Graph) -> Distance {
     if g.order() > 0 {
         let distances = floyd_warshall(&g);
-        *distances
-            .iter()
+        *distances.iter()
             .map(|x| x.iter().max().unwrap())
             .max()
             .unwrap()
@@ -188,7 +187,7 @@ pub fn diameter(g: &Graph) -> Distance {
 fn dfs(g: &Graph, u: usize, visited: &mut Vec<bool>) -> Vec<usize> {
     let mut comp = vec![];
     let mut to_visit = vec![u];
-    while to_visit.len() > 0 {
+    while !to_visit.is_empty() {
         let v = to_visit.pop().unwrap();
         if !visited[v] {
             comp.push(v);
@@ -245,7 +244,7 @@ pub fn bfs(g: &Graph, start: usize) -> (Vec<Distance>, Vec<Vec<usize>>) {
     dists[start] = Distance::Val(0);
     let mut frontier = VecDeque::with_capacity(1);
     frontier.push_back(start);
-    while frontier.len() > 0 {
+    while !frontier.is_empty() {
         let cur = frontier.pop_front().unwrap();
         let cdist = dists[cur] + Distance::Val(1);
         for n in g.neighbors_iter(cur) {
@@ -256,7 +255,7 @@ pub fn bfs(g: &Graph, start: usize) -> (Vec<Distance>, Vec<Vec<usize>>) {
                 paths[n].clear();
                 paths[n].push(cur);
                 frontier.push_back(n);
-            //there is another shortest path to join n
+                // there is another shortest path to join n
             } else if ndist == cdist {
                 paths[n].push(cur);
             }
@@ -285,13 +284,13 @@ pub fn bfs(g: &Graph, start: usize) -> (Vec<Distance>, Vec<Vec<usize>>) {
 pub fn eccentricities(g: &Graph) -> Vec<Distance> {
     floyd_warshall(&g)
         .iter()
-        .map(|x| x.iter().max().unwrap().clone())
+        .map(|x| *x.iter().max().unwrap())
         .collect()
 }
 
-fn construct_paths(pths: &Vec<Vec<usize>>, s: usize, e: usize) -> Vec<Vec<usize>> {
+fn construct_paths(pths: &[Vec<usize>], s: usize, e: usize) -> Vec<Vec<usize>> {
     let mut res = vec![];
-    if pths[e].len() == 0 || s == e {
+    if pths[e].is_empty() || s == e {
         res.push(vec![e]);
         res
     } else {
@@ -322,13 +321,13 @@ fn construct_paths(pths: &Vec<Vec<usize>>, s: usize, e: usize) -> Vec<Vec<usize>
 /// ```
 pub fn diametral_paths(g: &Graph) -> Vec<Vec<usize>> {
     let eccs = eccentricities(&g);
-    let diam = eccs.iter().max().unwrap().clone();
-    let extms: Vec<usize> = (0..g.order()).filter(|&x| eccs[x] == diam).collect();
+    let diam = eccs.iter().max().unwrap();
+    let extms: Vec<usize> = (0..g.order()).filter(|&x| eccs[x] == *diam).collect();
     let mut res = vec![];
-    //println!("{:?}", extms);
+    // println!("{:?}", extms);
     for e in extms {
         let (dsts, pths) = bfs(&g, e);
-        for (i, _dst) in dsts.iter().enumerate().filter(|&(_x, y)| y == &diam) {
+        for (i, _dst) in dsts.iter().enumerate().filter(|&(_x, y)| y == diam) {
             let mut tres = construct_paths(&pths, e, i);
             res.append(&mut tres);
         }
@@ -376,24 +375,18 @@ pub fn is_connected(g: &Graph) -> bool {
     connected_components(g).len() < 2
 }
 
-fn shortests_paths_length(p: &Vec<Vec<usize>>) -> usize {
-    if p.len() > 0 {
-        p[0].len() - 1
-    } else {
-        MAX
-    }
+fn shortests_paths_length(p: &[Vec<usize>]) -> usize {
+    if !p.is_empty() { p[0].len() - 1 } else { MAX }
 }
 
-fn combine_paths(p1: &Vec<Vec<usize>>, p2: &Vec<Vec<usize>>) -> Vec<Vec<usize>> {
+fn combine_paths(p1: &[Vec<usize>], p2: &[Vec<usize>]) -> Vec<Vec<usize>> {
     let mut res = vec![];
     for a in p1.iter() {
         for b in p2.iter() {
-            res.push(
-                a.iter()
-                    .chain(b.iter().skip(1))
-                    .cloned()
-                    .collect::<Vec<_>>(),
-            );
+            res.push(a.iter()
+                .chain(b.iter().skip(1))
+                .cloned()
+                .collect::<Vec<_>>());
         }
     }
     res
@@ -530,15 +523,13 @@ pub fn minus_avecc_avdist(g: &Graph) -> f64 {
     let n: f64 = g.order() as f64;
     let sum: f64 = match dm.iter()
         .flat_map(|x| x.iter())
-        .fold(Distance::Val(0), |acc, &x| acc + x)
-    {
+        .fold(Distance::Val(0), |acc, &x| acc + x) {
         Distance::Val(v) => v as f64,
         _ => f64::INFINITY,
     };
     let sum_ecc: f64 = match dm.iter()
         .map(|x| x.iter().max().unwrap_or(&default_max))
-        .fold(Distance::Val(0), |acc, &x| acc + x)
-    {
+        .fold(Distance::Val(0), |acc, &x| acc + x) {
         Distance::Val(v) => v as f64,
         _ => f64::INFINITY,
     };
@@ -663,7 +654,7 @@ pub fn num_pendant(g: &Graph) -> usize {
 pub fn dnm(g: &Graph) -> usize {
     let n = g.order() as f64;
     let m = g.size() as f64;
-    ((2f64 * n + 1f64 - ((17f64 + 8f64 * (m - n))).sqrt()) / 2f64).floor() as usize
+    ((2f64 * n + 1f64 - (17f64 + 8f64 * (m - n)).sqrt()) / 2f64).floor() as usize
 }
 
 /// # Examples

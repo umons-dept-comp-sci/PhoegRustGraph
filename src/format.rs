@@ -55,7 +55,7 @@ pub fn to_g6(graph: &Graph) -> String {
                     l = 0;
                     r = 0;
                 }
-                r = r << 1;
+                r <<= 1;
                 if graph.is_edge(u, v) {
                     r += 1;
                 }
@@ -63,7 +63,7 @@ pub fn to_g6(graph: &Graph) -> String {
             }
         }
         if l <= 6 {
-            r = r << (6 - l);
+            r <<= 6 - l;
             res += &((r + 63) as char).to_string();
         }
     }
@@ -110,7 +110,7 @@ pub fn to_g6(graph: &Graph) -> String {
 ///     _ => assert!(false),
 /// }
 /// ```
-pub fn from_g6(s: &String) -> Result<Graph, InvalidGraph6> {
+pub fn from_g6(s: &str) -> Result<Graph, InvalidGraph6> {
     let mut chars = s.chars();
     if let Some(n) = chars.next().and_then(|x| Some(((x as u8) - 63) as usize)) {
         let mut g = Graph::new(n);

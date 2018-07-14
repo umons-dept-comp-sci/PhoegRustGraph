@@ -39,9 +39,7 @@ fn get_position(i: usize, j: usize) -> usize {
     let mut i = i;
     let mut j = j;
     if i < j {
-        let tmp = i;
-        i = j;
-        j = tmp;
+        std::mem::swap(&mut i, &mut j);
     }
     (i * (i - 1)) / 2 + j
 }
@@ -260,7 +258,7 @@ pub struct NodeIterator {
 
 impl NodeIterator {
     fn new(max: usize) -> NodeIterator {
-        NodeIterator { n: 0, max: max }
+        NodeIterator { n: 0, max }
     }
 }
 
@@ -290,12 +288,12 @@ impl<'a> EdgeIterator<'a> {
             u: 0,
             v: 0,
             c: 0,
-            g: g,
+            g,
         }
     }
 
     fn inc(&mut self) {
-        self.u = self.u + 1;
+        self.u += 1;
         self.v += self.u / self.g.order();
         if self.u == self.g.order() {
             self.u = self.v + 1;
@@ -335,9 +333,9 @@ pub struct NeighborIterator<'a> {
 impl<'a> NeighborIterator<'a> {
     fn new(n: usize, g: &Graph) -> NeighborIterator {
         NeighborIterator {
-            n: n,
+            n,
             u: 0,
-            g: g,
+            g,
             first: true,
         }
     }
