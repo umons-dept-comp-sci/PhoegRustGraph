@@ -16,7 +16,7 @@ fn init_fixed(n: usize, fixed: &[Vec<u32>]) -> (Vec<u32>, Vec<u32>) {
     let mut ptn = vec![0; n];
     let mut cols = vec![n+1; n];
     let mut c = 0;
-    for s in fixed {
+    for s in fixed.iter().filter(|x| !x.is_empty()) {
         for &i in s {
             cols[i as usize] = c;
         }
