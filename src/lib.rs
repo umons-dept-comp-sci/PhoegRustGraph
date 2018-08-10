@@ -1,3 +1,4 @@
+//#![feature(trace_macros)]
 //! Crate using binary format to represent small graphs (order <= 11)
 
 extern crate bit_vec;
@@ -6,6 +7,8 @@ pub mod format;
 pub mod invariant;
 pub mod errors;
 pub mod nauty;
+#[macro_use]
+mod transfos_macros;
 pub mod transfos;
 
 use std::fmt;

@@ -1,190 +1,103 @@
+use std::collections::HashMap;
 use Graph;
 use nauty::orbits;
 
 pub fn add_edge(g: &Graph) -> Vec<Graph> {
-    let mut res = vec![];
-    let mut fixed = Vec::with_capacity(1);
-    for i in orbits(&g, &fixed) {
-        fixed.push(vec![i as u32]);
-        for &j in orbits(&g, &fixed)
-            .iter()
-            .filter(|&x| *x > i && !g.is_edge(*x, i)) {
-            let mut ng = g.clone();
-            ng.add_edge(i, j);
-            res.push(ng);
-        }
-        fixed.pop();
-    }
-    res
+    transformation! (
+        for g,
+        let a,
+        b sym a (after a and not adj a)
+        apply
+        add(a,b);
+        )
 }
 
 pub fn remove_edge(g: &Graph) -> Vec<Graph> {
-    let mut res = vec![];
-    let mut fixed = Vec::with_capacity(1);
-    for i in orbits(&g, &fixed) {
-        fixed.push(vec![i as u32]);
-        for &j in orbits(&g, &fixed)
-            .iter()
-            .filter(|&x| *x > i && g.is_edge(*x, i)) {
-            let mut ng = g.clone();
-            ng.remove_edge(i, j);
-            res.push(ng);
-        }
-        fixed.pop();
-    }
-    res
+    transformation!(
+        for g,
+        let a,
+        b sym a (after a and adj a)
+        apply
+        remove(a,b);
+        )
 }
 
 pub fn rotation(g: &Graph) -> Vec<Graph> {
-    let mut res = vec![];
-    let mut fixed = Vec::with_capacity(2);
-    for i in orbits(&g, &fixed) {
-        fixed.push(vec![i as u32]);
-        for &j in orbits(&g, &fixed)
-            .iter()
-            .filter(|&x| *x != i && g.is_edge(*x, i)) {
-            fixed.push(vec![j as u32]);
-            for &k in orbits(&g, &fixed)
-                .iter()
-                .filter(|&x| *x != j && *x != i && !g.is_edge(*x, i)) {
-                let mut ng = g.clone();
-                ng.remove_edge(i, j);
-                ng.add_edge(i, k);
-                res.push(ng);
-            }
-            fixed.pop();
-        }
-        fixed.pop();
-    }
-    res
+    transformation!(
+        for g,
+        let a,
+        b (diff a and adj a),
+        c (diff a and diff b and not adj a)
+        apply
+        remove(a,b);
+        add(a,c);
+        )
 }
 
 pub fn slide(g: &Graph) -> Vec<Graph> {
-    let mut res = vec![];
-    let mut fixed = Vec::with_capacity(2);
-    for i in orbits(&g, &fixed) {
-        fixed.push(vec![i as u32]);
-        for &j in orbits(&g, &fixed)
-            .iter()
-            .filter(|&x| *x != i && g.is_edge(*x, i)) {
-            fixed.push(vec![j as u32]);
-            for &k in orbits(&g, &fixed)
-                .iter()
-                .filter(|&x| *x != j && *x != i && !g.is_edge(*x, i) && g.is_edge(*x, j)) {
-                let mut ng = g.clone();
-                ng.remove_edge(i, j);
-                ng.add_edge(i, k);
-                res.push(ng);
-            }
-            fixed.pop();
-        }
-        fixed.pop();
-    }
-    res
+    transformation!(
+        for g,
+        let a,
+        b (diff a and adj a),
+        c (diff a and diff b and not adj a and adj b)
+        apply
+        remove(a,b);
+        add(a,c);
+        )
 }
 
 pub fn move_distinct(g: &Graph) -> Vec<Graph> {
-    let mut res = vec![];
-    let mut fixed = Vec::with_capacity(2);
-    for i in orbits(&g, &fixed) {
-        fixed.push(vec![i as u32]);
-        for &j in orbits(&g, &fixed).iter().filter(|&x| *x > i && g.is_edge(*x, i)) {
-            fixed[0].push(j as u32);
-            for &k in orbits(&g, &fixed).iter().filter(|&x| *x != i && *x != j) {
-                fixed.push(vec![k as u32]);
-                for &l in orbits(&g, &fixed)
-                    .iter()
-                    .filter(|&x| *x != i && *x != j && *x > k && !g.is_edge(*x, k)) {
-                    let mut ng = g.clone();
-                    ng.remove_edge(i, j);
-                    ng.add_edge(k, l);
-                    res.push(ng);
-                }
-                fixed.pop();
-            }
-            fixed[0].pop();
-        }
-        fixed.pop();
-    }
-    res
+    transformation! (
+        for g,
+        let a,
+        b sym a (after a and adj a),
+        c (diff a and diff b),
+        d sym c (diff a and diff b and after c and not adj c)
+        apply
+        remove(a,b);
+        add(c,d);
+        )
 }
 
 pub fn two_opt(g: &Graph) -> Vec<Graph> {
-    let mut res = vec![];
-    let mut fixed = Vec::with_capacity(2);
-    for i in orbits(&g, &fixed) {
-        fixed.push(vec![i as u32]);
-        for &j in orbits(&g, &fixed).iter().filter(|&x| *x > i && g.is_edge(*x, i)) {
-            fixed[0].push(j as u32);
-            for &k in orbits(&g, &fixed)
-                .iter()
-                .filter(|&x| *x > i && *x != j && !g.is_edge(*x, i)) {
-                fixed.push(vec![k as u32]);
-                for &l in orbits(&g, &fixed)
-                    .iter()
-                    .filter(|&x| {
-                        *x > i && *x != j && *x != k && g.is_edge(*x, k) && !g.is_edge(*x, j)
-                    }) {
-                    let mut ng = g.clone();
-                    ng.remove_edge(i, j);
-                    ng.remove_edge(k, l);
-                    ng.add_edge(i, k);
-                    ng.add_edge(j, l);
-                    res.push(ng);
-                }
-                fixed.pop();
-            }
-            fixed[0].pop();
-        }
-        fixed.pop();
-    }
-    res
+    transformation! (
+        for g,
+        let a,
+        b sym a (after a and adj a),
+        c (after a and diff b and not adj a),
+        d sym c (after a and diff b and diff c and adj c and not adj b)
+        apply
+        remove(a,b);
+        remove(c,d);
+        add(a,c);
+        add(b,d);
+        )
 }
 
 pub fn detour(g: &Graph) -> Vec<Graph> {
-    let mut res = vec![];
-    let mut fixed = Vec::with_capacity(1);
-    for i in orbits(&g, &fixed) {
-        fixed.push(vec![i as u32]);
-        for &j in orbits(&g, &fixed).iter().filter(|&x| *x > i && g.is_edge(*x, i)) {
-            fixed[0].push(j as u32);
-            for &k in orbits(&g, &fixed)
-                .iter()
-                .filter(|&x| *x != i && *x != j && !g.is_edge(*x, i) && !g.is_edge(*x, j)) {
-                let mut ng = g.clone();
-                ng.remove_edge(i, j);
-                ng.add_edge(i, k);
-                ng.add_edge(j, k);
-                res.push(ng);
-            }
-            fixed[0].pop();
-        }
-        fixed.pop();
-    }
-    res
+    transformation!(
+        for g,
+        let a,
+        b sym a (after a and adj a),
+        c (diff a and diff b and not adj a and not adj b)
+        apply
+        remove(a,b);
+        add(a,c);
+        add(c,b);
+        )
 }
 
 pub fn shortcut(g: &Graph) -> Vec<Graph> {
-    let mut res = vec![];
-    let mut fixed = Vec::with_capacity(1);
-    for i in orbits(&g, &fixed) {
-        fixed.push(vec![i as u32]);
-        for &j in orbits(&g, &fixed).iter().filter(|&x| *x > i && !g.is_edge(*x, i)) {
-            fixed[0].push(j as u32);
-            for &k in orbits(&g, &fixed)
-                .iter()
-                .filter(|&x| *x != i && *x != j && g.is_edge(*x, i) && g.is_edge(*x, j)) {
-                let mut ng = g.clone();
-                ng.remove_edge(i, k);
-                ng.remove_edge(j, k);
-                ng.add_edge(i, j);
-                res.push(ng);
-            }
-            fixed[0].pop();
-        }
-        fixed.pop();
-    }
-    res
+    transformation! (
+        for g,
+        let a,
+        b sym a (after a and not adj a),
+        c (diff a and diff b and adj a and adj b)
+        apply
+        remove(a,c);
+        remove(c,b);
+        add(a,b);
+        )
 }
 
 #[cfg(test)]
