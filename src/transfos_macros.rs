@@ -170,6 +170,9 @@ macro_rules! build_iter {
             res
         }
     };
+    (($m:ident $g:ident) $($_:tt)*) => {
+        compile_error!("Missing \"let\" before definitions of vertices.");
+    }
 }
 
 macro_rules! transformation {
@@ -179,5 +182,8 @@ macro_rules! transformation {
             let m = build_map!($($r)*);
             build_iter!((m $g) $($r)*)
         }
+    };
+    ($($_:tt)*) => {
+        compile_error!("Missing \"for <graph>,\" where <graph> is the name of the graph at start of expression.");
     };
 }
