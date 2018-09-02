@@ -10,6 +10,7 @@ pub mod nauty;
 #[macro_use]
 mod transfos_macros;
 pub mod transfos;
+pub mod utils;
 
 use std::fmt;
 
