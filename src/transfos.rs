@@ -12,6 +12,15 @@ pub fn add_edge(g: &Graph) -> Vec<Graph> {
         )
 }
 
+pub fn remove_vertex(g: &Graph) -> Vec<Graph> {
+    transformation! (
+        for g,
+        let a
+        apply
+        remove(a);
+        )
+}
+
 pub fn remove_edge(g: &Graph) -> Vec<Graph> {
     transformation!(
         for g,
@@ -136,6 +145,12 @@ mod tests {
     fn test_remove_edge() {
         let mut expected = vec!["DAK", "D@o"];
         test_transfo("DDW", super::remove_edge, &mut expected);
+    }
+
+    #[test]
+    fn test_remove_vertex() {
+        let mut expected = vec!["C^","CB","CN","CF"];
+        test_transfo("DB{", super::remove_vertex, &mut expected);
     }
 
     #[test]
