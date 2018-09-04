@@ -178,6 +178,49 @@ impl Graph {
         }
     }
 
+    // [TODO]: Add unit tests for this.
+    /// Removes the vertex i from the graph. The order if the vertices is not conserved.
+    /// The last vertex takes the place of the removed one.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut g = graph::Graph::new(7);
+    /// for i in g.nodes_iter().skip(1) {
+    ///     g.add_edge(i-1,i);
+    /// }
+    /// g.remove_vertex(7);
+    /// assert_eq!(g.order(),7);
+    /// g.remove_vertex(6);
+    /// assert_eq!(g.order(),6);
+    /// g.remove_vertex(0);
+    /// assert_eq!(g.order(),5);
+    /// g.remove_vertex(3);
+    /// assert_eq!(g.order(),4);
+    /// ```
+    pub fn remove_vertex(&mut self, i: usize) {
+        if i < self.order() {
+            let last = self.order()-1;
+            if last != i
+            {
+                for n in self.nodes_iter() {
+                    if n != i && n != last {
+                        if self.is_edge(last,n) {
+                            self.add_edge(i,n);
+                        }
+                        else
+                        {
+                            self.remove_edge(i,n)
+                        }
+                    }
+                }
+            }
+            self.num_vertices -= 1;
+            let n = self.num_vertices;
+            self.graph.truncate(n * (std::cmp::max(n, 1) - 1) / 2);
+        }
+    }
+
     /// Returns an iterator over the nodes of the graph.
     ///
     /// # Examples
