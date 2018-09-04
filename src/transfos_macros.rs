@@ -118,6 +118,9 @@ macro_rules! operation {
     (($g:ident) (remove ($a:ident , $b:ident))) => {
         $g.remove_edge($a,$b)
     };
+    (($g:ident) (remove ($a:ident))) => {
+        $g.remove_vertex($a);
+    };
     (($g:ident) (add ($a:ident , $b:ident))) => {
         $g.add_edge($a,$b);
     };
