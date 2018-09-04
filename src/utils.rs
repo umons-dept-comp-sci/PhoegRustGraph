@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet, BTreeSet, BTreeMap};
 use std::fmt;
 use ::Graph;
 
-struct VF2Data<'a> {
+struct VF2DSData<'a> {
     g1: &'a Graph,
     g2: &'a Graph,
     depth: usize,
@@ -22,7 +22,7 @@ struct VF2Data<'a> {
     adj_2: &'a mut BTreeMap<usize, usize>,
 }
 
-impl<'a> fmt::Display for VF2Data<'a> {
+impl<'a> fmt::Display for VF2DSData<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "depth : {:?}\n", self.depth)?;
         writeln!(f, "g1 : {:?}\n", self.g1)?;
@@ -36,7 +36,7 @@ impl<'a> fmt::Display for VF2Data<'a> {
     }
 }
 
-impl<'a> VF2Data<'a> {
+impl<'a> VF2DSData<'a> {
     fn add_pair(&mut self, n: usize, m: usize, adj: bool) -> (usize, usize) {
         self.out_1.remove(&n);
         self.out_2.remove(&m);
@@ -139,7 +139,7 @@ impl<'a> VF2Data<'a> {
     }
 }
 
-fn vf2_rec(data: &mut VF2Data) {
+fn vf2_rec_ds(data: &mut VF2DSData) {
     if data.out_2.is_empty() {
         // [TODO]: How to output the matches ?
         println!("Found a match");
@@ -149,7 +149,7 @@ fn vf2_rec(data: &mut VF2Data) {
         for (n, m) in p {
             if data.filter(n, m) {
                 let (p1, p2) = data.add_pair(n, m, adj);
-                vf2_rec(data);
+                vf2_rec_ds(data);
                 data.remove_pair(n, m, adj, p1, p2);
             }
         }
@@ -157,9 +157,9 @@ fn vf2_rec(data: &mut VF2Data) {
 }
 
 /// Checks wether g2 is a subgraph of g1.
-pub fn vf2(g1: &Graph, g2: &Graph) {
+pub fn vf2_ds(g1: &Graph, g2: &Graph) {
     assert!(g1.order() >= g2.order());
-    let mut data = VF2Data {
+    let mut data = VF2DSData {
         g1: g1,
         g2: g2,
         depth: 0,
@@ -176,15 +176,30 @@ pub fn vf2(g1: &Graph, g2: &Graph) {
     for i in g2.nodes_iter() {
         data.out_2.insert(i);
     }
-    vf2_rec(&mut data)
+    vf2_rec_ds(&mut data)
 }
+
+struct VF2Data<'a> {
+    g1: &'a Graph,
+    g2: &'a Graph,
+    depth: usize,
+    null: usize,
+    num_out: usize,
+    num_adj: usize,
+    // Set of vertices already mapped.
+    core_1: &'a mut Vec<usize>,
+    core_2: &'a mut Vec<usize>,
+    adj_1: &'a mut Vec<usize>,
+    adj_2: &'a mut Vec<usize>,
+}
+
 
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
-    fn test_vf2() {
+    fn test_vf2_ds() {
         let mut g1 = Graph::new(5);
         g1.add_edge(0, 1);
         g1.add_edge(0, 2);
@@ -195,7 +210,7 @@ mod test {
         g2.add_edge(0, 1);
         g2.add_edge(1, 2);
         g2.add_edge(2, 0);
-        vf2(&g1, &g2);
+        vf2_ds(&g1, &g2);
         panic!();
     }
 }
