@@ -1,6 +1,8 @@
 // [TODO]: Find a better name for this module
 
+use std::collections::{HashMap, HashSet};
 use ::Graph;
+use ::nauty;
 
 struct VF2Data<'a> {
     g1: &'a Graph,
@@ -13,16 +15,19 @@ struct VF2Data<'a> {
     core_2: &'a mut Vec<usize>,
     adj_1: &'a mut Vec<usize>,
     adj_2: &'a mut Vec<usize>,
+    orbits: &'a Vec<usize>,
+    taboo: &'a mut HashMap<usize, HashSet<usize>>,
 }
 
 fn vf2_rec(data: &mut VF2Data) {
     if data.num_out == 0 {
         // [TODO]: How to output the matches ?
         println!("Found a match");
-        for (i, j) in data.core_1.iter().enumerate().filter(|&(x, &y)| y != data.null) {
+        for (i, j) in data.core_1.iter().enumerate().filter(|&(_, &y)| y != data.null) {
             print!("{} : {}, ", i, j);
         }
         println!("");
+        println!("{:?}", data.taboo);
     } else {
         let p = data.compute_pairs();
         for (n, m) in p {
@@ -49,6 +54,8 @@ pub fn vf2(g1: &Graph, g2: &Graph) {
         core_2: &mut vec![null; g2.order()],
         adj_1: &mut vec![0; g1.order()],
         adj_2: &mut vec![0; g2.order()],
+        orbits: &nauty::canon_graph_fixed(&g2, &[]).2,
+        taboo: &mut HashMap::new(),
     };
     vf2_rec(&mut data)
 }
@@ -63,9 +70,16 @@ impl<'a> VF2Data<'a> {
                 self.adj_1[i] = self.depth;
             }
         }
+        let m_orbit = self.orbits[m];
         for i in self.g2.nodes_iter() {
             if (self.g2.is_edge(m, i) || i == m) && self.adj_2[i] == 0 {
                 self.adj_2[i] = self.depth;
+            }
+            if i != m && self.orbits[i] == m_orbit {
+                if !self.taboo.contains_key(&n) {
+                    self.taboo.insert(n, HashSet::new());
+                }
+                self.taboo.get_mut(&n).unwrap().insert(i);
             }
         }
         self.num_out -= 1;
@@ -89,46 +103,43 @@ impl<'a> VF2Data<'a> {
     }
 
     fn filter(&self, n: usize, m: usize) -> bool {
-        let mut match_neighbors = false;
+        if self.taboo.contains_key(&n) && self.taboo.get(&n).unwrap().contains(&m) {
+            return false;
+        }
         for (n1, n2) in self.g1
             .nodes_iter()
             .filter(|&x| self.core_1[x] != self.null)
             .map(|x| (x, self.core_1[x])) {
             let (e1, e2) = (self.g1.is_edge(n, n1), self.g2.is_edge(m, n2));
             if e1 || e2 {
-                match_neighbors = true;
                 if e1 != e2 {
                     return false;
                 }
             }
         }
-        if match_neighbors {
-            true
-        } else {
-            // e num of edges out of core and adj, n num of edges out of core and in adj
-            let (mut e1, mut n1, mut e2, mut n2) = (0, 0, 0, 0);
-            for i in self.g1.nodes_iter().filter(|&x| self.core_1[x] == self.null) {
-                if self.g1.is_edge(n, i) {
-                    if self.adj_1[i] > 0 {
-                        n1 += 1;
-                    } else {
-                        e1 += 1;
-                    }
+        // e num of edges out of core and adj, n num of edges out of core and in adj
+        let (mut e1, mut n1, mut e2, mut n2) = (0, 0, 0, 0);
+        for i in self.g1.nodes_iter().filter(|&x| self.core_1[x] == self.null) {
+            if self.g1.is_edge(n, i) {
+                if self.adj_1[i] > 0 {
+                    n1 += 1;
+                } else {
+                    e1 += 1;
                 }
             }
-            // [TODO]: Can we write this and avoid duplicated code ? adj_1 and adj_2 are not the same
-            // type.
-            for i in self.g2.nodes_iter().filter(|&x| self.core_2[x] == self.null) {
-                if self.g2.is_edge(n, i) {
-                    if self.adj_2[i] > 0 {
-                        n2 += 1;
-                    } else {
-                        e2 += 1;
-                    }
-                }
-            }
-            n2 <= n1 && e2 <= e1
         }
+        // [TODO]: Can we write this and avoid duplicated code ? adj_1 and adj_2 are not the same
+        // type.
+        for i in self.g2.nodes_iter().filter(|&x| self.core_2[x] == self.null) {
+            if self.g2.is_edge(n, i) {
+                if self.adj_2[i] > 0 {
+                    n2 += 1;
+                } else {
+                    e2 += 1;
+                }
+            }
+        }
+        n2 <= n1 && e2 <= e1
     }
 
     fn compute_pairs(&self) -> Vec<(usize, usize)> {
