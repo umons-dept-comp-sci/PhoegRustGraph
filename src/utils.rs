@@ -5,7 +5,16 @@ use std::fmt;
 use ::Graph;
 use ::nauty;
 
-struct VF2Data<'a> {
+trait VF2Data {
+    fn is_full_match(&self) -> bool;
+    fn get_match(&self) -> Vec<usize>;
+    fn add_pair(&mut self, n: usize, m: usize);
+    fn remove_pair(&mut self, n: usize, m: usize);
+    fn filter(&self, n: usize, m: usize) -> bool;
+    fn compute_pairs(&self) -> Vec<(usize, usize)>;
+}
+
+struct VF2DataImpl<'a> {
     g1: &'a Graph,
     g2: &'a Graph,
     depth: usize,
@@ -20,7 +29,7 @@ struct VF2Data<'a> {
     taboo: &'a mut HashMap<usize, HashSet<usize>>,
 }
 
-impl<'a> fmt::Display for VF2Data<'a> {
+impl<'a> fmt::Display for VF2DataImpl<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "g1 : {}", self.g1)?;
         writeln!(f, "g2 : {}", self.g2)?;
@@ -36,16 +45,14 @@ impl<'a> fmt::Display for VF2Data<'a> {
     }
 }
 
-fn vf2_rec(data: &mut VF2Data) -> Vec<Vec<usize>> {
+fn vf2_rec<D>(data: &mut D) -> Vec<Vec<usize>>
+    where D: VF2Data
+{
     let mut res = Vec::new();
-    if data.num_out == 0 {
+    if data.is_full_match() {
         // println!("{}", data);
         // println!("MATCH\n\n");
-        let mut mat = Vec::new();
-        for (i, _) in data.core_1.iter().enumerate().filter(|&(_, &y)| y != data.null) {
-            mat.push(i);
-        }
-        res.push(mat);
+        res.push(data.get_match());
     } else {
         let p = data.compute_pairs();
         for (n, m) in p {
@@ -68,7 +75,7 @@ fn vf2_rec(data: &mut VF2Data) -> Vec<Vec<usize>> {
 pub fn vf2(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
     assert!(g1.order() >= g2.order());
     let null = g1.order() + 1;
-    let mut data = VF2Data {
+    let mut data = VF2DataImpl {
         g1: g1,
         g2: g2,
         depth: 1,
@@ -85,7 +92,19 @@ pub fn vf2(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
     vf2_rec(&mut data)
 }
 
-impl<'a> VF2Data<'a> {
+impl<'a> VF2Data for VF2DataImpl<'a> {
+    fn is_full_match(&self) -> bool {
+        self.num_out == 0
+    }
+
+    fn get_match(&self) -> Vec<usize> {
+        self.core_1
+            .iter()
+            .enumerate()
+            .filter_map(|(x, &y)| if y != self.null { Some(x) } else { None })
+            .collect()
+    }
+
     fn add_pair(&mut self, n: usize, m: usize) {
         self.depth += 1;
         self.core_1[n] = m;
@@ -168,8 +187,15 @@ impl<'a> VF2Data<'a> {
     }
 
     fn compute_pairs(&self) -> Vec<(usize, usize)> {
-        let adj_out =
-            self.g1.nodes_iter().filter(|&x| self.core_1[x] == self.null && self.adj_1[x] > 0);
+        self.compute_pairs_internal(&self.g1.nodes_iter().collect())
+    }
+}
+
+impl<'a> VF2DataImpl<'a> {
+    fn compute_pairs_internal(&self, g1_nodes: &Vec<usize>) -> Vec<(usize, usize)> {
+        let adj_out = g1_nodes.iter()
+            .filter(|&&x| self.core_1[x] == self.null && self.adj_1[x] > 0)
+            .cloned();
         let adj_min = self.g2
             .nodes_iter()
             .filter(|&x| self.core_2[x] == self.null && self.adj_2[x] > 0)
@@ -178,7 +204,7 @@ impl<'a> VF2Data<'a> {
         if !adj_iter.is_empty() {
             adj_iter
         } else {
-            let out = self.g1.nodes_iter().filter(|&x| self.adj_1[x] == 0);
+            let out = g1_nodes.iter().filter(|&&x| self.adj_1[x] == 0).cloned();
             let min = self.g2.nodes_iter().filter(|&x| self.adj_2[x] == 0).min();
             let out_iter = out.zip(min.iter().cloned().cycle()).collect();
             out_iter
@@ -186,15 +212,87 @@ impl<'a> VF2Data<'a> {
     }
 }
 
+struct VF2DataOrb<'a> {
+    data: &'a mut VF2DataImpl<'a>,
+    fixed: &'a mut Vec<Vec<u32>>,
+}
+
+impl<'a> fmt::Display for VF2DataOrb<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.data)?;
+        writeln!(f, "fixed : {:?}", self.fixed)
+    }
+}
+
+impl<'a> VF2Data for VF2DataOrb<'a> {
+    fn is_full_match(&self) -> bool {
+        self.data.is_full_match()
+    }
+
+    fn get_match(&self) -> Vec<usize> {
+        self.data.get_match()
+    }
+
+    fn add_pair(&mut self, n: usize, m: usize) {
+        self.data.add_pair(n, m);
+        self.fixed.push(vec![n as u32]);
+    }
+
+    fn remove_pair(&mut self, n: usize, m: usize) {
+        self.data.remove_pair(n, m);
+        self.fixed.pop();
+    }
+
+    fn filter(&self, n: usize, m: usize) -> bool {
+        self.data.filter(n, m)
+    }
+
+    fn compute_pairs(&self) -> Vec<(usize, usize)> {
+        self.data.compute_pairs_internal(&nauty::orbits(self.data.g1, self.fixed.as_slice()))
+    }
+}
+
+pub fn vf2_orb(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
+    assert!(g1.order() >= g2.order());
+    let null = g1.order() + 1;
+    let mut fixed = Vec::new();
+    let mut data = VF2DataImpl {
+        g1: g1,
+        g2: g2,
+        depth: 1,
+        null: null,
+        num_out: g2.order(),
+        core_1: &mut vec![null; g1.order()],
+        core_2: &mut vec![null; g2.order()],
+        adj_1: &mut vec![0; g1.order()],
+        adj_2: &mut vec![0; g2.order()],
+        orbits: &nauty::canon_graph_fixed(&g2, &[]).2,
+        taboo: &mut HashMap::new(),
+    };
+    let mut data_orb = VF2DataOrb {
+        fixed: &mut fixed,
+        data: &mut data,
+    };
+    vf2_rec(&mut data_orb)
+}
+
 #[cfg(test)]
-mod test {
+mod testing {
     use super::*;
+    // use test::Bencher;
 
     fn test_vf2_graph(g1: &Graph, g2: &Graph) {
+        println!("-----------------");
         let matches = vf2(&g1, &g2);
         for t in matches {
             println!("{:?}", t);
         }
+        println!("-----------------");
+        let matches = vf2_orb(&g1, &g2);
+        for t in matches {
+            println!("{:?}", t);
+        }
+        println!("-----------------");
     }
 
     #[test]
@@ -229,4 +327,70 @@ mod test {
         test_vf2_graph(&g1, &g2);
         panic!();
     }
+
+    //    #[bench]
+    // fn bench_vf2_orbs(b: &mut Bencher) {
+    // let mut g1 = Graph::new(5);
+    // g1.add_edge(0, 1);
+    // g1.add_edge(1, 2);
+    // g1.add_edge(1, 3);
+    // g1.add_edge(1, 4);
+    // g1.add_edge(4, 2);
+    // g1.add_edge(4, 3);
+    // let mut g2 = Graph::new(3);
+    // g2.add_edge(0, 1);
+    // g2.add_edge(1, 2);
+    // g2.add_edge(2, 0);
+    // b.iter(|| vf2_orb(&g1, &g2));
+    // g2 = Graph::new(2);
+    // g2.add_edge(0, 1);
+    // b.iter(|| vf2_orb(&g1, &g2));
+    // g1 = Graph::new(7);
+    // for i in g1.nodes_iter().skip(1) {
+    // for j in g1.nodes_iter().take(i) {
+    // g1.add_edge(i, j);
+    // }
+    // }
+    // g2 = Graph::new(4);
+    // for i in g2.nodes_iter().skip(1) {
+    // for j in g2.nodes_iter().take(i) {
+    // g2.add_edge(j, i);
+    // }
+    // }
+    // b.iter(|| vf2_orb(&g1, &g2));
+    // }
+    //
+    //
+    // #[bench]
+    // fn bench_vf2(b: &mut Bencher) {
+    // let mut g1 = Graph::new(5);
+    // g1.add_edge(0, 1);
+    // g1.add_edge(1, 2);
+    // g1.add_edge(1, 3);
+    // g1.add_edge(1, 4);
+    // g1.add_edge(4, 2);
+    // g1.add_edge(4, 3);
+    // let mut g2 = Graph::new(3);
+    // g2.add_edge(0, 1);
+    // g2.add_edge(1, 2);
+    // g2.add_edge(2, 0);
+    // b.iter(|| vf2(&g1, &g2));
+    // g2 = Graph::new(2);
+    // g2.add_edge(0, 1);
+    // b.iter(|| vf2(&g1, &g2));
+    // g1 = Graph::new(7);
+    // for i in g1.nodes_iter().skip(1) {
+    // for j in g1.nodes_iter().take(i) {
+    // g1.add_edge(i, j);
+    // }
+    // }
+    // g2 = Graph::new(3);
+    // for i in g2.nodes_iter().skip(1) {
+    // for j in g2.nodes_iter().take(i) {
+    // g2.add_edge(j, i);
+    // }
+    // }
+    // b.iter(|| vf2(&g1, &g2));
+    //
+    // }
 }
