@@ -1,6 +1,7 @@
 // [TODO]: Find a better name for this module
 
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 use ::Graph;
 use ::nauty;
 
@@ -19,29 +20,52 @@ struct VF2Data<'a> {
     taboo: &'a mut HashMap<usize, HashSet<usize>>,
 }
 
-fn vf2_rec(data: &mut VF2Data) {
-    if data.num_out == 0 {
-        // [TODO]: How to output the matches ?
-        println!("Found a match");
-        for (i, j) in data.core_1.iter().enumerate().filter(|&(_, &y)| y != data.null) {
-            print!("{} : {}, ", i, j);
-        }
-        println!("");
-        println!("{:?}", data.taboo);
-    } else {
-        let p = data.compute_pairs();
-        for (n, m) in p {
-            if data.filter(n, m) {
-                data.add_pair(n, m);
-                vf2_rec(data);
-                data.remove_pair(n, m);
-            }
-        }
+impl<'a> fmt::Display for VF2Data<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "g1 : {}", self.g1)?;
+        writeln!(f, "g2 : {}", self.g2)?;
+        writeln!(f, "depth : {}", self.depth)?;
+        writeln!(f, "null : {}", self.null)?;
+        writeln!(f, "num_out : {:?}", self.num_out)?;
+        writeln!(f, "core_1 : {:?}", self.core_1)?;
+        writeln!(f, "core_2 : {:?}", self.core_2)?;
+        writeln!(f, "adj_1 : {:?}", self.adj_1)?;
+        writeln!(f, "adj_2 : {:?}", self.adj_2)?;
+        writeln!(f, "orbits : {:?}", self.orbits)?;
+        writeln!(f, "taboo : {:?}", self.taboo)
     }
 }
 
+fn vf2_rec(data: &mut VF2Data) -> Vec<Vec<usize>> {
+    let mut res = Vec::new();
+    if data.num_out == 0 {
+        // println!("{}", data);
+        // println!("MATCH\n\n");
+        let mut mat = Vec::new();
+        for (i, _) in data.core_1.iter().enumerate().filter(|&(_, &y)| y != data.null) {
+            mat.push(i);
+        }
+        res.push(mat);
+    } else {
+        let p = data.compute_pairs();
+        for (n, m) in p {
+            // println!("{}", data);
+            // print!("Pair ({},{}) : ", n, m);
+            if data.filter(n, m) {
+                // println!("ADDED\n\n");
+                data.add_pair(n, m);
+                res.extend(vf2_rec(data));
+                data.remove_pair(n, m);
+            } else {
+                // println!("REFUSED\n\n");
+            }
+        }
+    }
+    res
+}
+
 /// Checks wether g2 is a subgraph of g1.
-pub fn vf2(g1: &Graph, g2: &Graph) {
+pub fn vf2(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
     assert!(g1.order() >= g2.order());
     let null = g1.order() + 1;
     let mut data = VF2Data {
@@ -57,6 +81,7 @@ pub fn vf2(g1: &Graph, g2: &Graph) {
         orbits: &nauty::canon_graph_fixed(&g2, &[]).2,
         taboo: &mut HashMap::new(),
     };
+    // println!("orbits : {:?}", data.orbits);
     vf2_rec(&mut data)
 }
 
@@ -75,7 +100,7 @@ impl<'a> VF2Data<'a> {
             if (self.g2.is_edge(m, i) || i == m) && self.adj_2[i] == 0 {
                 self.adj_2[i] = self.depth;
             }
-            if i != m && self.orbits[i] == m_orbit {
+            if i > m && self.orbits[i] == m_orbit {
                 if !self.taboo.contains_key(&n) {
                     self.taboo.insert(n, HashSet::new());
                 }
@@ -165,6 +190,13 @@ impl<'a> VF2Data<'a> {
 mod test {
     use super::*;
 
+    fn test_vf2_graph(g1: &Graph, g2: &Graph) {
+        let matches = vf2(&g1, &g2);
+        for t in matches {
+            println!("{:?}", t);
+        }
+    }
+
     #[test]
     fn test_vf2() {
         let mut g1 = Graph::new(5);
@@ -178,7 +210,23 @@ mod test {
         g2.add_edge(0, 1);
         g2.add_edge(1, 2);
         g2.add_edge(2, 0);
-        vf2(&g1, &g2);
+        test_vf2_graph(&g1, &g2);
+        g2 = Graph::new(2);
+        g2.add_edge(0, 1);
+        test_vf2_graph(&g1, &g2);
+        g1 = Graph::new(7);
+        for i in g1.nodes_iter().skip(1) {
+            for j in g1.nodes_iter().take(i) {
+                g1.add_edge(i, j);
+            }
+        }
+        g2 = Graph::new(4);
+        for i in g2.nodes_iter().skip(1) {
+            for j in g2.nodes_iter().take(i) {
+                g2.add_edge(j, i);
+            }
+        }
+        test_vf2_graph(&g1, &g2);
         panic!();
     }
 }
