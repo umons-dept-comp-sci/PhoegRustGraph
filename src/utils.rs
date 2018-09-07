@@ -50,21 +50,15 @@ fn vf2_rec<D>(data: &mut D) -> Vec<Vec<usize>>
 {
     let mut res = Vec::new();
     if data.is_full_match() {
-        // println!("{}", data);
-        // println!("MATCH\n\n");
+        // println!("MATCH");
         res.push(data.get_match());
     } else {
         let p = data.compute_pairs();
         for (n, m) in p {
-            // println!("{}", data);
-            // print!("Pair ({},{}) : ", n, m);
             if data.filter(n, m) {
-                // println!("ADDED\n\n");
                 data.add_pair(n, m);
                 res.extend(vf2_rec(data));
                 data.remove_pair(n, m);
-            } else {
-                // println!("REFUSED\n\n");
             }
         }
     }
@@ -127,6 +121,7 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
             }
         }
         self.num_out -= 1;
+        // println!("n {}, m {}, taboo {:?}", n, m, self.taboo);
     }
 
     fn remove_pair(&mut self, n: usize, m: usize) {
@@ -281,6 +276,24 @@ mod testing {
     use super::*;
     // use test::Bencher;
 
+    fn apply_test_vf2<VF2>(g1: &Graph, g2: &Graph, matches: &mut Vec<Vec<usize>>, vf2: VF2)
+        where VF2: Fn(&Graph, &Graph) -> Vec<Vec<usize>>
+    {
+        let mut res = vf2(g1, g2);
+        assert_eq!(res.len(), matches.len());
+        matches.iter_mut().for_each(|x| x.sort());
+        matches.sort();
+        res.iter_mut().for_each(|x| x.sort());
+        res.sort();
+        for (ref m, ref me) in res.iter().zip(matches.iter()) {
+            assert_eq!(m.len(), me.len());
+            for (n1, n2) in m.iter().zip(me.iter()) {
+                assert_eq!(n1, n2);
+            }
+        }
+    }
+
+    #[allow(dead_code)]
     fn test_vf2_graph(g1: &Graph, g2: &Graph) {
         println!("-----------------");
         let matches = vf2(&g1, &g2);
@@ -308,24 +321,50 @@ mod testing {
         g2.add_edge(0, 1);
         g2.add_edge(1, 2);
         g2.add_edge(2, 0);
-        test_vf2_graph(&g1, &g2);
+        apply_test_vf2(&g1, &g2, &mut vec![vec![1, 2, 4], vec![1, 3, 4]], vf2);
+        apply_test_vf2(&g1, &g2, &mut vec![vec![1, 2, 4]], vf2_orb);
         g2 = Graph::new(2);
         g2.add_edge(0, 1);
-        test_vf2_graph(&g1, &g2);
-        g1 = Graph::new(7);
-        for i in g1.nodes_iter().skip(1) {
+        apply_test_vf2(&g1,
+                       &g2,
+                       &mut vec![vec![0, 1], vec![1, 2], vec![1, 3], vec![1, 4], vec![2, 4],
+                                 vec![3, 4]],
+                       vf2);
+        apply_test_vf2(&g1,
+                       &g2,
+                       &mut vec![vec![0, 1], vec![1, 2], vec![1, 4], vec![2, 4]],
+                       vf2_orb);
+        g1 = Graph::new(9);
+        for i in g1.nodes_iter().skip(1).take(6) {
             for j in g1.nodes_iter().take(i) {
                 g1.add_edge(i, j);
             }
         }
+        g1.add_edge(4, 7);
+        g1.add_edge(6, 8);
         g2 = Graph::new(4);
         for i in g2.nodes_iter().skip(1) {
             for j in g2.nodes_iter().take(i) {
                 g2.add_edge(j, i);
             }
         }
-        test_vf2_graph(&g1, &g2);
-        panic!();
+        apply_test_vf2(&g1,
+                       &g2,
+                       &mut vec![vec![0, 1, 2, 3],
+                                 vec![0, 1, 2, 4],
+                                 vec![0, 1, 2, 5],
+                                 vec![0, 1, 2, 6],
+                                 vec![0, 1, 3, 4],
+                                 vec![0, 1, 3, 5],
+                                 vec![0, 1, 3, 6],
+                                 vec![0, 1, 4, 5],
+                                 vec![0, 1, 4, 6],
+                                 vec![0, 1, 5, 6]],
+                       vf2);
+        apply_test_vf2(&g1,
+                       &g2,
+                       &mut vec![vec![0, 1, 2, 3], vec![0, 1, 2, 4], vec![0, 1, 4, 6]],
+                       vf2_orb);
     }
 
     //    #[bench]
