@@ -1,5 +1,4 @@
-// [TODO]: Find a better name for this module
-
+//! Module containing algorithms to compute the occurences of an induced subgraph in a bigger graph.
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use ::Graph;
@@ -45,19 +44,18 @@ impl<'a> fmt::Display for VF2DataImpl<'a> {
     }
 }
 
-fn vf2_rec<D>(data: &mut D) -> Vec<Vec<usize>>
+fn vf2<D>(data: &mut D) -> Vec<Vec<usize>>
     where D: VF2Data
 {
     let mut res = Vec::new();
     if data.is_full_match() {
-        // println!("MATCH");
         res.push(data.get_match());
     } else {
         let p = data.compute_pairs();
         for (n, m) in p {
             if data.filter(n, m) {
                 data.add_pair(n, m);
-                res.extend(vf2_rec(data));
+                res.extend(vf2(data));
                 data.remove_pair(n, m);
             }
         }
@@ -65,8 +63,11 @@ fn vf2_rec<D>(data: &mut D) -> Vec<Vec<usize>>
     res
 }
 
-/// Checks wether g2 is a subgraph of g1.
-pub fn vf2(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
+/// Returns every occurence of the graph `g2` in the graph `g1` up to permutations among the orbits
+/// of `g2`.
+///
+/// The graph `g2` must have at most the same order as `g1`.
+pub fn subgraphs(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
     assert!(g1.order() >= g2.order());
     let null = g1.order() + 1;
     let mut data = VF2DataImpl {
@@ -82,8 +83,7 @@ pub fn vf2(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
         orbits: &nauty::canon_graph_fixed(&g2, &[]).2,
         taboo: &mut HashMap::new(),
     };
-    // println!("orbits : {:?}", data.orbits);
-    vf2_rec(&mut data)
+    vf2(&mut data)
 }
 
 impl<'a> VF2Data for VF2DataImpl<'a> {
@@ -121,7 +121,6 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
             }
         }
         self.num_out -= 1;
-        // println!("n {}, m {}, taboo {:?}", n, m, self.taboo);
     }
 
     fn remove_pair(&mut self, n: usize, m: usize) {
@@ -243,7 +242,8 @@ impl<'a> VF2Data for VF2DataOrb<'a> {
     }
 }
 
-pub fn vf2_orb(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
+/// Returns every non-isomorphic occurence of the graph `g2` in the graph `g1`.
+pub fn subgraph_orbits(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
     assert!(g1.order() >= g2.order());
     let null = g1.order() + 1;
     let mut fixed = Vec::new();
@@ -264,13 +264,12 @@ pub fn vf2_orb(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
         fixed: &mut fixed,
         data: &mut data,
     };
-    vf2_rec(&mut data_orb)
+    vf2(&mut data_orb)
 }
 
 #[cfg(test)]
 mod testing {
     use super::*;
-    // use test::Bencher;
 
     fn apply_test_vf2<VF2>(g1: &Graph, g2: &Graph, matches: &mut Vec<Vec<usize>>, vf2: VF2)
         where VF2: Fn(&Graph, &Graph) -> Vec<Vec<usize>>
@@ -292,12 +291,12 @@ mod testing {
     #[allow(dead_code)]
     fn test_vf2_graph(g1: &Graph, g2: &Graph) {
         println!("-----------------");
-        let matches = vf2(&g1, &g2);
+        let matches = subgraphs(&g1, &g2);
         for t in matches {
             println!("{:?}", t);
         }
         println!("-----------------");
-        let matches = vf2_orb(&g1, &g2);
+        let matches = subgraph_orbits(&g1, &g2);
         for t in matches {
             println!("{:?}", t);
         }
@@ -317,19 +316,19 @@ mod testing {
         g2.add_edge(0, 1);
         g2.add_edge(1, 2);
         g2.add_edge(2, 0);
-        apply_test_vf2(&g1, &g2, &mut vec![vec![1, 2, 4], vec![1, 3, 4]], vf2);
-        apply_test_vf2(&g1, &g2, &mut vec![vec![1, 2, 4]], vf2_orb);
+        apply_test_vf2(&g1, &g2, &mut vec![vec![1, 2, 4], vec![1, 3, 4]], subgraphs);
+        apply_test_vf2(&g1, &g2, &mut vec![vec![1, 2, 4]], subgraph_orbits);
         g2 = Graph::new(2);
         g2.add_edge(0, 1);
         apply_test_vf2(&g1,
                        &g2,
                        &mut vec![vec![0, 1], vec![1, 2], vec![1, 3], vec![1, 4], vec![2, 4],
                                  vec![3, 4]],
-                       vf2);
+                       subgraphs);
         apply_test_vf2(&g1,
                        &g2,
                        &mut vec![vec![0, 1], vec![1, 2], vec![1, 4], vec![2, 4]],
-                       vf2_orb);
+                       subgraph_orbits);
         g1 = Graph::new(9);
         for i in g1.vertices().skip(1).take(6) {
             for j in g1.vertices().take(i) {
@@ -356,76 +355,10 @@ mod testing {
                                  vec![0, 1, 4, 5],
                                  vec![0, 1, 4, 6],
                                  vec![0, 1, 5, 6]],
-                       vf2);
+                       subgraphs);
         apply_test_vf2(&g1,
                        &g2,
                        &mut vec![vec![0, 1, 2, 3], vec![0, 1, 2, 4], vec![0, 1, 4, 6]],
-                       vf2_orb);
+                       subgraph_orbits);
     }
-
-    //    #[bench]
-    // fn bench_vf2_orbs(b: &mut Bencher) {
-    // let mut g1 = Graph::new(5);
-    // g1.add_edge(0, 1);
-    // g1.add_edge(1, 2);
-    // g1.add_edge(1, 3);
-    // g1.add_edge(1, 4);
-    // g1.add_edge(4, 2);
-    // g1.add_edge(4, 3);
-    // let mut g2 = Graph::new(3);
-    // g2.add_edge(0, 1);
-    // g2.add_edge(1, 2);
-    // g2.add_edge(2, 0);
-    // b.iter(|| vf2_orb(&g1, &g2));
-    // g2 = Graph::new(2);
-    // g2.add_edge(0, 1);
-    // b.iter(|| vf2_orb(&g1, &g2));
-    // g1 = Graph::new(7);
-    // for i in g1.vertices().skip(1) {
-    // for j in g1.vertices().take(i) {
-    // g1.add_edge(i, j);
-    // }
-    // }
-    // g2 = Graph::new(4);
-    // for i in g2.vertices().skip(1) {
-    // for j in g2.vertices().take(i) {
-    // g2.add_edge(j, i);
-    // }
-    // }
-    // b.iter(|| vf2_orb(&g1, &g2));
-    // }
-    //
-    //
-    // #[bench]
-    // fn bench_vf2(b: &mut Bencher) {
-    // let mut g1 = Graph::new(5);
-    // g1.add_edge(0, 1);
-    // g1.add_edge(1, 2);
-    // g1.add_edge(1, 3);
-    // g1.add_edge(1, 4);
-    // g1.add_edge(4, 2);
-    // g1.add_edge(4, 3);
-    // let mut g2 = Graph::new(3);
-    // g2.add_edge(0, 1);
-    // g2.add_edge(1, 2);
-    // g2.add_edge(2, 0);
-    // b.iter(|| vf2(&g1, &g2));
-    // g2 = Graph::new(2);
-    // g2.add_edge(0, 1);
-    // b.iter(|| vf2(&g1, &g2));
-    // g1 = Graph::new(7);
-    // for i in g1.vertices().skip(1) {
-    // for j in g1.vertices().take(i) {
-    // g1.add_edge(i, j);
-    // }
-    // }
-    // g2 = Graph::new(3);
-    // for i in g2.vertices().skip(1) {
-    // for j in g2.vertices().take(i) {
-    // g2.add_edge(j, i);
-    // }
-    // }
-    // b.iter(|| vf2(&g1, &g2));
-    //
-    // }
 }
