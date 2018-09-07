@@ -1,4 +1,4 @@
-//! Implementations of different graph invariants
+//! Module containing implementations of different graph invariants
 
 use super::Graph;
 use std::usize::MAX;
@@ -38,6 +38,7 @@ impl Distance {
     /// ```
     /// use graph::invariants::Distance;
     /// assert!(Distance::Val(6).get_val().is_some());
+    /// assert!(Distance::Inf.get_val().is_none());
     /// ```
     pub fn get_val(&self) -> Option<usize> {
         match *self {
@@ -46,12 +47,33 @@ impl Distance {
         }
     }
 
-    /// Returns true if the value is finite and false otherwise.
+    /// Returns `true` if the value is finite and `false` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use graph::invariants::Distance;
+    /// assert!(Distance::Val(42).is_finite());
+    /// assert!(!Distance::Inf.is_finite());
+    /// ```
     pub fn is_finite(&self) -> bool {
         match *self {
             Distance::Val(_) => true,
             Distance::Inf => false,
         }
+    }
+
+    /// Returns `true` if the value is infinite and `false` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use graph::invariants::Distance;
+    /// assert!(Distance::Inf.is_infinite());
+    /// assert!(!Distance::Val(42).is_infinite());
+    /// ```
+    pub fn is_infinite(&self) -> bool {
+        !self.is_finite()
     }
 }
 
@@ -112,8 +134,7 @@ impl ::std::cmp::Ord for Distance {
 }
 
 /// Implementation of the floyd-warshall algorithm.
-/// usize::MAX is used to represent infinity since the graph representation cannot have more than 11
-/// vertices.
+/// `usize::MAX` is used to represent infinity.
 ///
 /// # Examples
 ///
@@ -189,6 +210,31 @@ pub fn floyd_warshall(g: &Graph) -> Vec<Vec<Distance>> {
     matrix
 }
 
+/// Returns the length of the longest shortest path in the graph.
+/// This can also be defined as the maximum excentricity.
+///
+/// # Examples
+/// ```
+/// use graph::Graph;
+/// use graph::invariants::{Distance,diameter};
+///
+/// let mut g = Graph::new(5);
+/// assert!(diameter(&g).is_infinite());
+/// for i in g.vertices().skip(1) {
+///     g.add_edge(i-1,i);
+/// }
+/// let mut diam = diameter(&g);
+/// assert!(diam.is_finite());
+/// assert_eq!(diam.get_val().unwrap(),4);
+/// for i in g.vertices().skip(1) {
+///     for j in g.vertices().take(i) {
+///         g.add_edge(j,i);
+///     }
+/// }
+/// diam = diameter(&g);
+/// assert!(diam.is_finite());
+/// assert_eq!(diam.get_val().unwrap(),1);
+/// ```
 pub fn diameter(g: &Graph) -> Distance {
     if g.order() > 0 {
         let distances = floyd_warshall(&g);
@@ -217,7 +263,7 @@ fn dfs(g: &Graph, u: usize, visited: &mut Vec<bool>) -> Vec<usize> {
     comp
 }
 
-/// Returns all the shortests paths from start
+/// Returns all the shortests paths from `start`.
 ///
 ///  # Examples
 ///
@@ -322,7 +368,7 @@ fn construct_paths(pths: &[Vec<usize>], s: usize, e: usize) -> Vec<Vec<usize>> {
     }
 }
 
-///
+/// Returns the list of all elementary paths in g whose length is maximal.
 ///
 /// # Examples
 ///
@@ -333,8 +379,17 @@ fn construct_paths(pths: &[Vec<usize>], s: usize, e: usize) -> Vec<Vec<usize>> {
 ///
 /// let g = from_g6(&String::from("FiGoG")).unwrap();
 /// let r = diametral_paths(&g);
-/// println!("{:?}",r);
-/// panic!();
+/// let expected = vec![
+///     vec![0,1,2,5,6],
+///     vec![0,1,3,5,6],
+///     vec![6,5,2,1,0],
+///     vec![6,5,3,1,0]
+///     ];
+/// for (p1,p2) in r.iter().zip(expected.iter()) {
+///     for (n1,n2) in p1.iter().zip(p2.iter()) {
+///         assert_eq!(n1,n2);
+///     }
+/// }
 /// ```
 pub fn diametral_paths(g: &Graph) -> Vec<Vec<usize>> {
     let eccs = eccentricities(&g);
@@ -388,6 +443,20 @@ pub fn connected_components(g: &Graph) -> Vec<Vec<usize>> {
     comps
 }
 
+/// Returns `true` if the graph is connected and `false` otherwise.
+///
+/// # Examples
+///
+/// ```
+/// use graph::Graph;
+/// use graph::invariants::is_connected;
+/// let mut g = Graph::new(5);
+/// assert!(!is_connected(&g));
+/// for i in g.vertices().skip(1) {
+///     g.add_edge(i-1,i);
+/// }
+/// assert!(is_connected(&g));
+/// ```
 pub fn is_connected(g: &Graph) -> bool {
     connected_components(g).len() < 2
 }
@@ -657,6 +726,9 @@ pub fn num_pendant(g: &Graph) -> usize {
         .count()
 }
 
+/// Size of the biggest possible clique among all graphs with same order and size as the graph
+/// given in parameter.
+///
 /// # Examples
 /// ```
 /// use graph::Graph;
@@ -674,6 +746,8 @@ pub fn dnm(g: &Graph) -> usize {
     ((2f64 * n + 1f64 - (17f64 + 8f64 * (m - n)).sqrt()) / 2f64).floor() as usize
 }
 
+/// Computes the maximum degree in the graph.
+///
 /// # Examples
 /// ```
 /// use graph::Graph;
@@ -693,6 +767,8 @@ pub fn deg_max(g: &Graph) -> usize {
         .unwrap()
 }
 
+/// Computes the minimum degree in the graph.
+///
 /// # Examples
 /// ```
 /// use graph::Graph;
