@@ -6,7 +6,7 @@
 extern crate bit_vec;
 
 pub mod format;
-pub mod invariant;
+pub mod invariants;
 pub mod errors;
 pub mod nauty;
 #[macro_use]
