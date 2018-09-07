@@ -1,3 +1,5 @@
+//! Module containg methods to call the nauty library in order to compute the canonical form or the
+//! orbits of the vertices of a graph.
 extern crate libc;
 use self::libc::{uint32_t, uint8_t};
 use Graph;

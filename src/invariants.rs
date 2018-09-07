@@ -1,4 +1,4 @@
-//! Implementations of different graph invariants
+//! Module containing implementations of different graph invariants
 
 use super::Graph;
 use std::usize::MAX;
