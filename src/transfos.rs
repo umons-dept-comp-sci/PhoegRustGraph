@@ -1,7 +1,10 @@
+//! Module containing graph transformations.
+//! Each transformation uses the orbits of the homomorphism group to filter out symmetries.
 use std::collections::HashMap;
 use Graph;
 use nauty::orbits;
 
+/// Adds an edge.
 pub fn add_edge(g: &Graph) -> Vec<Graph> {
     transformation! (
         for g,
@@ -12,6 +15,7 @@ pub fn add_edge(g: &Graph) -> Vec<Graph> {
         )
 }
 
+/// Removes a vertex.
 pub fn remove_vertex(g: &Graph) -> Vec<Graph> {
     transformation! (
         for g,
@@ -21,6 +25,7 @@ pub fn remove_vertex(g: &Graph) -> Vec<Graph> {
         )
 }
 
+/// Removes an edge.
 pub fn remove_edge(g: &Graph) -> Vec<Graph> {
     transformation!(
         for g,
@@ -31,6 +36,13 @@ pub fn remove_edge(g: &Graph) -> Vec<Graph> {
         )
 }
 
+/// Given three distinct vertices a, b and c such that a and b are adjacent and c is not adjacent
+/// to a, a rotation on a, b and c consists in removing the edge ab and adding the edge ac.
+/// <pre>
+///      c        c
+///        ->   /
+/// a -- b    a   b
+/// </pre>
 pub fn rotation(g: &Graph) -> Vec<Graph> {
     transformation!(
         for g,
@@ -43,6 +55,13 @@ pub fn rotation(g: &Graph) -> Vec<Graph> {
         )
 }
 
+/// A slide is similar to a rotation except that the vertices b and c must be adjacent. This
+/// transformation does not disconnect the graph.
+/// <pre>
+///      c        c
+///      | ->   / |
+/// a -- b    a   b
+/// </pre>
 pub fn slide(g: &Graph) -> Vec<Graph> {
     transformation!(
         for g,
@@ -55,6 +74,13 @@ pub fn slide(g: &Graph) -> Vec<Graph> {
         )
 }
 
+/// Given four distinct vertices a, b, c and d such that a is adjacent to b and c is not adjacent
+/// to d, this transofrmation removes the edge ab and adds the edge cd.
+/// <pre>
+///  a -- b    a    b
+///         ->
+///  c    d    c -- d
+/// </pre>
 pub fn move_distinct(g: &Graph) -> Vec<Graph> {
     transformation! (
         for g,
@@ -68,6 +94,13 @@ pub fn move_distinct(g: &Graph) -> Vec<Graph> {
         )
 }
 
+/// Given two distinct edges ab and cd (with distinct extremities) such that there is no edge ac
+/// and bd, removes ab and cd and adds ac and bd.
+/// <pre>
+///  a -- b    a    b
+///         -> |    |
+///  c -- d    c    d
+/// </pre>
 pub fn two_opt(g: &Graph) -> Vec<Graph> {
     transformation! (
         for g,
@@ -83,6 +116,13 @@ pub fn two_opt(g: &Graph) -> Vec<Graph> {
         )
 }
 
+/// Given three vertices a, b and c with a adjacent to b and neither a or b adjacent to c, a detour
+/// removes the edge ab and adds the edges ac and cb.
+/// <pre>
+///      b         b
+///   /    ->      |
+/// a    c    a -- c
+/// </pre>
 pub fn detour(g: &Graph) -> Vec<Graph> {
     transformation!(
         for g,
@@ -96,6 +136,13 @@ pub fn detour(g: &Graph) -> Vec<Graph> {
         )
 }
 
+/// Given three vertices a, b and c with a not adjacent to b and both a and b adjacent to c, a
+/// shortcut removes the edges ac and cb and adds the edge ab.
+/// <pre>
+///      b         b
+///      | ->   /
+/// a -- c    a    c
+/// </pre>
 pub fn shortcut(g: &Graph) -> Vec<Graph> {
     transformation! (
         for g,
@@ -156,7 +203,7 @@ mod tests {
     #[test]
     fn test_rotation() {
         let mut expected = vec!["DD[", "DD[", "D`[", "D`[", "DqK", "D@{", "DBw", "DBw", "DBw",
-                                "DB["];
+        "DB["];
         test_transfo("DBw", super::rotation, &mut expected);
     }
 
