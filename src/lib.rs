@@ -18,8 +18,6 @@ use std::fmt;
 
 /// Structure representing a undirected simple graph as a binary number.
 ///
-/// Note : the maximum order is 11.
-///
 /// The format is the following :
 ///
 ///  * The first 4 bits encode the size.
@@ -27,11 +25,12 @@ use std::fmt;
 ///    The encoding is made from right to left to allow adding new vertices in constant time.
 ///
 /// For the graph C5 :
-///
+/// <pre>
 ///    0 1 0 1      0
 ///    1 0 1 0   -> 1 0       -> 1010 | 010 | 01 | 0 | 0101
 ///    0 1 0 1      0 1 0
 ///    1 0 1 0      1 0 1 0
+/// </pre>
 #[derive(Clone)]
 pub struct Graph {
     num_vertices: usize,
@@ -51,7 +50,7 @@ fn get_position(i: usize, j: usize) -> usize {
 }
 
 impl Graph {
-    /// Constructs a new graph with 0 edges and n nodes.
+    /// Constructs a new graph with 0 edges and n vertices.
     pub fn new(n: usize) -> Graph {
         Graph {
             num_vertices: n as usize,
@@ -60,7 +59,7 @@ impl Graph {
         }
     }
 
-    /// Returns the order of the graph (max 11)
+    /// Returns the order of the graph
     ///
     /// # Examples
     ///
@@ -69,7 +68,7 @@ impl Graph {
     /// assert!(g.order() == 0);
     /// for _ in 0..11
     /// {
-    ///     g.add_node();
+    ///     g.add_vertex();
     /// }
     /// assert!(g.order() == 11);
     /// ```
@@ -97,7 +96,7 @@ impl Graph {
         self.num_edges
     }
 
-    /// Adds a new node to the graph, increasing its order by one.
+    /// Adds a new vertex to the graph, increasing its order by one.
     /// Will return false if the graph had already an order of 11.
     ///
     /// # Examples
@@ -107,13 +106,56 @@ impl Graph {
     /// assert!(g.order() == 0);
     /// for i in 0..11
     /// {
-    ///     g.add_node();
+    ///     g.add_vertex();
     ///     assert!(g.order() == i+1);
     /// }
     /// ```
-    pub fn add_node(&mut self) {
+    pub fn add_vertex(&mut self) {
         self.num_vertices += 1;
         self.graph.grow(self.num_vertices, false);
+    }
+
+    // [TODO]: Add unit tests for this.
+    /// Removes the vertex i from the graph. The order if the vertices is not conserved.
+    /// The last vertex takes the place of the removed one.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut g = graph::Graph::new(7);
+    /// for i in g.vertices().skip(1) {
+    ///     g.add_edge(i-1,i);
+    /// }
+    /// g.remove_vertex(7);
+    /// assert_eq!(g.order(),7);
+    /// g.remove_vertex(6);
+    /// assert_eq!(g.order(),6);
+    /// g.remove_vertex(0);
+    /// assert_eq!(g.order(),5);
+    /// g.remove_vertex(3);
+    /// assert_eq!(g.order(),4);
+    /// ```
+    pub fn remove_vertex(&mut self, i: usize) {
+        if i < self.order() {
+            let last = self.order()-1;
+            if last != i
+            {
+                for n in self.vertices() {
+                    if n != i && n != last {
+                        if self.is_edge(last,n) {
+                            self.add_edge(i,n);
+                        }
+                        else
+                        {
+                            self.remove_edge(i,n)
+                        }
+                    }
+                }
+            }
+            self.num_vertices -= 1;
+            let n = self.num_vertices;
+            self.graph.truncate(n * (std::cmp::max(n, 1) - 1) / 2);
+        }
     }
 
     /// Checks weither the vertices i and j are adjacent.
@@ -181,65 +223,22 @@ impl Graph {
         }
     }
 
-    // [TODO]: Add unit tests for this.
-    /// Removes the vertex i from the graph. The order if the vertices is not conserved.
-    /// The last vertex takes the place of the removed one.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut g = graph::Graph::new(7);
-    /// for i in g.nodes_iter().skip(1) {
-    ///     g.add_edge(i-1,i);
-    /// }
-    /// g.remove_vertex(7);
-    /// assert_eq!(g.order(),7);
-    /// g.remove_vertex(6);
-    /// assert_eq!(g.order(),6);
-    /// g.remove_vertex(0);
-    /// assert_eq!(g.order(),5);
-    /// g.remove_vertex(3);
-    /// assert_eq!(g.order(),4);
-    /// ```
-    pub fn remove_vertex(&mut self, i: usize) {
-        if i < self.order() {
-            let last = self.order()-1;
-            if last != i
-            {
-                for n in self.nodes_iter() {
-                    if n != i && n != last {
-                        if self.is_edge(last,n) {
-                            self.add_edge(i,n);
-                        }
-                        else
-                        {
-                            self.remove_edge(i,n)
-                        }
-                    }
-                }
-            }
-            self.num_vertices -= 1;
-            let n = self.num_vertices;
-            self.graph.truncate(n * (std::cmp::max(n, 1) - 1) / 2);
-        }
-    }
-
-    /// Returns an iterator over the nodes of the graph.
+    /// Returns an iterator over the vertices of the graph.
     ///
     /// # Examples
     ///
     /// ```
     /// let g = graph::Graph::new(11);
     /// let mut i = 0;
-    /// for n in g.nodes_iter()
+    /// for n in g.vertices()
     /// {
     ///     assert!(n == i);
     ///     i += 1;
     /// }
     /// assert!(i == g.order());
     /// ```
-    pub fn nodes_iter(&self) -> NodeIterator {
-        NodeIterator::new(self.order())
+    pub fn vertices(&self) -> VertexIterator {
+        VertexIterator::new(self.order())
     }
 
     /// Returns an iterator over the edges of the graph.
@@ -253,14 +252,14 @@ impl Graph {
     ///     g.add_edge(i,i+1);
     /// }
     /// let mut i = 0;
-    /// for e in g.edges_iter()
+    /// for e in g.edges()
     /// {
     ///     assert!(e.0 == i+1 && e.1 == i);
     ///     i += 1;
     /// }
     /// assert!(i == g.size());
     /// ```
-    pub fn edges_iter(&self) -> EdgeIterator {
+    pub fn edges(&self) -> EdgeIterator {
         EdgeIterator::new(&self)
     }
 
@@ -276,14 +275,14 @@ impl Graph {
     ///     g.add_edge(7,*i);
     /// }
     /// let mut i = 0;
-    /// for u in g.neighbors_iter(7)
+    /// for u in g.neighbors(7)
     /// {
     ///     assert!(u == neighs[i]);
     ///     i += 1;
     /// }
     /// assert!(i == neighs.len());
     /// ```
-    pub fn neighbors_iter(&self, v: usize) -> NeighborIterator {
+    pub fn neighbors(&self, v: usize) -> NeighborIterator {
         NeighborIterator::new(v, &self)
     }
 }
@@ -300,18 +299,19 @@ impl fmt::Display for Graph {
     }
 }
 
-pub struct NodeIterator {
+/// Iterator over the vertices of the graph.
+pub struct VertexIterator {
     n: usize,
     max: usize,
 }
 
-impl NodeIterator {
-    fn new(max: usize) -> NodeIterator {
-        NodeIterator { n: 0, max }
+impl VertexIterator {
+    fn new(max: usize) -> VertexIterator {
+        VertexIterator { n: 0, max }
     }
 }
 
-impl Iterator for NodeIterator {
+impl Iterator for VertexIterator {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -324,6 +324,7 @@ impl Iterator for NodeIterator {
     }
 }
 
+/// Iterator over the vertices of the graph.
 pub struct EdgeIterator<'a> {
     u: usize,
     v: usize,
@@ -372,6 +373,9 @@ impl<'a> Iterator for EdgeIterator<'a> {
     }
 }
 
+/// Iterator over the adjacent vertices of a given vertex in the graph.
+///
+/// This iterator goes through every vertex but only returns neighbors.
 pub struct NeighborIterator<'a> {
     n: usize,
     u: usize,

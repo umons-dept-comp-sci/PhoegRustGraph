@@ -103,13 +103,13 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
         self.depth += 1;
         self.core_1[n] = m;
         self.core_2[m] = n;
-        for i in self.g1.nodes_iter() {
-            if (self.g1.is_edge(n, i) || i == n) && self.adj_1[i] == 0 {
+        for i in self.g1.neighbors(n).chain(Some(n).iter().cloned()) {
+            if self.adj_1[i] == 0 {
                 self.adj_1[i] = self.depth;
             }
         }
         let m_orbit = self.orbits[m];
-        for i in self.g2.nodes_iter() {
+        for i in self.g2.vertices() {
             if (self.g2.is_edge(m, i) || i == m) && self.adj_2[i] == 0 {
                 self.adj_2[i] = self.depth;
             }
@@ -127,12 +127,12 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
     fn remove_pair(&mut self, n: usize, m: usize) {
         self.core_1[n] = self.null;
         self.core_2[m] = self.null;
-        for i in self.g1.nodes_iter() {
+        for i in self.g1.vertices() {
             if self.adj_1[i] == self.depth {
                 self.adj_1[i] = 0;
             }
         }
-        for i in self.g2.nodes_iter() {
+        for i in self.g2.vertices() {
             if self.adj_2[i] == self.depth {
                 self.adj_2[i] = 0;
             }
@@ -146,7 +146,7 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
             return false;
         }
         for (n1, n2) in self.g1
-            .nodes_iter()
+            .vertices()
             .filter(|&x| self.core_1[x] != self.null)
             .map(|x| (x, self.core_1[x])) {
             let (e1, e2) = (self.g1.is_edge(n, n1), self.g2.is_edge(m, n2));
@@ -158,31 +158,27 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
         }
         // e num of edges out of core and adj, n num of edges out of core and in adj
         let (mut e1, mut n1, mut e2, mut n2) = (0, 0, 0, 0);
-        for i in self.g1.nodes_iter().filter(|&x| self.core_1[x] == self.null) {
-            if self.g1.is_edge(n, i) {
-                if self.adj_1[i] > 0 {
-                    n1 += 1;
-                } else {
-                    e1 += 1;
-                }
+        for i in self.g1.neighbors(n).filter(|&x| self.core_1[x] == self.null) {
+            if self.adj_1[i] > 0 {
+                n1 += 1;
+            } else {
+                e1 += 1;
             }
         }
         // [TODO]: Can we write this and avoid duplicated code ? adj_1 and adj_2 are not the same
         // type.
-        for i in self.g2.nodes_iter().filter(|&x| self.core_2[x] == self.null) {
-            if self.g2.is_edge(n, i) {
-                if self.adj_2[i] > 0 {
-                    n2 += 1;
-                } else {
-                    e2 += 1;
-                }
+        for i in self.g2.neighbors(m).filter(|&x| self.core_2[x] == self.null) {
+            if self.adj_2[i] > 0 {
+                n2 += 1;
+            } else {
+                e2 += 1;
             }
         }
         n2 <= n1 && e2 <= e1
     }
 
     fn compute_pairs(&self) -> Vec<(usize, usize)> {
-        self.compute_pairs_internal(&self.g1.nodes_iter().collect())
+        self.compute_pairs_internal(&self.g1.vertices().collect())
     }
 }
 
@@ -192,7 +188,7 @@ impl<'a> VF2DataImpl<'a> {
             .filter(|&&x| self.core_1[x] == self.null && self.adj_1[x] > 0)
             .cloned();
         let adj_min = self.g2
-            .nodes_iter()
+            .vertices()
             .filter(|&x| self.core_2[x] == self.null && self.adj_2[x] > 0)
             .min();
         let adj_iter: Vec<(usize, usize)> = adj_out.zip(adj_min.iter().cloned().cycle()).collect();
@@ -200,7 +196,7 @@ impl<'a> VF2DataImpl<'a> {
             adj_iter
         } else {
             let out = g1_nodes.iter().filter(|&&x| self.adj_1[x] == 0).cloned();
-            let min = self.g2.nodes_iter().filter(|&x| self.adj_2[x] == 0).min();
+            let min = self.g2.vertices().filter(|&x| self.adj_2[x] == 0).min();
             let out_iter = out.zip(min.iter().cloned().cycle()).collect();
             out_iter
         }
@@ -335,16 +331,16 @@ mod testing {
                        &mut vec![vec![0, 1], vec![1, 2], vec![1, 4], vec![2, 4]],
                        vf2_orb);
         g1 = Graph::new(9);
-        for i in g1.nodes_iter().skip(1).take(6) {
-            for j in g1.nodes_iter().take(i) {
+        for i in g1.vertices().skip(1).take(6) {
+            for j in g1.vertices().take(i) {
                 g1.add_edge(i, j);
             }
         }
         g1.add_edge(4, 7);
         g1.add_edge(6, 8);
         g2 = Graph::new(4);
-        for i in g2.nodes_iter().skip(1) {
-            for j in g2.nodes_iter().take(i) {
+        for i in g2.vertices().skip(1) {
+            for j in g2.vertices().take(i) {
                 g2.add_edge(j, i);
             }
         }
@@ -385,14 +381,14 @@ mod testing {
     // g2.add_edge(0, 1);
     // b.iter(|| vf2_orb(&g1, &g2));
     // g1 = Graph::new(7);
-    // for i in g1.nodes_iter().skip(1) {
-    // for j in g1.nodes_iter().take(i) {
+    // for i in g1.vertices().skip(1) {
+    // for j in g1.vertices().take(i) {
     // g1.add_edge(i, j);
     // }
     // }
     // g2 = Graph::new(4);
-    // for i in g2.nodes_iter().skip(1) {
-    // for j in g2.nodes_iter().take(i) {
+    // for i in g2.vertices().skip(1) {
+    // for j in g2.vertices().take(i) {
     // g2.add_edge(j, i);
     // }
     // }
@@ -418,14 +414,14 @@ mod testing {
     // g2.add_edge(0, 1);
     // b.iter(|| vf2(&g1, &g2));
     // g1 = Graph::new(7);
-    // for i in g1.nodes_iter().skip(1) {
-    // for j in g1.nodes_iter().take(i) {
+    // for i in g1.vertices().skip(1) {
+    // for j in g1.vertices().take(i) {
     // g1.add_edge(i, j);
     // }
     // }
     // g2 = Graph::new(3);
-    // for i in g2.nodes_iter().skip(1) {
-    // for j in g2.nodes_iter().take(i) {
+    // for i in g2.vertices().skip(1) {
+    // for j in g2.vertices().take(i) {
     // g2.add_edge(j, i);
     // }
     // }

@@ -21,17 +21,17 @@ fn length_g6(n: usize) -> usize {
 /// use graph::format;
 /// let mut g = Graph::new(0);
 /// assert!("?" == format::to_g6(&g));
-/// g.add_node();
+/// g.add_vertex();
 /// assert!("@" == format::to_g6(&g));
-/// g.add_node();
+/// g.add_vertex();
 /// assert!("A?" == format::to_g6(&g));
 /// g.add_edge(0,1);
 /// assert!("A_" == format::to_g6(&g));
 /// for _ in 0..9
 /// {
-///     g.add_node();
+///     g.add_vertex();
 /// }
-/// for u in g.nodes_iter().skip(1)
+/// for u in g.vertices().skip(1)
 /// {
 ///     g.add_edge(u,u-1);
 /// }
@@ -48,8 +48,8 @@ pub fn to_g6(graph: &Graph) -> String {
     } else {
         let mut l = 0;
         let mut r: u8 = 0;
-        for u in graph.nodes_iter().skip(1) {
-            for v in graph.nodes_iter().take_while(|x| *x != u) {
+        for u in graph.vertices().skip(1) {
+            for v in graph.vertices().take_while(|x| *x != u) {
                 if l == 6 {
                     res += &((r + 63) as char).to_string();
                     l = 0;
