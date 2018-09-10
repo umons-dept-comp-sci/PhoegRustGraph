@@ -1,8 +1,6 @@
 //#![feature(trace_macros)]
-//#![feature(test)]
 //! Crate using binary format to represent small graphs (order <= 11)
 
-//extern crate test;
 extern crate bit_vec;
 
 pub mod format;

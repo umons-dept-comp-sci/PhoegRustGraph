@@ -48,24 +48,7 @@ fn vf2<D>(data: &mut D) -> Vec<Vec<usize>>
     where D: VF2Data
 {
     let mut res = Vec::new();
-    if data.is_full_match() {
-        res.push(data.get_match());
-    } else {
-        let p = data.compute_pairs();
-        for (n, m) in p {
-            if data.filter(n, m) {
-                data.add_pair(n, m);
-                res.extend(vf2(data));
-                data.remove_pair(n, m);
-            }
-        }
-    }
-    res
-}
-
-fn vf2<D>(data: &mut D) -> Vec<Vec<usize>> {
-    let mut res = Vec::new();
-    let mut queue = Vec::new();//USE VECDEQUE
+    let mut queue = Vec::new();
     let p = data.compute_pairs();
     for (n, m) in p {
         if data.filter(n, m) {
@@ -73,7 +56,7 @@ fn vf2<D>(data: &mut D) -> Vec<Vec<usize>> {
         }
     }
     while !queue.is_empty() {
-        let (n, m, add) = queue.pop();
+        let (n, m, add) = queue.pop().unwrap();
         if !add {
             data.remove_pair(n, m);
         } else {
@@ -274,7 +257,7 @@ impl<'a> VF2Data for VF2DataOrb<'a> {
 }
 
 /// Returns every non-isomorphic occurence of the graph `g2` in the graph `g1`.
-pub fn subgraph_orbits(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
+pub fn subgraphs_orbits(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
     assert!(g1.order() >= g2.order());
     let null = g1.order() + 1;
     let mut fixed = Vec::new();
@@ -327,7 +310,7 @@ mod testing {
             println!("{:?}", t);
         }
         println!("-----------------");
-        let matches = subgraph_orbits(&g1, &g2);
+        let matches = subgraphs_orbits(&g1, &g2);
         for t in matches {
             println!("{:?}", t);
         }
@@ -348,7 +331,7 @@ mod testing {
         g2.add_edge(1, 2);
         g2.add_edge(2, 0);
         apply_test_vf2(&g1, &g2, &mut vec![vec![1, 2, 4], vec![1, 3, 4]], subgraphs);
-        apply_test_vf2(&g1, &g2, &mut vec![vec![1, 2, 4]], subgraph_orbits);
+        apply_test_vf2(&g1, &g2, &mut vec![vec![1, 2, 4]], subgraphs_orbits);
         g2 = Graph::new(2);
         g2.add_edge(0, 1);
         apply_test_vf2(&g1,
@@ -359,7 +342,7 @@ mod testing {
         apply_test_vf2(&g1,
                        &g2,
                        &mut vec![vec![0, 1], vec![1, 2], vec![1, 4], vec![2, 4]],
-                       subgraph_orbits);
+                       subgraphs_orbits);
         g1 = Graph::new(9);
         for i in g1.vertices().skip(1).take(6) {
             for j in g1.vertices().take(i) {
@@ -376,20 +359,20 @@ mod testing {
         }
         apply_test_vf2(&g1,
                        &g2,
-                       &mut vec![vec![0, 1, 2, 3],
-                                 vec![0, 1, 2, 4],
-                                 vec![0, 1, 2, 5],
-                                 vec![0, 1, 2, 6],
-                                 vec![0, 1, 3, 4],
-                                 vec![0, 1, 3, 5],
-                                 vec![0, 1, 3, 6],
-                                 vec![0, 1, 4, 5],
-                                 vec![0, 1, 4, 6],
+                       &mut vec![vec![3, 4, 5, 6],
+                                 vec![2, 4, 5, 6],
+                                 vec![1, 4, 5, 6],
+                                 vec![0, 4, 5, 6],
+                                 vec![2, 3, 5, 6],
+                                 vec![1, 3, 5, 6],
+                                 vec![0, 3, 5, 6],
+                                 vec![1, 2, 5, 6],
+                                 vec![0, 2, 5, 6],
                                  vec![0, 1, 5, 6]],
                        subgraphs);
         apply_test_vf2(&g1,
                        &g2,
                        &mut vec![vec![0, 1, 2, 3], vec![0, 1, 2, 4], vec![0, 1, 4, 6]],
-                       subgraph_orbits);
+                       subgraphs_orbits);
     }
 }
