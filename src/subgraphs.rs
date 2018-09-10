@@ -20,12 +20,12 @@ struct VF2DataImpl<'a> {
     null: usize,
     num_out: usize,
     // Set of vertices already mapped.
-    core_1: &'a mut Vec<usize>,
-    core_2: &'a mut Vec<usize>,
-    adj_1: &'a mut Vec<usize>,
-    adj_2: &'a mut Vec<usize>,
-    orbits: &'a Vec<usize>,
-    taboo: &'a mut HashMap<usize, HashSet<usize>>,
+    core_1: Vec<usize>,
+    core_2: Vec<usize>,
+    adj_1: Vec<usize>,
+    adj_2: Vec<usize>,
+    orbits: Vec<usize>,
+    taboo: HashMap<usize, HashSet<usize>>,
 }
 
 impl<'a> fmt::Display for VF2DataImpl<'a> {
@@ -44,60 +44,12 @@ impl<'a> fmt::Display for VF2DataImpl<'a> {
     }
 }
 
-fn vf2<D>(data: &mut D) -> Vec<Vec<usize>>
-    where D: VF2Data
-{
-    let mut res = Vec::new();
-    let mut queue = Vec::new();
-    let p = data.compute_pairs();
-    for (n, m) in p {
-        if data.filter(n, m) {
-            queue.push((n, m, true));
-        }
-    }
-    while !queue.is_empty() {
-        let (n, m, add) = queue.pop().unwrap();
-        if !add {
-            data.remove_pair(n, m);
-        } else {
-            queue.push((n, m, false));
-            data.add_pair(n, m);
-            if data.is_full_match() {
-                res.push(data.get_match());
-            } else {
-                let p = data.compute_pairs();
-                for (n, m) in p {
-                    if data.filter(n, m) {
-                        queue.push((n, m, true));
-                    }
-                }
-            }
-        }
-    }
-    res
-}
-
 /// Returns every occurence of the graph `g2` in the graph `g1` up to permutations among the orbits
 /// of `g2`.
 ///
 /// The graph `g2` must have at most the same order as `g1`.
-pub fn subgraphs(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
-    assert!(g1.order() >= g2.order());
-    let null = g1.order() + 1;
-    let mut data = VF2DataImpl {
-        g1: g1,
-        g2: g2,
-        depth: 1,
-        null: null,
-        num_out: g2.order(),
-        core_1: &mut vec![null; g1.order()],
-        core_2: &mut vec![null; g2.order()],
-        adj_1: &mut vec![0; g1.order()],
-        adj_2: &mut vec![0; g2.order()],
-        orbits: &nauty::canon_graph_fixed(&g2, &[]).2,
-        taboo: &mut HashMap::new(),
-    };
-    vf2(&mut data)
+pub fn subgraphs<'a>(g1: &'a Graph, g2: &'a Graph) -> impl Iterator<Item = Vec<usize>> + 'a {
+    SubgraphIter::without_orbits(g1, g2)
 }
 
 impl<'a> VF2Data for VF2DataImpl<'a> {
@@ -196,6 +148,23 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
 }
 
 impl<'a> VF2DataImpl<'a> {
+    fn new(g1: &'a Graph, g2: &'a Graph) -> VF2DataImpl<'a> {
+        assert!(g1.order() >= g2.order());
+        let null = g1.order() + 1;
+        VF2DataImpl {
+            g1: g1,
+            g2: g2,
+            depth: 1,
+            null: null,
+            num_out: g2.order(),
+            core_1: vec![null; g1.order()],
+            core_2: vec![null; g2.order()],
+            adj_1: vec![0; g1.order()],
+            adj_2: vec![0; g2.order()],
+            orbits: nauty::canon_graph_fixed(&g2, &[]).2,
+            taboo: HashMap::new(),
+        }
+    }
     fn compute_pairs_internal(&self, g1_nodes: &Vec<usize>) -> Vec<(usize, usize)> {
         let adj_out = g1_nodes.iter()
             .filter(|&&x| self.core_1[x] == self.null && self.adj_1[x] > 0)
@@ -217,33 +186,24 @@ impl<'a> VF2DataImpl<'a> {
 }
 
 struct VF2DataOrb<'a> {
-    data: &'a mut VF2DataImpl<'a>,
-    fixed: &'a mut Vec<Vec<u32>>,
+    data: VF2DataImpl<'a>,
+    fixed: Vec<Vec<u32>>,
 }
 
 /// Returns every non-isomorphic occurence of the graph `g2` in the graph `g1`.
-pub fn subgraphs_orbits(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
-    assert!(g1.order() >= g2.order());
-    let null = g1.order() + 1;
-    let mut fixed = Vec::new();
-    let mut data = VF2DataImpl {
-        g1: g1,
-        g2: g2,
-        depth: 1,
-        null: null,
-        num_out: g2.order(),
-        core_1: &mut vec![null; g1.order()],
-        core_2: &mut vec![null; g2.order()],
-        adj_1: &mut vec![0; g1.order()],
-        adj_2: &mut vec![0; g2.order()],
-        orbits: &nauty::canon_graph_fixed(&g2, &[]).2,
-        taboo: &mut HashMap::new(),
-    };
-    let mut data_orb = VF2DataOrb {
-        fixed: &mut fixed,
-        data: &mut data,
-    };
-    vf2(&mut data_orb)
+pub fn subgraphs_orbits<'a>(g1: &'a Graph, g2: &'a Graph) -> impl Iterator<Item = Vec<usize>> + 'a {
+    SubgraphIter::new(g1, g2)
+}
+
+impl<'a> VF2DataOrb<'a> {
+    fn new(g1: &'a Graph, g2: &'a Graph) -> VF2DataOrb<'a> {
+        let data: VF2DataImpl<'a> = VF2DataImpl::new(g1, g2);
+        let fixed = Vec::new();
+        VF2DataOrb {
+            data: data,
+            fixed: fixed,
+        }
+    }
 }
 
 impl<'a> fmt::Display for VF2DataOrb<'a> {
@@ -281,14 +241,85 @@ impl<'a> VF2Data for VF2DataOrb<'a> {
     }
 }
 
+struct SubgraphIter<D>
+    where D: VF2Data
+{
+    data: D,
+    queue: Vec<(usize, usize, bool)>,
+}
+
+impl<'a> SubgraphIter<VF2DataImpl<'a>> {
+    fn without_orbits(g1: &'a Graph, g2: &'a Graph) -> SubgraphIter<VF2DataImpl<'a>> {
+        let data: VF2DataImpl<'a> = VF2DataImpl::new(g1, g2);
+        SubgraphIter::init(data)
+    }
+}
+
+impl<'a> SubgraphIter<VF2DataOrb<'a>> {
+    fn new(g1: &'a Graph, g2: &'a Graph) -> SubgraphIter<VF2DataOrb<'a>> {
+        let data: VF2DataOrb<'a> = VF2DataOrb::new(g1, g2);
+        SubgraphIter::init(data)
+    }
+}
+
+impl<'a, D> SubgraphIter<D>
+    where D: VF2Data
+{
+    fn init(data: D) -> SubgraphIter<D> {
+        let mut iter = SubgraphIter {
+            data: data,
+            queue: Vec::new(),
+        };
+        let p = iter.data.compute_pairs();
+        for (n, m) in p {
+            if iter.data.filter(n, m) {
+                iter.queue.push((n, m, true));
+            }
+        }
+        iter
+    }
+}
+
+impl<'a, D> Iterator for SubgraphIter<D>
+    where D: VF2Data
+{
+    type Item = Vec<usize>;
+
+    fn next(&mut self) -> Option<Vec<usize>> {
+        let mut found = false;
+        let mut res = None;
+        while !found && !self.queue.is_empty() {
+            let (n, m, add) = self.queue.pop().unwrap();
+            if !add {
+                self.data.remove_pair(n, m);
+            } else {
+                self.queue.push((n, m, false));
+                self.data.add_pair(n, m);
+                if self.data.is_full_match() {
+                    found = true;
+                    res = Some(self.data.get_match());
+                } else {
+                    let p = self.data.compute_pairs();
+                    for (n, m) in p {
+                        if self.data.filter(n, m) {
+                            self.queue.push((n, m, true));
+                        }
+                    }
+                }
+            }
+        }
+        res
+    }
+}
+
 #[cfg(test)]
 mod testing {
     use super::*;
 
-    fn apply_test_vf2<VF2>(g1: &Graph, g2: &Graph, matches: &mut Vec<Vec<usize>>, vf2: VF2)
-        where VF2: Fn(&Graph, &Graph) -> Vec<Vec<usize>>
+    fn apply_test_vf2<VF2>(matches: &mut Vec<Vec<usize>>, vf2: VF2)
+        where VF2: Iterator<Item = Vec<usize>>
     {
-        let mut res = vf2(g1, g2);
+        let mut res: Vec<Vec<usize>> = vf2.collect();
         assert_eq!(res.len(), matches.len());
         matches.iter_mut().for_each(|x| x.sort());
         matches.sort();
@@ -330,19 +361,15 @@ mod testing {
         g2.add_edge(0, 1);
         g2.add_edge(1, 2);
         g2.add_edge(2, 0);
-        apply_test_vf2(&g1, &g2, &mut vec![vec![1, 2, 4], vec![1, 3, 4]], subgraphs);
-        apply_test_vf2(&g1, &g2, &mut vec![vec![1, 2, 4]], subgraphs_orbits);
+        apply_test_vf2(&mut vec![vec![1, 2, 4], vec![1, 3, 4]], subgraphs(&g1, &g2));
+        apply_test_vf2(&mut vec![vec![1, 2, 4]], subgraphs_orbits(&g1, &g2));
         g2 = Graph::new(2);
         g2.add_edge(0, 1);
-        apply_test_vf2(&g1,
-                       &g2,
-                       &mut vec![vec![0, 1], vec![1, 2], vec![1, 3], vec![1, 4], vec![2, 4],
+        apply_test_vf2(&mut vec![vec![0, 1], vec![1, 2], vec![1, 3], vec![1, 4], vec![2, 4],
                                  vec![3, 4]],
-                       subgraphs);
-        apply_test_vf2(&g1,
-                       &g2,
-                       &mut vec![vec![0, 1], vec![1, 2], vec![1, 4], vec![2, 4]],
-                       subgraphs_orbits);
+                       subgraphs(&g1, &g2));
+        apply_test_vf2(&mut vec![vec![0, 1], vec![1, 2], vec![1, 4], vec![2, 4]],
+                       subgraphs_orbits(&g1, &g2));
         g1 = Graph::new(9);
         for i in g1.vertices().skip(1).take(6) {
             for j in g1.vertices().take(i) {
@@ -357,9 +384,7 @@ mod testing {
                 g2.add_edge(j, i);
             }
         }
-        apply_test_vf2(&g1,
-                       &g2,
-                       &mut vec![vec![3, 4, 5, 6],
+        apply_test_vf2(&mut vec![vec![3, 4, 5, 6],
                                  vec![2, 4, 5, 6],
                                  vec![1, 4, 5, 6],
                                  vec![0, 4, 5, 6],
@@ -369,10 +394,8 @@ mod testing {
                                  vec![1, 2, 5, 6],
                                  vec![0, 2, 5, 6],
                                  vec![0, 1, 5, 6]],
-                       subgraphs);
-        apply_test_vf2(&g1,
-                       &g2,
-                       &mut vec![vec![0, 1, 2, 3], vec![0, 1, 2, 4], vec![0, 1, 4, 6]],
-                       subgraphs_orbits);
+                       subgraphs(&g1, &g2));
+        apply_test_vf2(&mut vec![vec![0, 1, 2, 3], vec![0, 1, 2, 4], vec![0, 1, 4, 6]],
+                       subgraphs_orbits(&g1, &g2));
     }
 }
