@@ -63,6 +63,37 @@ fn vf2<D>(data: &mut D) -> Vec<Vec<usize>>
     res
 }
 
+fn vf2<D>(data: &mut D) -> Vec<Vec<usize>> {
+    let mut res = Vec::new();
+    let mut queue = Vec::new();//USE VECDEQUE
+    let p = data.compute_pairs();
+    for (n, m) in p {
+        if data.filter(n, m) {
+            queue.push((n, m, true));
+        }
+    }
+    while !queue.is_empty() {
+        let (n, m, add) = queue.pop();
+        if !add {
+            data.remove_pair(n, m);
+        } else {
+            queue.push((n, m, false));
+            data.add_pair(n, m);
+            if data.is_full_match() {
+                res.push(data.get_match());
+            } else {
+                let p = data.compute_pairs();
+                for (n, m) in p {
+                    if data.filter(n, m) {
+                        queue.push((n, m, true));
+                    }
+                }
+            }
+        }
+    }
+    res
+}
+
 /// Returns every occurence of the graph `g2` in the graph `g1` up to permutations among the orbits
 /// of `g2`.
 ///
