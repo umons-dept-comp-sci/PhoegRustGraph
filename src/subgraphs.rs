@@ -221,6 +221,31 @@ struct VF2DataOrb<'a> {
     fixed: &'a mut Vec<Vec<u32>>,
 }
 
+/// Returns every non-isomorphic occurence of the graph `g2` in the graph `g1`.
+pub fn subgraphs_orbits(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
+    assert!(g1.order() >= g2.order());
+    let null = g1.order() + 1;
+    let mut fixed = Vec::new();
+    let mut data = VF2DataImpl {
+        g1: g1,
+        g2: g2,
+        depth: 1,
+        null: null,
+        num_out: g2.order(),
+        core_1: &mut vec![null; g1.order()],
+        core_2: &mut vec![null; g2.order()],
+        adj_1: &mut vec![0; g1.order()],
+        adj_2: &mut vec![0; g2.order()],
+        orbits: &nauty::canon_graph_fixed(&g2, &[]).2,
+        taboo: &mut HashMap::new(),
+    };
+    let mut data_orb = VF2DataOrb {
+        fixed: &mut fixed,
+        data: &mut data,
+    };
+    vf2(&mut data_orb)
+}
+
 impl<'a> fmt::Display for VF2DataOrb<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.data)?;
@@ -254,31 +279,6 @@ impl<'a> VF2Data for VF2DataOrb<'a> {
     fn compute_pairs(&self) -> Vec<(usize, usize)> {
         self.data.compute_pairs_internal(&nauty::orbits(self.data.g1, self.fixed.as_slice()))
     }
-}
-
-/// Returns every non-isomorphic occurence of the graph `g2` in the graph `g1`.
-pub fn subgraphs_orbits(g1: &Graph, g2: &Graph) -> Vec<Vec<usize>> {
-    assert!(g1.order() >= g2.order());
-    let null = g1.order() + 1;
-    let mut fixed = Vec::new();
-    let mut data = VF2DataImpl {
-        g1: g1,
-        g2: g2,
-        depth: 1,
-        null: null,
-        num_out: g2.order(),
-        core_1: &mut vec![null; g1.order()],
-        core_2: &mut vec![null; g2.order()],
-        adj_1: &mut vec![0; g1.order()],
-        adj_2: &mut vec![0; g2.order()],
-        orbits: &nauty::canon_graph_fixed(&g2, &[]).2,
-        taboo: &mut HashMap::new(),
-    };
-    let mut data_orb = VF2DataOrb {
-        fixed: &mut fixed,
-        data: &mut data,
-    };
-    vf2(&mut data_orb)
 }
 
 #[cfg(test)]
