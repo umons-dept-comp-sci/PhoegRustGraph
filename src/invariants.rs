@@ -1,5 +1,6 @@
 //! Module containing implementations of different graph invariants
 
+use super::GraphTrait;
 use super::Graph;
 use std::usize::MAX;
 use std::f64;
@@ -11,7 +12,7 @@ use std::collections::VecDeque;
 /// # Examples
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::Distance;
 /// let a = Distance::Val(1);
 /// let b = Distance::Val(2);
@@ -140,7 +141,7 @@ impl ::std::cmp::Ord for Distance {
 ///
 /// ```
 /// use std::usize::MAX;
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::floyd_warshall;
 /// use graph::invariants::Distance::{Val,Inf};
 ///
@@ -215,7 +216,7 @@ pub fn floyd_warshall(g: &Graph) -> Vec<Vec<Distance>> {
 ///
 /// # Examples
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::{Distance,diameter};
 ///
 /// let mut g = Graph::new(5);
@@ -268,7 +269,7 @@ fn dfs(g: &Graph, u: usize, visited: &mut Vec<bool>) -> Vec<usize> {
 ///  # Examples
 ///
 ///  ```
-///  use graph::Graph;
+///  use graph::{Graph,GraphTrait};
 ///  use graph::invariants::{bfs, Distance};
 ///  use graph::format::from_g6;
 ///
@@ -332,7 +333,7 @@ pub fn bfs(g: &Graph, start: usize) -> (Vec<Distance>, Vec<Vec<usize>>) {
 /// # Examples
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::{eccentricities, Distance};
 /// use graph::format::from_g6;
 ///
@@ -373,7 +374,7 @@ fn construct_paths(pths: &[Vec<usize>], s: usize, e: usize) -> Vec<Vec<usize>> {
 /// # Examples
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::{diametral_paths, Distance};
 /// use graph::format::from_g6;
 ///
@@ -412,7 +413,7 @@ pub fn diametral_paths(g: &Graph) -> Vec<Vec<usize>> {
 /// # Examples
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::connected_components;
 /// let mut g = Graph::new(0);
 /// assert!(connected_components(&g).len() == 0);
@@ -448,7 +449,7 @@ pub fn connected_components(g: &Graph) -> Vec<Vec<usize>> {
 /// # Examples
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::is_connected;
 /// let mut g = Graph::new(5);
 /// assert!(!is_connected(&g));
@@ -483,7 +484,7 @@ fn combine_paths(p1: &[Vec<usize>], p2: &[Vec<usize>]) -> Vec<Vec<usize>> {
 /// # Examples
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::shortests_paths;
 /// let mut g = Graph::new(0);
 /// for _ in 0..11
@@ -532,7 +533,7 @@ pub fn shortests_paths(g: &Graph) -> Vec<Vec<Vec<Vec<usize>>>> {
 /// # Examples
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::avecc;
 /// let mut g = Graph::new(5);
 /// for i in 0..5 {
@@ -560,7 +561,7 @@ pub fn avecc(g: &Graph) -> f64 {
 /// # Examples
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::avdist;
 /// let mut g = Graph::new(5);
 /// for i in 0..5 {
@@ -591,7 +592,7 @@ pub fn avdist(g: &Graph) -> f64 {
 /// # Examples
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::minus_avecc_avdist;
 /// let mut g = Graph::new(5);
 /// for i in 0..3
@@ -630,7 +631,7 @@ pub fn minus_avecc_avdist(g: &Graph) -> f64 {
 ///
 /// # Examples
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::eci;
 /// let mut g = Graph::new(5);
 /// for i in 0..4
@@ -672,7 +673,7 @@ pub fn eci(g: &Graph) -> Result<usize, DisconnectedGraph> {
 ///
 /// # Examples
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::num_dom;
 /// let mut g = Graph::new(5);
 /// for i in 0..4
@@ -704,7 +705,7 @@ pub fn num_dom(g: &Graph) -> usize {
 ///
 /// # Examples
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::num_pendant;
 /// let mut g = Graph::new(5);
 /// for i in 1..5
@@ -731,7 +732,7 @@ pub fn num_pendant(g: &Graph) -> usize {
 ///
 /// # Examples
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::dnm;
 /// let mut g = Graph::new(5);
 /// for i in 1..5
@@ -750,7 +751,7 @@ pub fn dnm(g: &Graph) -> usize {
 ///
 /// # Examples
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::deg_max;
 /// let mut g = Graph::new(5);
 /// for i in 1..5
@@ -771,7 +772,7 @@ pub fn deg_max(g: &Graph) -> usize {
 ///
 /// # Examples
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::deg_min;
 /// let mut g = Graph::new(5);
 /// for i in 1..5
@@ -793,7 +794,7 @@ pub fn deg_min(g: &Graph) -> usize {
 ///
 /// # Examples
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::invariants::irregularity;
 /// use graph::format::from_g6;
 ///

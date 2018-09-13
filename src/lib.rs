@@ -1,5 +1,5 @@
 //#![feature(trace_macros)]
-//! Crate using binary format to represent small graphs (order <= 11)
+//#Crate using binary format to represent small graphs (order <= 11)
 
 extern crate bit_vec;
 
@@ -13,6 +13,223 @@ pub mod transfos;
 pub mod subgraphs;
 
 use std::fmt;
+use std::ops::Range;
+
+pub trait GraphTrait<'a> {
+    /// A node in the graph
+    type Vertex;
+    /// An edge in the graph
+    type Edge;
+
+    /// An iterator over the vertices
+    type Vertices: Iterator<Item = Self::Vertex>;
+
+    /// An iterator over the edges
+    type Edges: Iterator<Item = Self::Edge>;
+
+    /// An iterator over the neighbors of a vertex
+    type Neighbors: Iterator<Item = Self::Vertex>;
+
+    /// Returns the order of the graph
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use graph::GraphTrait;
+    /// let mut g = graph::Graph::new(0);
+    /// assert!(g.order() == 0);
+    /// for _ in 0..11
+    /// {
+    ///     g.add_vertex();
+    /// }
+    /// assert!(g.order() == 11);
+    /// ```
+    fn order(&self) -> usize;
+
+    /// Returns the size of the graph
+    ///
+    /// #Examples
+    ///
+    /// ```
+    /// use graph::GraphTrait;
+    /// let mut g = graph::Graph::new(11);
+    /// assert!(g.size() == 0);
+    /// for i in 1..11
+    /// {
+    ///     for j in 0..i
+    ///     {
+    ///         g.add_edge(i,j);
+    ///     }
+    /// }
+    /// assert!(g.size() == 11*10/2);
+    /// ```
+    fn size(&self) -> usize;
+
+    /// Returns `true` if `x` is the index of a vertex.
+    ///
+    /// For a graph of order n, the indices should be between 0 and n-1.
+    fn is_vertex(&self, x: usize) -> bool;
+
+    /// Returns the `x`th vertex in the graph and `None` if there is no such vertex.
+    ///
+    /// For a graph of order n, the indices should be between 0 and n-1.
+    fn get_vertex(&self, x: usize) -> Option<Self::Vertex>;
+
+    /// Adds a new vertex to the graph, increasing its order by one.
+    /// Will return false if the graph had already an order of 11.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use graph::GraphTrait;
+    /// let mut g = graph::Graph::new(0);
+    /// assert!(g.order() == 0);
+    /// for i in 0..11
+    /// {
+    ///     g.add_vertex();
+    ///     assert!(g.order() == i+1);
+    /// }
+    /// ```
+    fn add_vertex(&mut self);
+
+    /// Removes the vertex i from the graph. The order if the vertices is not conserved.
+    /// The last vertex takes the place of the removed one.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use graph::GraphTrait;
+    /// let mut g = graph::Graph::new(7);
+    /// for i in g.vertices().skip(1) {
+    ///     g.add_edge(i-1,i);
+    /// }
+    /// g.remove_vertex(7);
+    /// assert_eq!(g.order(),7);
+    /// g.remove_vertex(6);
+    /// assert_eq!(g.order(),6);
+    /// g.remove_vertex(0);
+    /// assert_eq!(g.order(),5);
+    /// g.remove_vertex(3);
+    /// assert_eq!(g.order(),4);
+    /// ```
+    fn remove_vertex(&mut self, i: Self::Vertex);
+
+    /// Checks weither the vertices i and j are adjacent.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use graph::GraphTrait;
+    /// let mut g = graph::Graph::new(11);
+    /// for i in 0..10
+    /// {
+    ///     g.add_edge(i,i+1);
+    ///     assert!(g.is_edge(i,i+1));
+    /// }
+    /// assert!(!g.is_edge(10,0));
+    /// ```
+    fn is_edge(&self, i: usize, j: usize) -> bool;
+
+    /// Returns the edge between the ith and jth vertices and `None` if they are not adjacent or if
+    /// the do not exists.
+    fn get_edge(&self, i: usize, j: usize) -> Option<Self::Edge>;
+
+    /// Adds an edge between the vertices i and j.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use graph::GraphTrait;
+    /// let mut g = graph::Graph::new(11);
+    /// for i in 0..10
+    /// {
+    ///     g.add_edge(i,i+1);
+    ///     assert!(g.is_edge(i,i+1));
+    ///     assert!(g.size() == i+1);
+    /// }
+    /// ```
+    fn add_edge(&mut self, i: usize, j: usize);
+
+    /// Removes the edge between the vertices i and j.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use graph::GraphTrait;
+    /// let mut g = graph::Graph::new(11);
+    /// for i in 0..10
+    /// {
+    ///     g.add_edge(i,i+1);
+    /// }
+    /// for i in 0..10
+    /// {
+    ///     g.remove_edge(i,i+1);
+    ///     assert!(!g.is_edge(i,i+1));
+    ///     assert!(g.size() == 10-i-1);
+    /// }
+    /// ```
+    fn remove_edge(&mut self, i: usize, j: usize);
+
+    /// Returns an iterator over the vertices of the graph.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use graph::GraphTrait;
+    /// let g = graph::Graph::new(11);
+    /// let mut i = 0;
+    /// for n in g.vertices()
+    /// {
+    ///     assert!(n == i);
+    ///     i += 1;
+    /// }
+    /// assert!(i == g.order());
+    /// ```
+    fn vertices(&self) -> Self::Vertices;
+
+    /// Returns an iterator over the edges of the graph.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use graph::GraphTrait;
+    /// let mut g = graph::Graph::new(11);
+    /// for i in 0..10
+    /// {
+    ///     g.add_edge(i,i+1);
+    /// }
+    /// let mut i = 0;
+    /// for e in g.edges()
+    /// {
+    ///     assert!(e.0 == i+1 && e.1 == i);
+    ///     i += 1;
+    /// }
+    /// assert!(i == g.size());
+    /// ```
+    fn edges(&'a self) -> Self::Edges;
+
+    /// Returns an iterator over the neighbors of the vertx v in the graph.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use graph::GraphTrait;
+    /// let mut g = graph::Graph::new(11);
+    /// let neighs = vec![2,6,8,9];
+    /// for i in neighs.iter()
+    /// {
+    ///     g.add_edge(7,*i);
+    /// }
+    /// let mut i = 0;
+    /// for u in g.neighbors(7)
+    /// {
+    ///     assert!(u == neighs[i]);
+    ///     i += 1;
+    /// }
+    /// assert!(i == neighs.len());
+    /// ```
+    fn neighbors(&self, v: usize) -> <Graph as GraphTrait>::Neighbors;
+}
 
 /// Structure representing a undirected simple graph as a binary number.
 ///
@@ -56,96 +273,47 @@ impl Graph {
             graph: bit_vec::BitVec::from_elem(n * (std::cmp::max(n, 1) - 1) / 2, false),
         }
     }
+}
 
-    /// Returns the order of the graph
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut g = graph::Graph::new(0);
-    /// assert!(g.order() == 0);
-    /// for _ in 0..11
-    /// {
-    ///     g.add_vertex();
-    /// }
-    /// assert!(g.order() == 11);
-    /// ```
-    pub fn order(&self) -> usize {
+impl<'a> GraphTrait<'a> for Graph {
+    type Vertex = usize;
+    type Edge = (usize, usize);
+    type Vertices = Range<Self::Vertex>;
+    type Edges = EdgeIterator<'a, Self>;
+    type Neighbors = NeighborIterator<'a, Self>;
+
+    fn order(&self) -> usize {
         self.num_vertices
     }
 
-    /// Returns the size of the graph
-    ///
-    /// #Examples
-    ///
-    /// ```
-    /// let mut g = graph::Graph::new(11);
-    /// assert!(g.size() == 0);
-    /// for i in 1..11
-    /// {
-    ///     for j in 0..i
-    ///     {
-    ///         g.add_edge(i,j);
-    ///     }
-    /// }
-    /// assert!(g.size() == 11*10/2);
-    /// ```
-    pub fn size(&self) -> usize {
+    fn size(&self) -> usize {
         self.num_edges
     }
 
-    /// Adds a new vertex to the graph, increasing its order by one.
-    /// Will return false if the graph had already an order of 11.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut g = graph::Graph::new(0);
-    /// assert!(g.order() == 0);
-    /// for i in 0..11
-    /// {
-    ///     g.add_vertex();
-    ///     assert!(g.order() == i+1);
-    /// }
-    /// ```
-    pub fn add_vertex(&mut self) {
+    fn is_vertex(&self, n: usize) -> bool {
+        self.get_vertex(n).is_some()
+    }
+
+    fn get_vertex(&self, n: usize) -> Option<Self::Vertex> {
+        if n < self.order() { Some(n) } else { None }
+    }
+
+    fn add_vertex(&mut self) {
         self.num_vertices += 1;
         self.graph.grow(self.num_vertices, false);
     }
 
     // [TODO]: Add unit tests for this.
-    /// Removes the vertex i from the graph. The order if the vertices is not conserved.
-    /// The last vertex takes the place of the removed one.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut g = graph::Graph::new(7);
-    /// for i in g.vertices().skip(1) {
-    ///     g.add_edge(i-1,i);
-    /// }
-    /// g.remove_vertex(7);
-    /// assert_eq!(g.order(),7);
-    /// g.remove_vertex(6);
-    /// assert_eq!(g.order(),6);
-    /// g.remove_vertex(0);
-    /// assert_eq!(g.order(),5);
-    /// g.remove_vertex(3);
-    /// assert_eq!(g.order(),4);
-    /// ```
-    pub fn remove_vertex(&mut self, i: usize) {
+    fn remove_vertex(&mut self, i: usize) {
         if i < self.order() {
-            let last = self.order()-1;
-            if last != i
-            {
+            let last = self.order() - 1;
+            if last != i {
                 for n in self.vertices() {
                     if n != i && n != last {
-                        if self.is_edge(last,n) {
-                            self.add_edge(i,n);
-                        }
-                        else
-                        {
-                            self.remove_edge(i,n)
+                        if self.is_edge(last, n) {
+                            self.add_edge(i, n);
+                        } else {
+                            self.remove_edge(i, n)
                         }
                     }
                 }
@@ -156,39 +324,21 @@ impl Graph {
         }
     }
 
-    /// Checks weither the vertices i and j are adjacent.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut g = graph::Graph::new(11);
-    /// for i in 0..10
-    /// {
-    ///     g.add_edge(i,i+1);
-    ///     assert!(g.is_edge(i,i+1));
-    /// }
-    /// assert!(!g.is_edge(10,0));
-    /// ```
-    pub fn is_edge(&self, i: usize, j: usize) -> bool {
+    fn is_edge(&self, i: usize, j: usize) -> bool {
         let n = self.order();
         i < n && j < n && i != j && (self.graph.get(get_position(i, j)).unwrap())
     }
 
+    fn get_edge(&self, i: Self::Vertex, j: Self::Vertex) -> Option<Self::Edge> {
+        if self.is_edge(i, j) {
+            Some((i, j))
+        } else {
+            None
+        }
+    }
 
-    /// Adds an edge between the vertices i and j.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut g = graph::Graph::new(11);
-    /// for i in 0..10
-    /// {
-    ///     g.add_edge(i,i+1);
-    ///     assert!(g.is_edge(i,i+1));
-    ///     assert!(g.size() == i+1);
-    /// }
-    /// ```
-    pub fn add_edge(&mut self, i: usize, j: usize) {
+
+    fn add_edge(&mut self, i: usize, j: usize) {
         let n = self.order();
         if i < n && j < n && !self.is_edge(i, j) && i != j {
             self.num_edges += 1;
@@ -196,24 +346,7 @@ impl Graph {
         }
     }
 
-    /// Removes the edge between the vertices i and j.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut g = graph::Graph::new(11);
-    /// for i in 0..10
-    /// {
-    ///     g.add_edge(i,i+1);
-    /// }
-    /// for i in 0..10
-    /// {
-    ///     g.remove_edge(i,i+1);
-    ///     assert!(!g.is_edge(i,i+1));
-    ///     assert!(g.size() == 10-i-1);
-    /// }
-    /// ```
-    pub fn remove_edge(&mut self, i: usize, j: usize) {
+    fn remove_edge(&mut self, i: usize, j: usize) {
         let n = self.order();
         if i < n && j < n && self.is_edge(i, j) && i != j {
             self.num_edges -= 1;
@@ -221,66 +354,15 @@ impl Graph {
         }
     }
 
-    /// Returns an iterator over the vertices of the graph.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let g = graph::Graph::new(11);
-    /// let mut i = 0;
-    /// for n in g.vertices()
-    /// {
-    ///     assert!(n == i);
-    ///     i += 1;
-    /// }
-    /// assert!(i == g.order());
-    /// ```
-    pub fn vertices(&self) -> VertexIterator {
-        VertexIterator::new(self.order())
+    fn vertices(&self) -> <Graph as GraphTrait>::Vertices {
+        (0..self.order())
     }
 
-    /// Returns an iterator over the edges of the graph.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut g = graph::Graph::new(11);
-    /// for i in 0..10
-    /// {
-    ///     g.add_edge(i,i+1);
-    /// }
-    /// let mut i = 0;
-    /// for e in g.edges()
-    /// {
-    ///     assert!(e.0 == i+1 && e.1 == i);
-    ///     i += 1;
-    /// }
-    /// assert!(i == g.size());
-    /// ```
-    pub fn edges(&self) -> EdgeIterator {
+    fn edges(&'a self) -> <Graph as GraphTrait<'a>>::Edges {
         EdgeIterator::new(&self)
     }
 
-    /// Returns an iterator over the neighbors of the vertx v in the graph.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut g = graph::Graph::new(11);
-    /// let neighs = vec![2,6,8,9];
-    /// for i in neighs.iter()
-    /// {
-    ///     g.add_edge(7,*i);
-    /// }
-    /// let mut i = 0;
-    /// for u in g.neighbors(7)
-    /// {
-    ///     assert!(u == neighs[i]);
-    ///     i += 1;
-    /// }
-    /// assert!(i == neighs.len());
-    /// ```
-    pub fn neighbors(&self, v: usize) -> NeighborIterator {
+    fn neighbors(&self, v: usize) -> <Graph as GraphTrait>::Neighbors {
         NeighborIterator::new(v, &self)
     }
 }
@@ -298,45 +380,24 @@ impl fmt::Display for Graph {
 }
 
 /// Iterator over the vertices of the graph.
-pub struct VertexIterator {
-    n: usize,
-    max: usize,
-}
-
-impl VertexIterator {
-    fn new(max: usize) -> VertexIterator {
-        VertexIterator { n: 0, max }
-    }
-}
-
-impl Iterator for VertexIterator {
-    type Item = usize;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.n += 1;
-        if self.n > self.max {
-            None
-        } else {
-            Some(self.n - 1)
-        }
-    }
-}
-
-/// Iterator over the vertices of the graph.
-pub struct EdgeIterator<'a> {
+pub struct EdgeIterator<'a, G>
+    where G: GraphTrait<'a> + 'a
+{
     u: usize,
     v: usize,
     c: usize,
-    g: &'a Graph,
+    g: &'a G,
 }
 
-impl<'a> EdgeIterator<'a> {
-    fn new(g: &Graph) -> EdgeIterator {
+impl<'a, G> EdgeIterator<'a, G>
+    where G: GraphTrait<'a> + 'a
+{
+    fn new(g: &'a G) -> EdgeIterator<'a, G> {
         EdgeIterator {
             u: 0,
             v: 0,
             c: 0,
-            g,
+            g: g,
         }
     }
 
@@ -349,8 +410,10 @@ impl<'a> EdgeIterator<'a> {
     }
 }
 
-impl<'a> Iterator for EdgeIterator<'a> {
-    type Item = (usize, usize);
+impl<'a, G> Iterator for EdgeIterator<'a, G>
+    where G: GraphTrait<'a>
+{
+    type Item = G::Edge;
 
     fn next(&mut self) -> Option<Self::Item> {
         let n = self.g.order();
@@ -366,7 +429,7 @@ impl<'a> Iterator for EdgeIterator<'a> {
             None
         } else {
             self.c += 1;
-            Some((self.u, self.v))
+            self.g.get_edge(self.u, self.v)
         }
     }
 }
@@ -374,26 +437,32 @@ impl<'a> Iterator for EdgeIterator<'a> {
 /// Iterator over the adjacent vertices of a given vertex in the graph.
 ///
 /// This iterator goes through every vertex but only returns neighbors.
-pub struct NeighborIterator<'a> {
+pub struct NeighborIterator<'a, G>
+    where G: GraphTrait<'a> + 'a
+{
     n: usize,
     u: usize,
-    g: &'a Graph,
+    g: &'a G,
     first: bool,
 }
 
-impl<'a> NeighborIterator<'a> {
-    fn new(n: usize, g: &Graph) -> NeighborIterator {
+impl<'a, G> NeighborIterator<'a, G>
+    where G: GraphTrait<'a>
+{
+    fn new(n: usize, g: &'a G) -> NeighborIterator<'a, G> {
         NeighborIterator {
-            n,
+            n: n,
             u: 0,
-            g,
+            g: g,
             first: true,
         }
     }
 }
 
-impl<'a> Iterator for NeighborIterator<'a> {
-    type Item = usize;
+impl<'a, G> Iterator for NeighborIterator<'a, G>
+    where G: GraphTrait<'a>
+{
+    type Item = G::Vertex;
 
     fn next(&mut self) -> Option<Self::Item> {
         if !self.first {
@@ -405,18 +474,39 @@ impl<'a> Iterator for NeighborIterator<'a> {
         while self.u < n && !self.g.is_edge(self.u, self.n) {
             self.u += 1;
         }
-        if self.u >= n { None } else { Some(self.u) }
+        if self.u >= n {
+            None
+        } else {
+            self.g.get_vertex(self.u)
+        }
     }
 }
 
 #[cfg(test)]
 mod testing {
     use super::*;
+    use std::iter::repeat;
 
     #[test]
     fn get_position_test() {
         assert!(get_position(1, 0) == 0);
         assert!(get_position(0, 1) == 0);
         assert!(get_position(0, 2) == 1);
+    }
+
+    #[test]
+    fn test_iterate_over_edges() {
+        let mut g = Graph::new(7);
+        for (x, y) in g.vertices().skip(1).zip(g.vertices().take(6)) {
+            g.add_edge(x, y);
+        }
+        for i in g.vertices()
+            .enumerate()
+            .skip(1)
+            .flat_map(|(x, y)| repeat(y).zip(g.vertices().take(x)))
+            .filter_map(|(x, y)| g.get_edge(x, y)) {
+            println!("{:?}", i);
+        }
+        panic!();
     }
 }

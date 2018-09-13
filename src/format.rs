@@ -1,5 +1,6 @@
 //! Module containing functions to handle different graph formats such as graph6
 
+use GraphTrait;
 use Graph;
 use errors::*;
 
@@ -17,7 +18,7 @@ fn length_g6(n: usize) -> usize {
 /// # Examples
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::format;
 /// let mut g = Graph::new(0);
 /// assert!("?" == format::to_g6(&g));
@@ -75,6 +76,7 @@ pub fn to_g6(graph: &Graph) -> String {
 /// # Examples
 ///
 /// ```
+/// use graph::GraphTrait;
 /// use graph::format;
 /// use graph::errors::*;
 /// let mut g;
@@ -151,7 +153,7 @@ pub fn from_g6(s: &str) -> Result<Graph, InvalidGraph6> {
 // # Examples
 //
 // ```
-// use graph::Graph;
+// use graph::{Graph,GraphTrait};
 // use graph::format;
 // let mut g;
 // g = format::from_g6(&"?".to_string()).unwrap();

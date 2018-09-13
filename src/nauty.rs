@@ -3,6 +3,7 @@
 extern crate libc;
 use self::libc::{uint32_t, uint8_t};
 use Graph;
+use GraphTrait;
 
 extern "C" {
     fn nauty_wrapper(n: uint32_t,
@@ -57,7 +58,7 @@ fn init_fixed(n: usize, fixed: &[Vec<u32>]) -> (Vec<u32>, Vec<u32>) {
 ///
 /// ```
 /// use graph::nauty::canon_graph_fixed;
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// let mut g = Graph::new(5);
 /// let (_,_,orbits) = canon_graph_fixed(&g, &vec![vec![1]]);
 /// println!("ORBITS {:?}", orbits);
@@ -138,7 +139,7 @@ fn orbits_sample(orbits: &[usize]) -> Vec<usize> {
 /// Example:
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphTrait};
 /// use graph::nauty::orbits;
 /// let mut g = Graph::new(5);
 /// let fixed: Vec<Vec<u32>> = vec![];
