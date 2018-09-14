@@ -17,7 +17,7 @@ use std::ops::Range;
 
 pub trait GraphTrait<'a> {
     /// A node in the graph
-    type Vertex;
+    type Vertex: Clone;
     /// An edge in the graph
     type Edge;
 
@@ -128,11 +128,11 @@ pub trait GraphTrait<'a> {
     /// }
     /// assert!(!g.is_edge(10,0));
     /// ```
-    fn is_edge(&self, i: usize, j: usize) -> bool;
+    fn is_edge(&self, i: Self::Vertex, j: Self::Vertex) -> bool;
 
     /// Returns the edge between the ith and jth vertices and `None` if they are not adjacent or if
     /// the do not exists.
-    fn get_edge(&self, i: usize, j: usize) -> Option<Self::Edge>;
+    fn get_edge(&self, i: Self::Vertex, j: Self::Vertex) -> Option<Self::Edge>;
 
     /// Adds an edge between the vertices i and j.
     ///
@@ -148,7 +148,7 @@ pub trait GraphTrait<'a> {
     ///     assert!(g.size() == i+1);
     /// }
     /// ```
-    fn add_edge(&mut self, i: usize, j: usize);
+    fn add_edge(&mut self, i: Self::Vertex, j: Self::Vertex);
 
     /// Removes the edge between the vertices i and j.
     ///
@@ -168,7 +168,7 @@ pub trait GraphTrait<'a> {
     ///     assert!(g.size() == 10-i-1);
     /// }
     /// ```
-    fn remove_edge(&mut self, i: usize, j: usize);
+    fn remove_edge(&mut self, i: Self::Vertex, j: Self::Vertex);
 
     /// Returns an iterator over the vertices of the graph.
     ///
@@ -277,10 +277,10 @@ impl Graph {
 
 impl<'a> GraphTrait<'a> for Graph {
     type Vertex = usize;
-    type Edge = (usize, usize);
+    type Edge = (Self::Vertex, Self::Vertex);
     type Vertices = Range<Self::Vertex>;
-    type Edges = EdgeIterator<'a, Self>;
-    type Neighbors = NeighborIterator<'a, Self>;
+    type Edges = EdgeIterator<'a>;
+    type Neighbors = NeighborIterator<'a>;
 
     fn order(&self) -> usize {
         self.num_vertices
@@ -304,7 +304,7 @@ impl<'a> GraphTrait<'a> for Graph {
     }
 
     // [TODO]: Add unit tests for this.
-    fn remove_vertex(&mut self, i: usize) {
+    fn remove_vertex(&mut self, i: Self::Vertex) {
         if i < self.order() {
             let last = self.order() - 1;
             if last != i {
@@ -324,13 +324,13 @@ impl<'a> GraphTrait<'a> for Graph {
         }
     }
 
-    fn is_edge(&self, i: usize, j: usize) -> bool {
-        let n = self.order();
-        i < n && j < n && i != j && (self.graph.get(get_position(i, j)).unwrap())
+    fn is_edge(&self, i: Self::Vertex, j: Self::Vertex) -> bool {
+        self.get_edge(i, j).is_some()
     }
 
     fn get_edge(&self, i: Self::Vertex, j: Self::Vertex) -> Option<Self::Edge> {
-        if self.is_edge(i, j) {
+        let n = self.order();
+        if i < n && j < n && i != j && (self.graph.get(get_position(i, j)).unwrap()) {
             Some((i, j))
         } else {
             None
@@ -338,7 +338,7 @@ impl<'a> GraphTrait<'a> for Graph {
     }
 
 
-    fn add_edge(&mut self, i: usize, j: usize) {
+    fn add_edge(&mut self, i: Self::Vertex, j: Self::Vertex) {
         let n = self.order();
         if i < n && j < n && !self.is_edge(i, j) && i != j {
             self.num_edges += 1;
@@ -346,7 +346,7 @@ impl<'a> GraphTrait<'a> for Graph {
         }
     }
 
-    fn remove_edge(&mut self, i: usize, j: usize) {
+    fn remove_edge(&mut self, i: Self::Vertex, j: Self::Vertex) {
         let n = self.order();
         if i < n && j < n && self.is_edge(i, j) && i != j {
             self.num_edges -= 1;
@@ -380,19 +380,15 @@ impl fmt::Display for Graph {
 }
 
 /// Iterator over the vertices of the graph.
-pub struct EdgeIterator<'a, G>
-    where G: GraphTrait<'a> + 'a
-{
+pub struct EdgeIterator<'a> {
     u: usize,
     v: usize,
     c: usize,
-    g: &'a G,
+    g: &'a Graph,
 }
 
-impl<'a, G> EdgeIterator<'a, G>
-    where G: GraphTrait<'a> + 'a
-{
-    fn new(g: &'a G) -> EdgeIterator<'a, G> {
+impl<'a> EdgeIterator<'a> {
+    fn new(g: &Graph) -> EdgeIterator {
         EdgeIterator {
             u: 0,
             v: 0,
@@ -410,10 +406,8 @@ impl<'a, G> EdgeIterator<'a, G>
     }
 }
 
-impl<'a, G> Iterator for EdgeIterator<'a, G>
-    where G: GraphTrait<'a>
-{
-    type Item = G::Edge;
+impl<'a> Iterator for EdgeIterator<'a> {
+    type Item = <Graph as GraphTrait<'a>>::Edge;
 
     fn next(&mut self) -> Option<Self::Item> {
         let n = self.g.order();
@@ -437,19 +431,15 @@ impl<'a, G> Iterator for EdgeIterator<'a, G>
 /// Iterator over the adjacent vertices of a given vertex in the graph.
 ///
 /// This iterator goes through every vertex but only returns neighbors.
-pub struct NeighborIterator<'a, G>
-    where G: GraphTrait<'a> + 'a
-{
+pub struct NeighborIterator<'a> {
     n: usize,
     u: usize,
-    g: &'a G,
+    g: &'a Graph,
     first: bool,
 }
 
-impl<'a, G> NeighborIterator<'a, G>
-    where G: GraphTrait<'a>
-{
-    fn new(n: usize, g: &'a G) -> NeighborIterator<'a, G> {
+impl<'a> NeighborIterator<'a> {
+    fn new(n: usize, g: &'a Graph) -> NeighborIterator<'a> {
         NeighborIterator {
             n: n,
             u: 0,
@@ -459,10 +449,8 @@ impl<'a, G> NeighborIterator<'a, G>
     }
 }
 
-impl<'a, G> Iterator for NeighborIterator<'a, G>
-    where G: GraphTrait<'a>
-{
-    type Item = G::Vertex;
+impl<'a> Iterator for NeighborIterator<'a> {
+    type Item = <Graph as GraphTrait<'a>>::Vertex;
 
     fn next(&mut self) -> Option<Self::Item> {
         if !self.first {
@@ -485,28 +473,11 @@ impl<'a, G> Iterator for NeighborIterator<'a, G>
 #[cfg(test)]
 mod testing {
     use super::*;
-    use std::iter::repeat;
 
     #[test]
     fn get_position_test() {
         assert!(get_position(1, 0) == 0);
         assert!(get_position(0, 1) == 0);
         assert!(get_position(0, 2) == 1);
-    }
-
-    #[test]
-    fn test_iterate_over_edges() {
-        let mut g = Graph::new(7);
-        for (x, y) in g.vertices().skip(1).zip(g.vertices().take(6)) {
-            g.add_edge(x, y);
-        }
-        for i in g.vertices()
-            .enumerate()
-            .skip(1)
-            .flat_map(|(x, y)| repeat(y).zip(g.vertices().take(x)))
-            .filter_map(|(x, y)| g.get_edge(x, y)) {
-            println!("{:?}", i);
-        }
-        panic!();
     }
 }
