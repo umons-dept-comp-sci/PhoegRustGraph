@@ -1,5 +1,6 @@
-//#![feature(trace_macros)]
 //! Crate using binary format to represent small graphs (order <= 11)
+
+//#![feature(trace_macros)]
 
 extern crate bit_vec;
 
@@ -135,17 +136,14 @@ impl Graph {
     /// ```
     pub fn remove_vertex(&mut self, i: usize) {
         if i < self.order() {
-            let last = self.order()-1;
-            if last != i
-            {
+            let last = self.order() - 1;
+            if last != i {
                 for n in self.vertices() {
                     if n != i && n != last {
-                        if self.is_edge(last,n) {
-                            self.add_edge(i,n);
-                        }
-                        else
-                        {
-                            self.remove_edge(i,n)
+                        if self.is_edge(last, n) {
+                            self.add_edge(i, n);
+                        } else {
+                            self.remove_edge(i, n)
                         }
                     }
                 }
@@ -305,7 +303,7 @@ pub struct VertexIterator {
 
 impl VertexIterator {
     fn new(max: usize) -> VertexIterator {
-        VertexIterator { n: 0, max }
+        VertexIterator { n: 0, max: max }
     }
 }
 
@@ -336,7 +334,7 @@ impl<'a> EdgeIterator<'a> {
             u: 0,
             v: 0,
             c: 0,
-            g,
+            g: g,
         }
     }
 
@@ -384,9 +382,9 @@ pub struct NeighborIterator<'a> {
 impl<'a> NeighborIterator<'a> {
     fn new(n: usize, g: &Graph) -> NeighborIterator {
         NeighborIterator {
-            n,
+            n: n,
             u: 0,
-            g,
+            g: g,
             first: true,
         }
     }
