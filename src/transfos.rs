@@ -2,7 +2,84 @@
 //! Each transformation uses the orbits of the homomorphism group to filter out symmetries.
 use std::collections::HashMap;
 use Graph;
-use nauty::orbits;
+use nauty::{canon_graph, orbits};
+use std::fmt;
+
+/// Result obtained by applying a transformation to a graph.
+pub struct TransfoResult {
+    /// Graph to which the transformation was applied.
+    start: Graph,
+    /// Graph resulting from the transformation.
+    end: Graph,
+    /// New ordering of the vertices of `end` from the canonical form.
+    order: Vec<usize>,
+    /// Edges added to the graph.
+    added: Graph,
+    /// Edges removed from the graph.
+    removed: Graph,
+}
+
+impl TransfoResult {
+    /// Creates a new `TransfoResult` with `g` as a starting point.
+    /// The graph is cloned in the making.
+    pub fn new(g: &Graph) -> TransfoResult {
+        TransfoResult {
+            start: g.clone(),
+            end: g.clone(),
+            order: (0..g.order()).collect(),
+            added: Graph::new(g.order()),
+            removed: Graph::new(g.order()),
+        }
+    }
+
+    /// Computes the canonical form of the result as well as the order of the vertices in this
+    /// form.
+    pub fn canon(&mut self) {
+        let (cg, ord, _) = canon_graph(&self.end);
+        self.end = cg;
+        self.order = ord;
+    }
+
+    /// Adds an edge.
+    pub fn add_edge(&mut self, i: usize, j: usize) {
+        if self.start.is_edge(i, j) {
+            self.end.add_edge(i, j);
+            self.added.add_edge(i, j);
+        }
+    }
+
+    /// Removes an edge.
+    pub fn remove_edge(&mut self, i: usize, j: usize) {
+        if !self.start.is_edge(i, j) {
+            self.end.remove_edge(i, j);
+            self.removed.remove_edge(i, j);
+        }
+    }
+
+    /// Adds a vertex.
+    pub fn add_vertex(&mut self) {
+        self.end.add_vertex();
+        self.added.add_vertex();
+    }
+
+    /// Removes a vertex.
+    pub fn remove_vertex(&mut self, i: usize) {
+        self.end.remove_vertex(i);
+        self.removed.remove_vertex(i);
+    }
+}
+
+impl fmt::Display for TransfoResult {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f,
+               "{} -> {} [added: {}, removed: {}, order: {:?}]",
+               self.start,
+               self.end,
+               self.added,
+               self.removed,
+               self.order)
+    }
+}
 
 /// Adds an edge.
 pub fn add_edge(g: &Graph) -> Vec<Graph> {
