@@ -67,6 +67,11 @@ impl TransfoResult {
         self.end.remove_vertex(i);
         self.removed.remove_vertex(i);
     }
+
+    /// Returns a reference to the result of the transformation
+    pub fn get_end(&self) -> &Graph {
+        &self.end
+    }
 }
 
 impl fmt::Display for TransfoResult {
