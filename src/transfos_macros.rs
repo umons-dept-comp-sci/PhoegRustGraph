@@ -152,7 +152,7 @@ macro_rules! build_iter {
     };
     (@iter ($($v:tt)*) () -> ($($a:tt)*)) => {};
     (@iter ($m:ident $f:ident $res:ident $g:ident) (apply $($r:tt)+) -> ()) => {
-        let mut ng = $g.clone();
+        let mut ng = TransfoResult::new(&$g);
         parse_transfo!((ng) ($($r)*) -> ());
         $res.push(ng);
     };
@@ -167,7 +167,7 @@ macro_rules! build_iter {
     };
     (($m:ident $g:ident) let $($tts:tt)*) => {
         {
-            let mut res: Vec<Graph> = Vec::new();
+            let mut res: Vec<TransfoResult> = Vec::new();
             let mut fixed : Vec<Vec<u32>> = Vec::new();
             build_iter!(@iter ($m fixed res $g) ($($tts)*) -> ());
             res

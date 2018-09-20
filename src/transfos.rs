@@ -42,7 +42,7 @@ impl TransfoResult {
 
     /// Adds an edge.
     pub fn add_edge(&mut self, i: usize, j: usize) {
-        if self.start.is_edge(i, j) {
+        if !self.start.is_edge(i, j) {
             self.end.add_edge(i, j);
             self.added.add_edge(i, j);
         }
@@ -50,7 +50,7 @@ impl TransfoResult {
 
     /// Removes an edge.
     pub fn remove_edge(&mut self, i: usize, j: usize) {
-        if !self.start.is_edge(i, j) {
+        if self.start.is_edge(i, j) {
             self.end.remove_edge(i, j);
             self.removed.remove_edge(i, j);
         }
@@ -81,8 +81,20 @@ impl fmt::Display for TransfoResult {
     }
 }
 
+impl fmt::Debug for TransfoResult {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f,
+               "{} -> {} [added: {}, removed: {}, order: {:?}]",
+               self.start,
+               self.end,
+               self.added,
+               self.removed,
+               self.order)
+    }
+}
+
 /// Adds an edge.
-pub fn add_edge(g: &Graph) -> Vec<Graph> {
+pub fn add_edge(g: &Graph) -> Vec<TransfoResult> {
     transformation! (
         for g,
         let a,
@@ -93,7 +105,7 @@ pub fn add_edge(g: &Graph) -> Vec<Graph> {
 }
 
 /// Removes a vertex.
-pub fn remove_vertex(g: &Graph) -> Vec<Graph> {
+pub fn remove_vertex(g: &Graph) -> Vec<TransfoResult> {
     transformation! (
         for g,
         let a
@@ -103,7 +115,7 @@ pub fn remove_vertex(g: &Graph) -> Vec<Graph> {
 }
 
 /// Removes an edge.
-pub fn remove_edge(g: &Graph) -> Vec<Graph> {
+pub fn remove_edge(g: &Graph) -> Vec<TransfoResult> {
     transformation!(
         for g,
         let a,
@@ -120,7 +132,7 @@ pub fn remove_edge(g: &Graph) -> Vec<Graph> {
 ///        ->   /
 /// a -- b    a   b
 /// </pre>
-pub fn rotation(g: &Graph) -> Vec<Graph> {
+pub fn rotation(g: &Graph) -> Vec<TransfoResult> {
     transformation!(
         for g,
         let a,
@@ -139,7 +151,7 @@ pub fn rotation(g: &Graph) -> Vec<Graph> {
 ///      | ->   / |
 /// a -- b    a   b
 /// </pre>
-pub fn slide(g: &Graph) -> Vec<Graph> {
+pub fn slide(g: &Graph) -> Vec<TransfoResult> {
     transformation!(
         for g,
         let a,
@@ -158,7 +170,7 @@ pub fn slide(g: &Graph) -> Vec<Graph> {
 ///         ->
 ///  c    d    c -- d
 /// </pre>
-pub fn move_distinct(g: &Graph) -> Vec<Graph> {
+pub fn move_distinct(g: &Graph) -> Vec<TransfoResult> {
     transformation! (
         for g,
         let a,
@@ -178,7 +190,7 @@ pub fn move_distinct(g: &Graph) -> Vec<Graph> {
 ///         -> |    |
 ///  c -- d    c    d
 /// </pre>
-pub fn two_opt(g: &Graph) -> Vec<Graph> {
+pub fn two_opt(g: &Graph) -> Vec<TransfoResult> {
     transformation! (
         for g,
         let a,
@@ -200,7 +212,7 @@ pub fn two_opt(g: &Graph) -> Vec<Graph> {
 ///   /    ->      |
 /// a    c    a -- c
 /// </pre>
-pub fn detour(g: &Graph) -> Vec<Graph> {
+pub fn detour(g: &Graph) -> Vec<TransfoResult> {
     transformation!(
         for g,
         let a,
@@ -220,7 +232,7 @@ pub fn detour(g: &Graph) -> Vec<Graph> {
 ///      | ->   /
 /// a -- c    a    c
 /// </pre>
-pub fn shortcut(g: &Graph) -> Vec<Graph> {
+pub fn shortcut(g: &Graph) -> Vec<TransfoResult> {
     transformation! (
         for g,
         let a,
@@ -235,19 +247,22 @@ pub fn shortcut(g: &Graph) -> Vec<Graph> {
 
 #[cfg(test)]
 mod tests {
+    use super::TransfoResult;
     use super::Graph;
     use format::{from_g6, to_g6};
-    use nauty::canon_graph;
 
     fn test_transfo<F>(sig: &str, trsf: F, expected: &mut Vec<&str>)
-        where F: Fn(&Graph) -> Vec<Graph>
+        where F: Fn(&Graph) -> Vec<TransfoResult>
     {
         let g = from_g6(&String::from(sig)).unwrap();
-        let r: Vec<Graph> = trsf(&g).iter().map(|x| canon_graph(x).0).collect();
+        let mut r: Vec<TransfoResult> = trsf(&g);
+        for rg in r.iter_mut() {
+            rg.canon();
+        }
         eprintln!("{:?}", r);
         assert_eq!(r.len(), expected.len());
         for rg in r {
-            let s = to_g6(&rg);
+            let s = to_g6(&rg.end);
             assert!(expected.contains(&s.as_str()));
             let i = expected.iter()
                 .enumerate()
