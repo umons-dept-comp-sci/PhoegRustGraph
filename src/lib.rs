@@ -3,6 +3,7 @@
 //#![feature(trace_macros)]
 
 extern crate bit_vec;
+extern crate libc;
 
 pub mod format;
 pub mod invariants;
@@ -14,6 +15,206 @@ pub mod transfos;
 pub mod subgraphs;
 
 use std::fmt;
+
+
+#[allow(non_camel_case_types)]
+#[cfg(target_pointer_width="32")]
+type set = libc::c_ulong;
+#[allow(non_camel_case_types)]
+#[cfg(target_pointer_width="64")]
+type set = libc::c_ulonglong;
+
+#[allow(non_camel_case_types)]
+// Type used by nauty in C
+type int = libc::c_int;
+#[allow(non_camel_case_types)]
+type graph = set;
+
+
+mod detail {
+    use super::set;
+    use super::int;
+    use super::graph;
+    extern "C" {
+        pub fn setwordsneeded(n: int) -> int;
+        pub fn emptyset(input: *mut set, size: int);
+        pub fn addelement(input: *mut set, elem: int);
+        pub fn delelement(input: *mut set, elem: int);
+        pub fn flipelement(input: *mut set, elem: int);
+        pub fn iselement(input: *const set, elem: int) -> bool;
+        #[allow(dead_code)]
+        pub fn setsize(input: *const set, size: int) -> int;
+        pub fn nextelement(input: *const set, size: int, pos: int) -> int;
+        pub fn wordsize() -> int;
+        pub fn allbits() -> set;
+        pub fn allmask(i: int) -> set;
+        #[allow(dead_code)]
+        pub fn emptygraph(graph: *mut graph, m: int, n: int);
+        pub fn graphrow(graph: *const graph, v: int, m: int) -> *const set;
+        pub fn graphrowmut(graph: *mut graph, v: int, m: int) -> *mut set;
+        pub fn addoneedge(graph: *mut graph, v: int, w: int, m: int);
+    }
+}
+
+
+#[derive(Clone,Debug)]
+pub struct Set {
+    data: Vec<set>,
+    maxm: int,
+    size: int,
+}
+
+impl Set {
+    fn fill<PF>(maxm: int, pfunc: PF, val: set, size: int) -> Set
+        where PF: Fn(int) -> set
+    {
+        unsafe {
+            let mut p = maxm;
+            let words = detail::setwordsneeded(maxm);
+            let mut v = Vec::with_capacity(words as usize);
+            for _ in 0..words - 1 {
+                v.push(val);
+                p -= detail::wordsize();
+            }
+            v.push(pfunc(p));
+            Set {
+                data: v,
+                maxm: maxm,
+                size: size,
+            }
+        }
+    }
+
+    pub fn new(maxm: int) -> Set {
+        Set::fill(maxm, |_| 0, 0, 0)
+    }
+
+    pub fn full(maxm: int) -> Set {
+        unsafe { Set::fill(maxm, |x| detail::allmask(x), detail::allbits(), maxm) }
+    }
+
+    pub fn clear(&mut self) {
+        unsafe {
+            self.size = 0;
+            detail::emptyset(self.data.as_mut_ptr(), self.data.len() as int)
+        }
+    }
+
+    pub fn add(&mut self, elem: int) {
+        if !self.contains(elem) {
+            self.size += 1;
+            unsafe { detail::addelement(self.data.as_mut_ptr(), elem) }
+        }
+    }
+
+    pub fn remove(&mut self, elem: int) {
+        if self.contains(elem) {
+            self.size -= 1;
+            unsafe { detail::delelement(self.data.as_mut_ptr(), elem) }
+        }
+    }
+
+    pub fn flip(&mut self, elem: int) {
+        unsafe {
+            if self.contains(elem) {
+                self.size -= 1;
+            } else {
+                self.size += 1;
+            }
+            detail::flipelement(self.data.as_mut_ptr(), elem)
+        }
+    }
+
+    pub fn contains(&self, elem: int) -> bool {
+        unsafe { detail::iselement(self.data.as_ptr(), elem) }
+    }
+
+    pub fn size(&self) -> i32 {
+        self.size
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = int> + '_ {
+        SetIter::new(self.data.as_ptr(), self.data.len() as int)
+    }
+
+    pub fn maxm(&self) -> int {
+        self.maxm
+    }
+
+    fn combine<C>(first: &mut Set, other: &Set, comb: C)
+        where C: Fn(&set, &set) -> set
+    {
+        for (i, a) in first.data.iter_mut().enumerate().take_while(|(i, _)| other.data.len() > *i) {
+            *a = comb(a, &other.data[i]);
+        }
+    }
+
+    pub fn inter(&mut self, other: &Set) {
+        Set::combine(self, other, |a, b| a & b);
+        if self.data.len() > other.data.len() {
+            for i in (self.data.len() - other.data.len())..self.data.len() {
+                self.data[i] = 0;
+            }
+        }
+    }
+
+    pub fn union(&mut self, other: &Set) {
+        if self.data.len() < other.data.len() {
+            for _ in (other.data.len() - self.data.len())..other.data.len() {
+                self.data.push(0);
+            }
+        }
+        Set::combine(self, other, |&a, &b| a | b)
+    }
+
+    fn complement_set(s: *mut set, len: int, maxm: int) {
+        let mut s = s;
+        let mut maxm = maxm;
+        unsafe {
+            for _ in 0..(len - 1) {
+                *s = !*s;
+                maxm -= detail::wordsize();
+                s = s.add(1);
+            }
+            *s = !*s & detail::allmask(maxm);
+        }
+    }
+
+    pub fn complement(&mut self) {
+        Set::complement_set(self.data.as_mut_ptr(), self.data.len() as int, self.maxm);
+    }
+}
+
+struct SetIter {
+    data: *const set,
+    len: int,
+    pos: int,
+}
+
+impl SetIter {
+    fn new(data: *const set, len: int) -> SetIter {
+        SetIter::with_pos(data, len, -1)
+    }
+
+    fn with_pos(data: *const set, len: int, pos: int) -> SetIter {
+        SetIter {
+            data: data,
+            len: len,
+            pos: pos,
+        }
+    }
+}
+
+impl Iterator for SetIter {
+    type Item = int;
+
+    fn next(&mut self) -> Option<int> {
+        unsafe {
+            self.pos = detail::nextelement(self.data, self.len, self.pos);
+            if self.pos < 0 { None } else { Some(self.pos) }
+        }
+    }
+}
 
 /// Structure representing a undirected simple graph as a binary number.
 ///
