@@ -96,7 +96,6 @@ pub fn canon_graph_fixed(g: &Graph, fixed: &[Vec<u64>]) -> (Graph, Vec<u64>, Vec
         let m = g.w;
         let mut orbits = vec![0i32; n as usize];
         let (mut lab, mut ptn) = init_fixed(n, &fixed);
-        println!("{:?} {:?}",lab,ptn);
 
         nauty_wrapper(n,
                       m,
@@ -113,10 +112,8 @@ pub fn canon_graph_fixed(g: &Graph, fixed: &[Vec<u64>]) -> (Graph, Vec<u64>, Vec
                 }
             }
         }
-        println!("{:?}",orbits);
         let lab = lab.drain(..).map(|x| x as u64).collect();
         let orbits = orbits.drain(..).map(|x| x as u64).collect();
-        println!("{:?}",orbits);
         (ng, lab, orbits)
     }
 }
