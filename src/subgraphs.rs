@@ -6,26 +6,26 @@ use ::nauty;
 
 trait VF2Data {
     fn is_full_match(&self) -> bool;
-    fn get_match(&self) -> Vec<usize>;
-    fn add_pair(&mut self, n: usize, m: usize);
-    fn remove_pair(&mut self, n: usize, m: usize);
-    fn filter(&self, n: usize, m: usize) -> bool;
-    fn compute_pairs(&self) -> Vec<(usize, usize)>;
+    fn get_match(&self) -> Vec<u64>;
+    fn add_pair(&mut self, n: u64, m: u64);
+    fn remove_pair(&mut self, n: u64, m: u64);
+    fn filter(&self, n: u64, m: u64) -> bool;
+    fn compute_pairs(&self) -> Vec<(u64, u64)>;
 }
 
 struct VF2DataImpl<'a> {
     g1: &'a Graph,
     g2: &'a Graph,
-    depth: usize,
-    null: usize,
-    num_out: usize,
+    depth: u64,
+    null: u64,
+    num_out: u64,
     // Set of vertices already mapped.
-    core_1: Vec<usize>,
-    core_2: Vec<usize>,
-    adj_1: Vec<usize>,
-    adj_2: Vec<usize>,
-    orbits: Vec<usize>,
-    taboo: HashMap<usize, HashSet<usize>>,
+    core_1: Vec<u64>,
+    core_2: Vec<u64>,
+    adj_1: Vec<u64>,
+    adj_2: Vec<u64>,
+    orbits: Vec<u64>,
+    taboo: HashMap<u64, HashSet<u64>>,
 }
 
 impl<'a> fmt::Display for VF2DataImpl<'a> {
@@ -48,7 +48,7 @@ impl<'a> fmt::Display for VF2DataImpl<'a> {
 /// of `g2`.
 ///
 /// The graph `g2` must have at most the same order as `g1`.
-pub fn subgraphs<'a>(g1: &'a Graph, g2: &'a Graph) -> impl Iterator<Item = Vec<usize>> + 'a {
+pub fn subgraphs<'a>(g1: &'a Graph, g2: &'a Graph) -> impl Iterator<Item = Vec<u64>> + 'a {
     SubgraphIter::without_orbits(g1, g2)
 }
 
@@ -57,29 +57,29 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
         self.num_out == 0
     }
 
-    fn get_match(&self) -> Vec<usize> {
+    fn get_match(&self) -> Vec<u64> {
         self.core_1
             .iter()
             .enumerate()
-            .filter_map(|(x, &y)| if y != self.null { Some(x) } else { None })
+            .filter_map(|(x, &y)| if y != self.null { Some(x as u64) } else { None })
             .collect()
     }
 
-    fn add_pair(&mut self, n: usize, m: usize) {
+    fn add_pair(&mut self, n: u64, m: u64) {
         self.depth += 1;
-        self.core_1[n] = m;
-        self.core_2[m] = n;
+        self.core_1[n as usize] = m;
+        self.core_2[m as usize] = n;
         for i in self.g1.neighbors(n).chain(Some(n).iter().cloned()) {
-            if self.adj_1[i] == 0 {
-                self.adj_1[i] = self.depth;
+            if self.adj_1[i as usize] == 0 {
+                self.adj_1[i as usize] = self.depth;
             }
         }
-        let m_orbit = self.orbits[m];
+        let m_orbit = self.orbits[m as usize];
         for i in self.g2.vertices() {
-            if (self.g2.is_edge(m, i) || i == m) && self.adj_2[i] == 0 {
-                self.adj_2[i] = self.depth;
+            if (self.g2.is_edge(m, i) || i == m) && self.adj_2[i as usize] == 0 {
+                self.adj_2[i as usize] = self.depth;
             }
-            if i > m && self.orbits[i] == m_orbit {
+            if i > m && self.orbits[i as usize] == m_orbit {
                 if !self.taboo.contains_key(&n) {
                     self.taboo.insert(n, HashSet::new());
                 }
@@ -89,31 +89,31 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
         self.num_out -= 1;
     }
 
-    fn remove_pair(&mut self, n: usize, m: usize) {
-        self.core_1[n] = self.null;
-        self.core_2[m] = self.null;
+    fn remove_pair(&mut self, n: u64, m: u64) {
+        self.core_1[n as usize] = self.null;
+        self.core_2[m as usize] = self.null;
         for i in self.g1.vertices() {
-            if self.adj_1[i] == self.depth {
-                self.adj_1[i] = 0;
+            if self.adj_1[i as usize] == self.depth {
+                self.adj_1[i as usize] = 0;
             }
         }
         for i in self.g2.vertices() {
-            if self.adj_2[i] == self.depth {
-                self.adj_2[i] = 0;
+            if self.adj_2[i as usize] == self.depth {
+                self.adj_2[i as usize] = 0;
             }
         }
         self.depth -= 1;
         self.num_out += 1;
     }
 
-    fn filter(&self, n: usize, m: usize) -> bool {
+    fn filter(&self, n: u64, m: u64) -> bool {
         if self.taboo.contains_key(&n) && self.taboo.get(&n).unwrap().contains(&m) {
             return false;
         }
         for (n1, n2) in self.g1
             .vertices()
-            .filter(|&x| self.core_1[x] != self.null)
-            .map(|x| (x, self.core_1[x])) {
+            .filter(|&x| self.core_1[x as usize] != self.null)
+            .map(|x| (x, self.core_1[x as usize])) {
             let (e1, e2) = (self.g1.is_edge(n, n1), self.g2.is_edge(m, n2));
             if e1 || e2 {
                 if e1 != e2 {
@@ -123,8 +123,8 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
         }
         // e num of edges out of core and adj, n num of edges out of core and in adj
         let (mut e1, mut n1, mut e2, mut n2) = (0, 0, 0, 0);
-        for i in self.g1.neighbors(n).filter(|&x| self.core_1[x] == self.null) {
-            if self.adj_1[i] > 0 {
+        for i in self.g1.neighbors(n).filter(|&x| self.core_1[x as usize] == self.null) {
+            if self.adj_1[i as usize] > 0 {
                 n1 += 1;
             } else {
                 e1 += 1;
@@ -132,8 +132,8 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
         }
         // [TODO]: Can we write this and avoid duplicated code ? adj_1 and adj_2 are not the same
         // type.
-        for i in self.g2.neighbors(m).filter(|&x| self.core_2[x] == self.null) {
-            if self.adj_2[i] > 0 {
+        for i in self.g2.neighbors(m).filter(|&x| self.core_2[x as usize] == self.null) {
+            if self.adj_2[i as usize] > 0 {
                 n2 += 1;
             } else {
                 e2 += 1;
@@ -142,7 +142,7 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
         n2 <= n1 && e2 <= e1
     }
 
-    fn compute_pairs(&self) -> Vec<(usize, usize)> {
+    fn compute_pairs(&self) -> Vec<(u64, u64)> {
         self.compute_pairs_internal(&self.g1.vertices().collect())
     }
 }
@@ -157,28 +157,28 @@ impl<'a> VF2DataImpl<'a> {
             depth: 1,
             null: null,
             num_out: g2.order(),
-            core_1: vec![null; g1.order()],
-            core_2: vec![null; g2.order()],
-            adj_1: vec![0; g1.order()],
-            adj_2: vec![0; g2.order()],
+            core_1: vec![null; g1.order() as usize],
+            core_2: vec![null; g2.order() as usize],
+            adj_1: vec![0; g1.order() as usize],
+            adj_2: vec![0; g2.order() as usize],
             orbits: nauty::canon_graph_fixed(&g2, &[]).2,
             taboo: HashMap::new(),
         }
     }
-    fn compute_pairs_internal(&self, g1_nodes: &Vec<usize>) -> Vec<(usize, usize)> {
+    fn compute_pairs_internal(&self, g1_nodes: &Vec<u64>) -> Vec<(u64, u64)> {
         let adj_out = g1_nodes.iter()
-            .filter(|&&x| self.core_1[x] == self.null && self.adj_1[x] > 0)
+            .filter(|&&x| self.core_1[x as usize] == self.null && self.adj_1[x as usize] > 0)
             .cloned();
         let adj_min = self.g2
             .vertices()
-            .filter(|&x| self.core_2[x] == self.null && self.adj_2[x] > 0)
+            .filter(|&x| self.core_2[x as usize] == self.null && self.adj_2[x as usize] > 0)
             .min();
-        let adj_iter: Vec<(usize, usize)> = adj_out.zip(adj_min.iter().cloned().cycle()).collect();
+        let adj_iter: Vec<(u64, u64)> = adj_out.zip(adj_min.iter().cloned().cycle()).collect();
         if !adj_iter.is_empty() {
             adj_iter
         } else {
-            let out = g1_nodes.iter().filter(|&&x| self.adj_1[x] == 0).cloned();
-            let min = self.g2.vertices().filter(|&x| self.adj_2[x] == 0).min();
+            let out = g1_nodes.iter().filter(|&&x| self.adj_1[x as usize] == 0).cloned();
+            let min = self.g2.vertices().filter(|&x| self.adj_2[x as usize] == 0).min();
             let out_iter = out.zip(min.iter().cloned().cycle()).collect();
             out_iter
         }
@@ -187,11 +187,11 @@ impl<'a> VF2DataImpl<'a> {
 
 struct VF2DataOrb<'a> {
     data: VF2DataImpl<'a>,
-    fixed: Vec<Vec<u32>>,
+    fixed: Vec<Vec<u64>>,
 }
 
 /// Returns every non-isomorphic occurence of the graph `g2` in the graph `g1`.
-pub fn subgraphs_orbits<'a>(g1: &'a Graph, g2: &'a Graph) -> impl Iterator<Item = Vec<usize>> + 'a {
+pub fn subgraphs_orbits<'a>(g1: &'a Graph, g2: &'a Graph) -> impl Iterator<Item = Vec<u64>> + 'a {
     SubgraphIter::new(g1, g2)
 }
 
@@ -218,25 +218,25 @@ impl<'a> VF2Data for VF2DataOrb<'a> {
         self.data.is_full_match()
     }
 
-    fn get_match(&self) -> Vec<usize> {
+    fn get_match(&self) -> Vec<u64> {
         self.data.get_match()
     }
 
-    fn add_pair(&mut self, n: usize, m: usize) {
+    fn add_pair(&mut self, n: u64, m: u64) {
         self.data.add_pair(n, m);
-        self.fixed.push(vec![n as u32]);
+        self.fixed.push(vec![n]);
     }
 
-    fn remove_pair(&mut self, n: usize, m: usize) {
+    fn remove_pair(&mut self, n: u64, m: u64) {
         self.data.remove_pair(n, m);
         self.fixed.pop();
     }
 
-    fn filter(&self, n: usize, m: usize) -> bool {
+    fn filter(&self, n: u64, m: u64) -> bool {
         self.data.filter(n, m)
     }
 
-    fn compute_pairs(&self) -> Vec<(usize, usize)> {
+    fn compute_pairs(&self) -> Vec<(u64, u64)> {
         self.data.compute_pairs_internal(&nauty::orbits(self.data.g1, self.fixed.as_slice()))
     }
 }
@@ -245,7 +245,7 @@ struct SubgraphIter<D>
     where D: VF2Data
 {
     data: D,
-    queue: Vec<(usize, usize, bool)>,
+    queue: Vec<(u64, u64, bool)>,
 }
 
 impl<'a> SubgraphIter<VF2DataImpl<'a>> {
@@ -283,9 +283,9 @@ impl<'a, D> SubgraphIter<D>
 impl<'a, D> Iterator for SubgraphIter<D>
     where D: VF2Data
 {
-    type Item = Vec<usize>;
+    type Item = Vec<u64>;
 
-    fn next(&mut self) -> Option<Vec<usize>> {
+    fn next(&mut self) -> Option<Vec<u64>> {
         let mut found = false;
         let mut res = None;
         while !found && !self.queue.is_empty() {
@@ -316,10 +316,10 @@ impl<'a, D> Iterator for SubgraphIter<D>
 mod testing {
     use super::*;
 
-    fn apply_test_vf2<VF2>(matches: &mut Vec<Vec<usize>>, vf2: VF2)
-        where VF2: Iterator<Item = Vec<usize>>
+    fn apply_test_vf2<VF2>(matches: &mut Vec<Vec<u64>>, vf2: VF2)
+        where VF2: Iterator<Item = Vec<u64>>
     {
-        let mut res: Vec<Vec<usize>> = vf2.collect();
+        let mut res: Vec<Vec<u64>> = vf2.collect();
         assert_eq!(res.len(), matches.len());
         matches.iter_mut().for_each(|x| x.sort());
         matches.sort();
@@ -372,7 +372,7 @@ mod testing {
                        subgraphs_orbits(&g1, &g2));
         g1 = Graph::new(9);
         for i in g1.vertices().skip(1).take(6) {
-            for j in g1.vertices().take(i) {
+            for j in g1.vertices().take(i as usize) {
                 g1.add_edge(i, j);
             }
         }
@@ -380,7 +380,7 @@ mod testing {
         g1.add_edge(6, 8);
         g2 = Graph::new(4);
         for i in g2.vertices().skip(1) {
-            for j in g2.vertices().take(i) {
+            for j in g2.vertices().take(i as usize) {
                 g2.add_edge(j, i);
             }
         }

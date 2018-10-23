@@ -1,22 +1,25 @@
 //! Module containg methods to call the nauty library in order to compute the canonical form or the
 //! orbits of the vertices of a graph.
 extern crate libc;
-use self::libc::{uint32_t, uint8_t};
 use Graph;
+use super::{int, graph};
+
+#[allow(non_camel_case_types)]
+type long = libc::c_ulonglong;
 
 extern "C" {
-    fn nauty_wrapper(n: uint32_t,
-                     m: uint32_t,
-                     g: *const uint8_t,
-                     lab: *mut uint32_t,
-                     ptn: *mut uint32_t,
-                     orbits: *mut uint32_t);
+    fn nauty_wrapper(n: long,
+                     m: long,
+                     g: *const graph,
+                     lab: *mut int,
+                     ptn: *mut int,
+                     orbits: *mut int);
 }
 
-fn init_fixed(n: usize, fixed: &[Vec<u32>]) -> (Vec<u32>, Vec<u32>) {
-    let mut lab = vec![0; n];
-    let mut ptn = vec![0; n];
-    let mut cols = vec![n+1; n];
+fn init_fixed(n: u64, fixed: &[Vec<u64>]) -> (Vec<i32>, Vec<i32>) {
+    let mut lab = vec![0i32; n as usize];
+    let mut ptn = vec![0i32; n as usize];
+    let mut cols = vec![n+1; n as usize];
     let mut c = 0;
     for s in fixed.iter().filter(|x| !x.is_empty()) {
         for &i in s {
@@ -29,22 +32,22 @@ fn init_fixed(n: usize, fixed: &[Vec<u32>]) -> (Vec<u32>, Vec<u32>) {
             *x = c;
         }
     }
-    let mut nfixed = Vec::with_capacity(c + 1);
+    let mut nfixed = Vec::with_capacity(c as usize + 1);
     for (i, c) in cols.iter().enumerate() {
-        while nfixed.len() <= *c {
+        while nfixed.len() <= *c as usize {
             nfixed.push(vec![]);
         }
-        nfixed[*c].push(i);
+        nfixed[*c as usize].push(i);
     }
     c = 0;
     for s in nfixed {
         for &i in s.iter().take(s.len() - 1) {
-            lab[c] = i as u32;
-            ptn[c] = 1;
+            lab[c as usize] = i as i32;
+            ptn[c as usize] = 1;
             c += 1;
         }
-        lab[c] = s[s.len() - 1] as u32;
-        ptn[c] = 0;
+        lab[c as usize] = s[s.len() - 1] as i32;
+        ptn[c as usize] = 0;
         c += 1;
     }
     (lab, ptn)
@@ -87,16 +90,17 @@ fn init_fixed(n: usize, fixed: &[Vec<u32>]) -> (Vec<u32>, Vec<u32>) {
 ///     assert!(orbits[i] == exp_orbits[i]);
 /// }
 /// ```
-pub fn canon_graph_fixed(g: &Graph, fixed: &[Vec<u32>]) -> (Graph, Vec<usize>, Vec<usize>) {
+pub fn canon_graph_fixed(g: &Graph, fixed: &[Vec<u64>]) -> (Graph, Vec<u64>, Vec<u64>) {
     unsafe {
         let n = g.order();
-        let m = g.size();
-        let mut orbits: Vec<u32> = vec![0; n];
+        let m = g.w;
+        let mut orbits = vec![0i32; n as usize];
         let (mut lab, mut ptn) = init_fixed(n, &fixed);
+        println!("{:?} {:?}",lab,ptn);
 
-        nauty_wrapper(n as u32,
-                      m as u32,
-                      g.graph.to_bytes().as_slice().as_ptr(),
+        nauty_wrapper(n,
+                      m,
+                      g.data.as_ptr(),
                       lab.as_mut_slice().as_mut_ptr(),
                       ptn.as_mut_slice().as_mut_ptr(),
                       orbits.as_mut_slice().as_mut_ptr());
@@ -104,25 +108,27 @@ pub fn canon_graph_fixed(g: &Graph, fixed: &[Vec<u32>]) -> (Graph, Vec<usize>, V
         let mut ng = Graph::new(n);
         for i in 1..n {
             for j in 0..i {
-                if g.is_edge(lab[i] as usize, lab[j] as usize) {
+                if g.is_edge(lab[i as usize] as u64, lab[j as usize] as u64) {
                     ng.add_edge(i, j);
                 }
             }
         }
-        (ng,
-         lab.iter().map(|&x| x as usize).collect(),
-         orbits.iter().map(|&x| x as usize).collect())
+        println!("{:?}",orbits);
+        let lab = lab.drain(..).map(|x| x as u64).collect();
+        let orbits = orbits.drain(..).map(|x| x as u64).collect();
+        println!("{:?}",orbits);
+        (ng, lab, orbits)
     }
 }
 
 /// Given a graph, returns the canonical form of the graph, the order of the vertices of g in the
 /// new graph and the orbits with same format as nauty. The return values are in this order.
-pub fn canon_graph(g: &Graph) -> (Graph, Vec<usize>, Vec<usize>) {
+pub fn canon_graph(g: &Graph) -> (Graph, Vec<u64>, Vec<u64>) {
     canon_graph_fixed(g, &[])
 }
 
 /// Given orbits (nauty format), returns a vector with one vertex from each orbit.
-fn orbits_sample(orbits: &[usize]) -> Vec<usize> {
+fn orbits_sample(orbits: &[u64]) -> Vec<u64> {
     let mut mi = 0;
     let mut r = vec![];
     for &o in orbits {
@@ -141,7 +147,7 @@ fn orbits_sample(orbits: &[usize]) -> Vec<usize> {
 /// use graph::Graph;
 /// use graph::nauty::orbits;
 /// let mut g = Graph::new(5);
-/// let fixed: Vec<Vec<u32>> = vec![];
+/// let fixed: Vec<Vec<u64>> = vec![];
 /// let orbsexp = vec![0,1,3];
 /// g.add_edge(0,1);
 /// g.add_edge(2,1);
@@ -151,7 +157,7 @@ fn orbits_sample(orbits: &[usize]) -> Vec<usize> {
 ///     assert!(orbs[i] == orbsexp[i]);
 /// }
 /// ```
-pub fn orbits(g: &Graph, fixed: &[Vec<u32>]) -> Vec<usize> {
+pub fn orbits(g: &Graph, fixed: &[Vec<u64>]) -> Vec<u64> {
     let (_, _, orbits) = canon_graph_fixed(g, fixed);
     orbits_sample(&orbits)
 }

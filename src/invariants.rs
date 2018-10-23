@@ -1,7 +1,7 @@
 //! Module containing implementations of different graph invariants
 
 use super::Graph;
-use std::usize::MAX;
+use std::u64::MAX;
 use std::f64;
 use errors::*;
 use std::collections::VecDeque;
@@ -28,7 +28,7 @@ pub enum Distance {
     /// Infinite distance
     Inf,
     /// Finite distance
-    Val(usize),
+    Val(u64),
 }
 
 impl Distance {
@@ -40,7 +40,7 @@ impl Distance {
     /// assert!(Distance::Val(6).get_val().is_some());
     /// assert!(Distance::Inf.get_val().is_none());
     /// ```
-    pub fn get_val(&self) -> Option<usize> {
+    pub fn get_val(&self) -> Option<u64> {
         match *self {
             Distance::Inf => None,
             Distance::Val(x) => Some(x),
@@ -134,26 +134,26 @@ impl ::std::cmp::Ord for Distance {
 }
 
 /// Implementation of the floyd-warshall algorithm.
-/// `usize::MAX` is used to represent infinity.
+/// `u64::MAX` is used to represent infinity.
 ///
 /// # Examples
 ///
 /// ```
-/// use std::usize::MAX;
+/// use std::u64::MAX;
 /// use graph::Graph;
 /// use graph::invariants::floyd_warshall;
 /// use graph::invariants::Distance::{Val,Inf};
 ///
-/// fn to_usize(v: Vec<Vec<graph::invariants::Distance>>) -> Vec<Vec<usize>>
+/// fn to_u64(v: Vec<Vec<graph::invariants::Distance>>) -> Vec<Vec<u64>>
 /// {
 ///     v.iter().map(|x| x.iter().map(|x| match x {&Val(v) => v, &Inf => MAX}).collect()).collect()
 /// }
 ///
 /// let mut g = Graph::new(0);
-/// let distances: Vec<Vec<usize>> = to_usize(floyd_warshall(&g));
+/// let distances: Vec<Vec<u64>> = to_u64(floyd_warshall(&g));
 /// assert!(distances.len() == 0);
 /// g.add_vertex();
-/// let distances: Vec<Vec<usize>> = to_usize(floyd_warshall(&g));
+/// let distances: Vec<Vec<u64>> = to_u64(floyd_warshall(&g));
 /// assert!(distances.len() == 1);
 /// assert!(distances[0].len() == 1);
 /// assert!(distances[0][0] == 0);
@@ -165,7 +165,7 @@ impl ::std::cmp::Ord for Distance {
 /// {
 ///     g.add_edge(u-1,u);
 /// }
-/// let distances: Vec<Vec<usize>> = to_usize(floyd_warshall(&g));
+/// let distances: Vec<Vec<u64>> = to_u64(floyd_warshall(&g));
 /// let expected_distances = vec![vec![0,1,2,3,4,5,6,7,8,9,MAX],
 ///                               vec![1,0,1,2,3,4,5,6,7,8,MAX],
 ///                               vec![2,1,0,1,2,3,4,5,6,7,MAX],
@@ -177,9 +177,9 @@ impl ::std::cmp::Ord for Distance {
 ///                               vec![8,7,6,5,4,3,2,1,0,1,MAX],
 ///                               vec![9,8,7,6,5,4,3,2,1,0,MAX],
 ///                               vec![MAX,MAX,MAX,MAX,MAX,MAX,MAX,MAX,MAX,MAX,0]];
-/// for u in g.vertices()
+/// for u in g.vertices().map(|x| x as usize)
 /// {
-///     for v in g.vertices()
+///     for v in g.vertices().map(|x| x as usize)
 ///     {
 ///         println!("{}, {}",u,v);
 ///         println!("{}, {}",distances[u][v],expected_distances[u][v]);
@@ -189,18 +189,18 @@ impl ::std::cmp::Ord for Distance {
 /// ```
 pub fn floyd_warshall(g: &Graph) -> Vec<Vec<Distance>> {
     use self::Distance::{Inf, Val};
-    let n = g.order();
+    let n = g.order() as usize;
     let mut matrix = vec![vec![Inf; n]; n];
-    for u in g.vertices() {
+    for u in g.vertices().map(|x| x as usize) {
         matrix[u][u] = Val(0);
     }
-    for (u, v) in g.edges() {
+    for (u, v) in g.edges().map(|(x,y)| (x as usize, y as usize)) {
         matrix[u][v] = Val(1);
         matrix[v][u] = Val(1);
     }
-    for k in g.vertices() {
-        for u in g.vertices() {
-            for v in g.vertices() {
+    for k in g.vertices().map(|x| x as usize) {
+        for u in g.vertices().map(|x| x as usize) {
+            for v in g.vertices().map(|x| x as usize) {
                 if matrix[u][v] > matrix[u][k] + matrix[k][v] {
                     matrix[u][v] = matrix[u][k] + matrix[k][v];
                 }
@@ -227,7 +227,7 @@ pub fn floyd_warshall(g: &Graph) -> Vec<Vec<Distance>> {
 /// assert!(diam.is_finite());
 /// assert_eq!(diam.get_val().unwrap(),4);
 /// for i in g.vertices().skip(1) {
-///     for j in g.vertices().take(i) {
+///     for j in g.vertices().take(i as usize) {
 ///         g.add_edge(j,i);
 ///     }
 /// }
@@ -247,17 +247,17 @@ pub fn diameter(g: &Graph) -> Distance {
     }
 }
 
-fn dfs(g: &Graph, u: usize, visited: &mut Vec<bool>) -> Vec<usize> {
+fn dfs(g: &Graph, u: u64, visited: &mut Vec<bool>) -> Vec<u64> {
     let mut comp = vec![];
     let mut to_visit = vec![u];
     while !to_visit.is_empty() {
         let v = to_visit.pop().unwrap();
-        if !visited[v] {
+        if !visited[v as usize] {
             comp.push(v);
             for w in g.neighbors(v) {
                 to_visit.push(w);
             }
-            visited[v] = true;
+            visited[v as usize] = true;
         }
     }
     comp
@@ -291,36 +291,36 @@ fn dfs(g: &Graph, u: usize, visited: &mut Vec<bool>) -> Vec<usize> {
 ///     }
 ///  }
 ///  ```
-pub fn bfs(g: &Graph, start: usize) -> (Vec<Distance>, Vec<Vec<usize>>) {
+pub fn bfs(g: &Graph, start: u64) -> (Vec<Distance>, Vec<Vec<u64>>) {
     let mut dists: Vec<Distance> = [Distance::Inf]
         .iter()
         .cycle()
-        .take(g.order())
+        .take(g.order() as usize)
         .cloned()
         .collect();
-    let mut paths: Vec<Vec<usize>> = [Vec::new()]
+    let mut paths: Vec<Vec<u64>> = [Vec::new()]
         .iter()
         .cycle()
-        .take(g.order())
+        .take(g.order() as usize)
         .cloned()
         .collect();
-    dists[start] = Distance::Val(0);
+    dists[start as usize] = Distance::Val(0);
     let mut frontier = VecDeque::with_capacity(1);
     frontier.push_back(start);
     while !frontier.is_empty() {
         let cur = frontier.pop_front().unwrap();
-        let cdist = dists[cur] + Distance::Val(1);
+        let cdist = dists[cur as usize] + Distance::Val(1);
         for n in g.neighbors(cur) {
-            let ndist = dists[n];
+            let ndist = dists[n as usize];
             // ndist was infinite (we know it because it is a bfs)
             if ndist > cdist {
-                dists[n] = cdist;
-                paths[n].clear();
-                paths[n].push(cur);
+                dists[n as usize] = cdist;
+                paths[n as usize].clear();
+                paths[n as usize].push(cur);
                 frontier.push_back(n);
                 // there is another shortest path to join n
             } else if ndist == cdist {
-                paths[n].push(cur);
+                paths[n as usize].push(cur);
             }
         }
     }
@@ -351,13 +351,13 @@ pub fn eccentricities(g: &Graph) -> Vec<Distance> {
         .collect()
 }
 
-fn construct_paths(pths: &[Vec<usize>], s: usize, e: usize) -> Vec<Vec<usize>> {
+fn construct_paths(pths: &[Vec<u64>], s: u64, e: u64) -> Vec<Vec<u64>> {
     let mut res = vec![];
-    if pths[e].is_empty() || s == e {
+    if pths[e as usize].is_empty() || s == e {
         res.push(vec![e]);
         res
     } else {
-        for &t in &pths[e] {
+        for &t in &pths[e as usize] {
             let mut tres = construct_paths(pths, s, t);
             for mut p in tres {
                 p.push(e);
@@ -391,16 +391,16 @@ fn construct_paths(pths: &[Vec<usize>], s: usize, e: usize) -> Vec<Vec<usize>> {
 ///     }
 /// }
 /// ```
-pub fn diametral_paths(g: &Graph) -> Vec<Vec<usize>> {
+pub fn diametral_paths(g: &Graph) -> Vec<Vec<u64>> {
     let eccs = eccentricities(&g);
     let diam = eccs.iter().max().unwrap();
-    let extms: Vec<usize> = (0..g.order()).filter(|&x| eccs[x] == *diam).collect();
+    let extms: Vec<u64> = (0..g.order()).filter(|&x| eccs[x as usize] == *diam).collect();
     let mut res = vec![];
     // println!("{:?}", extms);
     for e in extms {
         let (dsts, pths) = bfs(&g, e);
         for (i, _dst) in dsts.iter().enumerate().filter(|&(_x, y)| y == diam) {
-            let mut tres = construct_paths(&pths, e, i);
+            let mut tres = construct_paths(&pths, e, i as u64);
             res.append(&mut tres);
         }
     }
@@ -432,11 +432,11 @@ pub fn diametral_paths(g: &Graph) -> Vec<Vec<usize>> {
 /// assert!(comps[0].len() == 5);
 /// assert!(comps[1].len() == 5);
 /// ```
-pub fn connected_components(g: &Graph) -> Vec<Vec<usize>> {
+pub fn connected_components(g: &Graph) -> Vec<Vec<u64>> {
     let mut comps = vec![];
-    let mut visited = vec![false; g.order()];
+    let mut visited = vec![false; g.order() as usize];
     for u in g.vertices() {
-        if !visited[u] {
+        if !visited[u as usize] {
             comps.push(dfs(&g, u, &mut visited));
         }
     }
@@ -461,11 +461,11 @@ pub fn is_connected(g: &Graph) -> bool {
     connected_components(g).len() < 2
 }
 
-fn shortests_paths_length(p: &[Vec<usize>]) -> usize {
-    if !p.is_empty() { p[0].len() - 1 } else { MAX }
+fn shortests_paths_length(p: &[Vec<u64>]) -> u64 {
+    if !p.is_empty() { p[0].len() as u64 - 1 } else { MAX }
 }
 
-fn combine_paths(p1: &[Vec<usize>], p2: &[Vec<usize>]) -> Vec<Vec<usize>> {
+fn combine_paths(p1: &[Vec<u64>], p2: &[Vec<u64>]) -> Vec<Vec<u64>> {
     let mut res = vec![];
     for a in p1.iter() {
         for b in p2.iter() {
@@ -497,19 +497,19 @@ fn combine_paths(p1: &[Vec<usize>], p2: &[Vec<usize>]) -> Vec<Vec<usize>> {
 /// g.add_edge(10,0);
 /// shortests_paths(&g);
 /// ```
-pub fn shortests_paths(g: &Graph) -> Vec<Vec<Vec<Vec<usize>>>> {
-    let n = g.order();
+pub fn shortests_paths(g: &Graph) -> Vec<Vec<Vec<Vec<u64>>>> {
+    let n = g.order() as usize;
     let mut paths = vec![vec![vec![]; n]; n];
-    for u in g.vertices() {
-        paths[u][u].push(vec![u]);
+    for u in g.vertices().map(|x| x as usize) {
+        paths[u][u].push(vec![u as u64]);
     }
-    for (u, v) in g.edges() {
-        paths[u][v].push(vec![u, v]);
-        paths[v][u].push(vec![v, u]);
+    for (u, v) in g.edges().map(|(x,y)| (x as usize, y as usize)) {
+        paths[u][v].push(vec![u as u64, v as u64]);
+        paths[v][u].push(vec![v as u64, u as u64]);
     }
-    for k in g.vertices() {
-        for u in g.vertices().filter(|&x| x != k) {
-            for v in g.vertices().filter(|&x| x != k && x != u) {
+    for k in g.vertices().map(|x| x as usize) {
+        for u in g.vertices().map(|x| x as usize).filter(|&x| x != k) {
+            for v in g.vertices().map(|x| x as usize).filter(|&x| x != k && x != u) {
                 let duk = shortests_paths_length(&paths[u][k]);
                 let dkv = shortests_paths_length(&paths[k][v]);
                 let duv = shortests_paths_length(&paths[u][v]);
@@ -648,11 +648,11 @@ pub fn minus_avecc_avdist(g: &Graph) -> f64 {
 /// g.add_edge(3,5);
 /// assert!(eci(&g).unwrap() == 35);
 /// ```
-pub fn eci(g: &Graph) -> Result<usize, DisconnectedGraph> {
+pub fn eci(g: &Graph) -> Result<u64, DisconnectedGraph> {
     let dm = floyd_warshall(&g);
     let eccs: Vec<Distance> = dm.iter().map(|x| (*x.iter().max().unwrap())).collect();
-    let degrees: Vec<usize> = g.vertices()
-        .map(|x| g.neighbors(x).count())
+    let degrees: Vec<u64> = g.vertices()
+        .map(|x| g.neighbors(x).count() as u64)
         .collect();
     eccs.iter()
         .zip(degrees.iter())
@@ -660,7 +660,7 @@ pub fn eci(g: &Graph) -> Result<usize, DisconnectedGraph> {
             Distance::Val(v) => Ok(v * *b),
             _ => Err(DisconnectedGraph::new("eci")),
         })
-        .fold(Ok(0), |acc, x: Result<usize, DisconnectedGraph>| {
+        .fold(Ok(0), |acc, x: Result<u64, DisconnectedGraph>| {
             match (acc, x) {
                 (Ok(v), Ok(o)) => Ok(v + o),
                 _ => Err(DisconnectedGraph::new("eci")),
@@ -692,38 +692,38 @@ pub fn eci(g: &Graph) -> Result<usize, DisconnectedGraph> {
 /// }
 /// assert!(num_dom(&g) == 3);
 /// ```
-pub fn num_dom(g: &Graph) -> usize {
+pub fn num_dom(g: &Graph) -> u64 {
     let n = g.order();
     g.vertices()
-        .map(|x| g.neighbors(x).count())
+        .map(|x| g.neighbors(x).count() as u64)
         .filter(|&x| x == n - 1)
-        .count()
+        .count() as u64
 }
 
-/// Computes the number of pendant vertices
+/// Computes the number of pending vertices
 ///
 /// # Examples
 /// ```
 /// use graph::Graph;
-/// use graph::invariants::num_pendant;
+/// use graph::invariants::num_pending;
 /// let mut g = Graph::new(5);
 /// for i in 1..5
 /// {
 ///     g.add_edge(0,i);
 /// }
-/// assert!(num_pendant(&g) == 4);
+/// assert!(num_pending(&g) == 4);
 /// g.add_edge(2,1);
-/// assert!(num_pendant(&g) == 2);
+/// assert!(num_pending(&g) == 2);
 /// g.add_edge(3,1);
-/// assert!(num_pendant(&g) == 1);
+/// assert!(num_pending(&g) == 1);
 /// g.add_edge(4,1);
-/// assert!(num_pendant(&g) == 0);
+/// assert!(num_pending(&g) == 0);
 /// ```
-pub fn num_pendant(g: &Graph) -> usize {
+pub fn num_pending(g: &Graph) -> u64 {
     g.vertices()
-        .map(|x| g.neighbors(x).count())
+        .map(|x| g.neighbors(x).count() as u64)
         .filter(|&x| x == 1)
-        .count()
+        .count() as u64
 }
 
 /// Size of the biggest possible clique among all graphs with same order and size as the graph
@@ -740,10 +740,10 @@ pub fn num_pendant(g: &Graph) -> usize {
 /// }
 /// dnm(&g);
 /// ```
-pub fn dnm(g: &Graph) -> usize {
+pub fn dnm(g: &Graph) -> u64 {
     let n = g.order() as f64;
     let m = g.size() as f64;
-    ((2f64 * n + 1f64 - (17f64 + 8f64 * (m - n)).sqrt()) / 2f64).floor() as usize
+    ((2f64 * n + 1f64 - (17f64 + 8f64 * (m - n)).sqrt()) / 2f64).floor() as u64
 }
 
 /// Computes the maximum degree in the graph.
@@ -760,9 +760,9 @@ pub fn dnm(g: &Graph) -> usize {
 /// println!("{}",deg_max(&g));
 /// assert!(deg_max(&g) == 4);
 /// ```
-pub fn deg_max(g: &Graph) -> usize {
+pub fn deg_max(g: &Graph) -> u64 {
     g.vertices()
-        .map(|x| g.neighbors(x).count())
+        .map(|x| g.neighbors(x).count() as u64)
         .max()
         .unwrap()
 }
@@ -780,9 +780,9 @@ pub fn deg_max(g: &Graph) -> usize {
 /// }
 /// assert!(deg_min(&g) == 1);
 /// ```
-pub fn deg_min(g: &Graph) -> usize {
+pub fn deg_min(g: &Graph) -> u64 {
     g.vertices()
-        .map(|x| g.neighbors(x).count())
+        .map(|x| g.neighbors(x).count() as u64)
         .min()
         .unwrap()
 }
@@ -806,11 +806,11 @@ pub fn deg_min(g: &Graph) -> usize {
 /// g = from_g6(&"D??".to_string()).unwrap();
 /// assert!(irregularity(&g) == 0);
 /// ```
-pub fn irregularity(g: &Graph) -> usize {
+pub fn irregularity(g: &Graph) -> u64 {
     let degrees = g.vertices()
         .map(|x| g.neighbors(x).count() as isize)
         .collect::<Vec<isize>>();
     g.edges()
-        .map(|(x, y)| (degrees[x] - degrees[y]).abs() as usize)
+        .map(|(x, y)| (degrees[x as usize] - degrees[y as usize]).abs() as u64)
         .sum()
 }

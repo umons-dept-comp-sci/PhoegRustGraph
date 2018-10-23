@@ -12,7 +12,7 @@ pub struct TransfoResult {
     /// Graph resulting from the transformation.
     end: Graph,
     /// New ordering of the vertices of `end` from the canonical form.
-    order: Vec<usize>,
+    order: Vec<u64>,
     /// Edges added to the graph.
     added: Graph,
     /// Edges removed from the graph.
@@ -41,7 +41,7 @@ impl TransfoResult {
     }
 
     /// Adds an edge.
-    pub fn add_edge(&mut self, i: usize, j: usize) {
+    pub fn add_edge(&mut self, i: u64, j: u64) {
         if !self.start.is_edge(i, j) {
             self.end.add_edge(i, j);
             self.added.add_edge(i, j);
@@ -50,7 +50,7 @@ impl TransfoResult {
     }
 
     /// Removes an edge.
-    pub fn remove_edge(&mut self, i: usize, j: usize) {
+    pub fn remove_edge(&mut self, i: u64, j: u64) {
         if self.start.is_edge(i, j) {
             self.end.remove_edge(i, j);
             self.removed.add_edge(i, j);
@@ -65,7 +65,7 @@ impl TransfoResult {
     }
 
     /// Removes a vertex.
-    pub fn remove_vertex(&mut self, i: usize) {
+    pub fn remove_vertex(&mut self, i: u64) {
         self.end.remove_vertex(i);
         self.removed.remove_vertex(i);
     }

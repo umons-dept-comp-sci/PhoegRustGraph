@@ -4,9 +4,9 @@ use Graph;
 use errors::*;
 
 /// Returns the length of the graph6 format for a graph of order n
-fn length_g6(n: usize) -> usize {
+fn length_g6(n: u64) -> u64 {
     if n > 0 {
-        1 + (((n * (n - 1)) / 2) as f64 / 6f64).ceil() as usize
+        1 + (((n * (n - 1)) / 2) as f64 / 6f64).ceil() as u64
     } else {
         1
     }
@@ -112,7 +112,7 @@ pub fn to_g6(graph: &Graph) -> String {
 /// ```
 pub fn from_g6(s: &str) -> Result<Graph, InvalidGraph6> {
     let mut chars = s.chars();
-    if let Some(n) = chars.next().and_then(|x| Some(((x as u8) - 63) as usize)) {
+    if let Some(n) = chars.next().and_then(|x| Some(((x as u8) - 63) as u64)) {
         let mut g = Graph::new(n);
         if n > 1 && s.len() == 1 + (((n * (n - 1)) as f64 / 12.0).ceil() as usize) {
             let mut l = 6;

@@ -3,7 +3,7 @@ macro_rules! replace_expr {
 }
 macro_rules! count
 {
-    ($($ts:tt)*) => {<[()]>::len(&[$(replace_expr!($ts ())),*])};
+    ($($ts:tt)*) => {<[()]>::len(&[$(replace_expr!($ts ())),*]) as u64};
 }
 
 macro_rules! build_map {
@@ -37,7 +37,7 @@ macro_rules! build_map {
     };
     (let $($tts:tt)*) => {
         {
-            let mut m :HashMap<&str,usize> = HashMap::new();
+            let mut m :HashMap<&str,u64> = HashMap::new();
             build_map!(@build (m) ($($tts)*) -> () ());
             m
         }
@@ -101,13 +101,13 @@ macro_rules! index {
     //symmetry constraint
     (($m:ident $f:ident $($v:tt)*) ($a:ident sym $b:ident) ($($t:tt)*)) => {
         let index = *($m.get(stringify!($b))).unwrap();
-        $f[index].push($a as u32);
+        $f[index as usize].push($a);
         build_iter!(@iter ($m $f $($v)*) ($($t)*) -> ());
-        $f[index].pop();
+        $f[index as usize].pop();
     };
     //no symmetry
     (($m:ident $f:ident $($v:tt)*) ($a:ident) ($($t:tt)*)) => {
-        $f.push(vec![$a as u32]);
+        $f.push(vec![$a]);
         build_iter!(@iter ($m $f $($v)*) ($($t)*) -> ());
         $f.pop();
     };
@@ -168,7 +168,7 @@ macro_rules! build_iter {
     (($m:ident $g:ident) let $($tts:tt)*) => {
         {
             let mut res: Vec<TransfoResult> = Vec::new();
-            let mut fixed : Vec<Vec<u32>> = Vec::new();
+            let mut fixed : Vec<Vec<u64>> = Vec::new();
             build_iter!(@iter ($m fixed res $g) ($($tts)*) -> ());
             res
         }
