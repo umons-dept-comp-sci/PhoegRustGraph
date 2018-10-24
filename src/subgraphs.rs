@@ -80,10 +80,7 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
                 self.adj_2[i as usize] = self.depth;
             }
             if i > m && self.orbits[i as usize] == m_orbit {
-                if !self.taboo.contains_key(&n) {
-                    self.taboo.insert(n, HashSet::new());
-                }
-                self.taboo.get_mut(&n).unwrap().insert(i);
+                self.taboo.entry(n).or_default().insert(i);
             }
         }
         self.num_out -= 1;
@@ -107,7 +104,7 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
     }
 
     fn filter(&self, n: u64, m: u64) -> bool {
-        if self.taboo.contains_key(&n) && self.taboo.get(&n).unwrap().contains(&m) {
+        if self.taboo.contains_key(&n) && self.taboo[&n].contains(&m) {
             return false;
         }
         for (n1, n2) in self.g1
@@ -115,10 +112,8 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
             .filter(|&x| self.core_1[x as usize] != self.null)
             .map(|x| (x, self.core_1[x as usize])) {
             let (e1, e2) = (self.g1.is_edge(n, n1), self.g2.is_edge(m, n2));
-            if e1 || e2 {
-                if e1 != e2 {
-                    return false;
-                }
+            if e1 != e2 {
+                return false;
             }
         }
         // e num of edges out of core and adj, n num of edges out of core and in adj
@@ -143,29 +138,29 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
     }
 
     fn compute_pairs(&self) -> Vec<(u64, u64)> {
-        self.compute_pairs_internal(&self.g1.vertices().collect())
+        self.compute_pairs_internal(&self.g1.vertices().collect::<Vec<_>>().as_slice())
     }
 }
 
 impl<'a> VF2DataImpl<'a> {
-    fn new(g1: &'a Graph, g2: &'a Graph) -> VF2DataImpl<'a> {
-        assert!(g1.order() >= g2.order());
-        let null = g1.order() + 1;
+    fn new(graph1: &'a Graph, graph2: &'a Graph) -> VF2DataImpl<'a> {
+        assert!(graph1.order() >= graph2.order());
+        let nullv = graph1.order() + 1;
         VF2DataImpl {
-            g1: g1,
-            g2: g2,
+            g1: graph1,
+            g2: graph2,
             depth: 1,
-            null: null,
-            num_out: g2.order(),
-            core_1: vec![null; g1.order() as usize],
-            core_2: vec![null; g2.order() as usize],
-            adj_1: vec![0; g1.order() as usize],
-            adj_2: vec![0; g2.order() as usize],
-            orbits: nauty::canon_graph_fixed(&g2, &[]).2,
+            null: nullv,
+            num_out: graph2.order(),
+            core_1: vec![nullv; graph1.order() as usize],
+            core_2: vec![nullv; graph2.order() as usize],
+            adj_1: vec![0; graph1.order() as usize],
+            adj_2: vec![0; graph2.order() as usize],
+            orbits: nauty::canon_graph_fixed(&graph2, &[]).2,
             taboo: HashMap::new(),
         }
     }
-    fn compute_pairs_internal(&self, g1_nodes: &Vec<u64>) -> Vec<(u64, u64)> {
+    fn compute_pairs_internal(&self, g1_nodes: &[u64]) -> Vec<(u64, u64)> {
         let adj_out = g1_nodes.iter()
             .filter(|&&x| self.core_1[x as usize] == self.null && self.adj_1[x as usize] > 0)
             .cloned();
@@ -179,8 +174,7 @@ impl<'a> VF2DataImpl<'a> {
         } else {
             let out = g1_nodes.iter().filter(|&&x| self.adj_1[x as usize] == 0).cloned();
             let min = self.g2.vertices().filter(|&x| self.adj_2[x as usize] == 0).min();
-            let out_iter = out.zip(min.iter().cloned().cycle()).collect();
-            out_iter
+            out.zip(min.iter().cloned().cycle()).collect()
         }
     }
 }
@@ -197,11 +191,11 @@ pub fn subgraphs_orbits<'a>(g1: &'a Graph, g2: &'a Graph) -> impl Iterator<Item 
 
 impl<'a> VF2DataOrb<'a> {
     fn new(g1: &'a Graph, g2: &'a Graph) -> VF2DataOrb<'a> {
-        let data: VF2DataImpl<'a> = VF2DataImpl::new(g1, g2);
-        let fixed = Vec::new();
+        let dataobj: VF2DataImpl<'a> = VF2DataImpl::new(g1, g2);
+        let fixedempt = Vec::new();
         VF2DataOrb {
-            data: data,
-            fixed: fixed,
+            data: dataobj,
+            fixed: fixedempt,
         }
     }
 }
@@ -265,9 +259,9 @@ impl<'a> SubgraphIter<VF2DataOrb<'a>> {
 impl<'a, D> SubgraphIter<D>
     where D: VF2Data
 {
-    fn init(data: D) -> SubgraphIter<D> {
+    fn init(dataobj: D) -> SubgraphIter<D> {
         let mut iter = SubgraphIter {
-            data: data,
+            data: dataobj,
             queue: Vec::new(),
         };
         let p = iter.data.compute_pairs();

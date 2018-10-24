@@ -112,7 +112,7 @@ pub fn to_g6(graph: &Graph) -> String {
 /// ```
 pub fn from_g6(s: &str) -> Result<Graph, InvalidGraph6> {
     let mut chars = s.chars();
-    if let Some(n) = chars.next().and_then(|x| Some(((x as u8) - 63) as u64)) {
+    if let Some(n) = chars.next().and_then(|x| Some(u64::from((x as u8) - 63))) {
         let mut g = Graph::new(n);
         if n > 1 && s.len() == 1 + (((n * (n - 1)) as f64 / 12.0).ceil() as usize) {
             let mut l = 6;

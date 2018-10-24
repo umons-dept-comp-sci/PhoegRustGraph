@@ -146,7 +146,7 @@ macro_rules! parse_transfo {
 
 macro_rules! build_iter {
     (@loop ($m:ident $f:ident $res:ident $g:ident) ($a:ident $($r:tt)*) ($($t:tt)*)) => {
-        for &$a in orbits(&$g, $f.as_slice()).iter() {
+        for &$a in &orbits(&$g, $f.as_slice()) {
             ifcond!( ($m $f $res $g) ($a) ($($r)*) -> () ($($t)*));
         }
     };

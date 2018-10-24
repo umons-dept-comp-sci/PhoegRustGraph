@@ -194,7 +194,7 @@ pub fn floyd_warshall(g: &Graph) -> Vec<Vec<Distance>> {
     for u in g.vertices().map(|x| x as usize) {
         matrix[u][u] = Val(0);
     }
-    for (u, v) in g.edges().map(|(x,y)| (x as usize, y as usize)) {
+    for (u, v) in g.edges().map(|(x, y)| (x as usize, y as usize)) {
         matrix[u][v] = Val(1);
         matrix[v][u] = Val(1);
     }
@@ -462,7 +462,11 @@ pub fn is_connected(g: &Graph) -> bool {
 }
 
 fn shortests_paths_length(p: &[Vec<u64>]) -> u64 {
-    if !p.is_empty() { p[0].len() as u64 - 1 } else { MAX }
+    if !p.is_empty() {
+        p[0].len() as u64 - 1
+    } else {
+        MAX
+    }
 }
 
 fn combine_paths(p1: &[Vec<u64>], p2: &[Vec<u64>]) -> Vec<Vec<u64>> {
@@ -503,7 +507,7 @@ pub fn shortests_paths(g: &Graph) -> Vec<Vec<Vec<Vec<u64>>>> {
     for u in g.vertices().map(|x| x as usize) {
         paths[u][u].push(vec![u as u64]);
     }
-    for (u, v) in g.edges().map(|(x,y)| (x as usize, y as usize)) {
+    for (u, v) in g.edges().map(|(x, y)| (x as usize, y as usize)) {
         paths[u][v].push(vec![u as u64, v as u64]);
         paths[v][u].push(vec![v as u64, u as u64]);
     }

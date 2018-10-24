@@ -67,12 +67,12 @@ pub struct Set {
 }
 
 impl Set {
-    fn fill<PF>(maxm: u64, pfunc: PF, val: set, size: u64) -> Set
+    fn fill<PF>(maxelem: u64, pfunc: PF, val: set, numelem: u64) -> Set
         where PF: Fn(u64) -> set
     {
         unsafe {
-            let mut p = maxm;
-            let words = detail::setwordsneeded(maxm as int);
+            let mut p = maxelem;
+            let words = detail::setwordsneeded(maxelem as int);
             let mut v = Vec::with_capacity(words as usize);
             for _ in 0..words - 1 {
                 v.push(val);
@@ -81,8 +81,8 @@ impl Set {
             v.push(pfunc(p));
             Set {
                 data: v,
-                maxm: maxm,
-                size: size,
+                maxm: maxelem,
+                size: numelem,
             }
         }
     }
@@ -187,6 +187,12 @@ impl Set {
     }
 }
 
+impl fmt::Display for Set {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.iter().collect::<Vec<u64>>())
+    }
+}
+
 struct SetIter {
     data: *const set,
     len: u64,
@@ -198,11 +204,11 @@ impl SetIter {
         SetIter::with_pos(data, len, -1i64)
     }
 
-    fn with_pos(data: *const set, len: u64, pos: i64) -> SetIter {
+    fn with_pos(set: *const set, numelem: u64, start: i64) -> SetIter {
         SetIter {
-            data: data,
-            len: len,
-            pos: pos,
+            data: set,
+            len: numelem,
+            pos: start,
         }
     }
 }
@@ -213,7 +219,7 @@ impl Iterator for SetIter {
     fn next(&mut self) -> Option<u64> {
         unsafe {
             let p = detail::nextelement(self.data, self.len as int, self.pos as int);
-            self.pos = p as i64;
+            self.pos = i64::from(p);
             if self.pos < 0 {
                 None
             } else {
@@ -226,7 +232,7 @@ impl Iterator for SetIter {
 /// Structure representing a undirected simple graph.
 #[derive(Clone)]
 pub struct Graph {
-    pub data: Vec<graph>,
+    data: Vec<graph>,
     n: u64,
     m: u64,
     w: u64,
@@ -234,15 +240,15 @@ pub struct Graph {
 
 impl Graph {
     /// Constructs a new graph with 0 edges and n vertices.
-    pub fn new(n: u64) -> Graph {
+    pub fn new(ord: u64) -> Graph {
         unsafe {
-            let w = detail::setwordsneeded(n as int) as u64;
-            let v = vec![0; (n*w) as usize];
+            let words = detail::setwordsneeded(ord as int) as u64;
+            let v = vec![0; (ord*words) as usize];
             Graph {
                 data: v,
-                n: n,
+                n: ord,
                 m: 0,
-                w: w,
+                w: words,
             }
         }
     }

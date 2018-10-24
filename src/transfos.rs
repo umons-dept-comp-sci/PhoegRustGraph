@@ -45,7 +45,7 @@ impl TransfoResult {
         if !self.start.is_edge(i, j) {
             self.end.add_edge(i, j);
             self.added.add_edge(i, j);
-            self.removed.remove_edge(i,j);
+            self.removed.remove_edge(i, j);
         }
     }
 
@@ -54,7 +54,7 @@ impl TransfoResult {
         if self.start.is_edge(i, j) {
             self.end.remove_edge(i, j);
             self.removed.add_edge(i, j);
-            self.added.remove_edge(i,j);
+            self.added.remove_edge(i, j);
         }
     }
 

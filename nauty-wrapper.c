@@ -22,7 +22,7 @@ void nauty_wrapper(
         ullong s = 0;
         ullong mi = n;
         for (ullong i = 0; i < n; ++i) {
-            if (mi > lab[i]) {
+            if (mi > (ullong) lab[i]) {
                 mi = lab[i];
             }
             if (ptn[i] == 0) {
