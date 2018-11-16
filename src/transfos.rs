@@ -121,6 +121,7 @@ impl fmt::Debug for TransfoResult {
 /// Adds an edge.
 pub fn add_edge(g: &Graph) -> Vec<TransfoResult> {
     transformation! (
+        "add_edge",
         for g,
         let a,
         b sym a (after a and not adj a)
@@ -132,6 +133,7 @@ pub fn add_edge(g: &Graph) -> Vec<TransfoResult> {
 /// Removes a vertex.
 pub fn remove_vertex(g: &Graph) -> Vec<TransfoResult> {
     transformation! (
+        "remove_vertex",
         for g,
         let a
         apply
@@ -142,6 +144,7 @@ pub fn remove_vertex(g: &Graph) -> Vec<TransfoResult> {
 /// Removes an edge.
 pub fn remove_edge(g: &Graph) -> Vec<TransfoResult> {
     transformation!(
+        "remove_edge",
         for g,
         let a,
         b sym a (after a and adj a)
@@ -159,6 +162,7 @@ pub fn remove_edge(g: &Graph) -> Vec<TransfoResult> {
 /// </pre>
 pub fn rotation(g: &Graph) -> Vec<TransfoResult> {
     transformation!(
+        "rotation",
         for g,
         let a,
         b (diff a and adj a),
@@ -178,6 +182,7 @@ pub fn rotation(g: &Graph) -> Vec<TransfoResult> {
 /// </pre>
 pub fn slide(g: &Graph) -> Vec<TransfoResult> {
     transformation!(
+        "slide",
         for g,
         let a,
         b (diff a and adj a),
@@ -197,6 +202,7 @@ pub fn slide(g: &Graph) -> Vec<TransfoResult> {
 /// </pre>
 pub fn move_distinct(g: &Graph) -> Vec<TransfoResult> {
     transformation! (
+        "move_distinct",
         for g,
         let a,
         b sym a (after a and adj a),
@@ -217,6 +223,7 @@ pub fn move_distinct(g: &Graph) -> Vec<TransfoResult> {
 /// </pre>
 pub fn two_opt(g: &Graph) -> Vec<TransfoResult> {
     transformation! (
+        "two_opt",
         for g,
         let a,
         b sym a (after a and adj a),
@@ -239,6 +246,7 @@ pub fn two_opt(g: &Graph) -> Vec<TransfoResult> {
 /// </pre>
 pub fn detour(g: &Graph) -> Vec<TransfoResult> {
     transformation!(
+        "detour",
         for g,
         let a,
         b sym a (after a and adj a),
@@ -259,6 +267,7 @@ pub fn detour(g: &Graph) -> Vec<TransfoResult> {
 /// </pre>
 pub fn shortcut(g: &Graph) -> Vec<TransfoResult> {
     transformation! (
+        "shortcut",
         for g,
         let a,
         b sym a (after a and not adj a),

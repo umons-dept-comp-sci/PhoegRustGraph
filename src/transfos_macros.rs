@@ -82,10 +82,10 @@ macro_rules! ifcond {
         ifcond!(($($v)*) ($a) () -> ($($b)*) ($($t)*));
     };
     //Found condition block
-    (($m:ident $f:ident $res:ident $g:ident) ($a:ident) (($($p:tt)+)) -> ($($b:tt)*) ($($t:tt)*)) => {
+    (($m:ident $f:ident $res:ident $g:ident $n:expr) ($a:ident) (($($p:tt)+)) -> ($($b:tt)*) ($($t:tt)*)) => {
         if cond!($g $a ($($p)*) -> ())
         {
-            index!(($m $f $res $g) ($a $($b)*) ($($t)*));
+            index!(($m $f $res $g $n) ($a $($b)*) ($($t)*));
         }
     };
     //Looking for condition block (could be sym constraint before the ()'s)
@@ -145,15 +145,16 @@ macro_rules! parse_transfo {
 }
 
 macro_rules! build_iter {
-    (@loop ($m:ident $f:ident $res:ident $g:ident) ($a:ident $($r:tt)*) ($($t:tt)*)) => {
+    (@loop ($m:ident $f:ident $res:ident $g:ident $n:expr) ($a:ident $($r:tt)*) ($($t:tt)*)) => {
         for &$a in &orbits(&$g, $f.as_slice()) {
-            ifcond!( ($m $f $res $g) ($a) ($($r)*) -> () ($($t)*));
+            ifcond!( ($m $f $res $g $n) ($a) ($($r)*) -> () ($($t)*));
         }
     };
     (@iter ($($v:tt)*) () -> ($($a:tt)*)) => {};
-    (@iter ($m:ident $f:ident $res:ident $g:ident) (apply $($r:tt)+) -> ()) => {
+    (@iter ($m:ident $f:ident $res:ident $g:ident $n:expr) (apply $($r:tt)+) -> ()) => {
         let mut ng = TransfoResult::new(&$g);
         parse_transfo!((ng) ($($r)*) -> ());
+        ng.set_name($n.to_string());
         $res.push(ng);
     };
     (@iter ($($v:tt)*) (apply $($r:tt)+) -> ($($a:tt)+)) => {
@@ -165,11 +166,11 @@ macro_rules! build_iter {
     (@iter ($($v:tt)*) ($tok:tt $($r:tt)*) -> ($($a:tt)*)) => {
         build_iter!(@iter ($($v)*) ($($r)*) -> ($($a)* $tok));
     };
-    (($m:ident $g:ident) let $($tts:tt)*) => {
+    (($m:ident $g:ident $n:expr) let $($tts:tt)*) => {
         {
             let mut res: Vec<TransfoResult> = Vec::new();
             let mut fixed : Vec<Vec<u64>> = Vec::new();
-            build_iter!(@iter ($m fixed res $g) ($($tts)*) -> ());
+            build_iter!(@iter ($m fixed res $g $n) ($($tts)*) -> ());
             res
         }
     };
@@ -179,11 +180,11 @@ macro_rules! build_iter {
 }
 
 macro_rules! transformation {
-    (for $g:ident, $($r:tt)*) => {
+    ($n:expr, for $g:ident, $($r:tt)*) => {
         {
             #[allow(unused_variables)]
             let m = build_map!($($r)*);
-            build_iter!((m $g) $($r)*)
+            build_iter!((m $g $n) $($r)*)
         }
     };
     ($($_:tt)*) => {
