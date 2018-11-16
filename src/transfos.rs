@@ -17,6 +17,8 @@ pub struct TransfoResult {
     added: Graph,
     /// Edges removed from the graph.
     removed: Graph,
+    /// Name of the transformation
+    name: String,
 }
 
 impl TransfoResult {
@@ -29,7 +31,16 @@ impl TransfoResult {
             order: (0..g.order()).collect(),
             added: Graph::new(g.order()),
             removed: Graph::new(g.order()),
+            name: "".to_string(),
         }
+    }
+
+    /// Creates a new `TransfoResult` with `g` as a starting point and with given name.
+    /// The graph is cloned in the making.
+    pub fn with_name(g: &Graph, name: String) -> TransfoResult {
+        let mut tr = TransfoResult::new(g);
+        tr.name = name;
+        tr
     }
 
     /// Computes the canonical form of the result as well as the order of the vertices in this
@@ -74,12 +85,18 @@ impl TransfoResult {
     pub fn get_end(&self) -> &Graph {
         &self.end
     }
+
+    /// Sets the name of the transformation
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
 }
 
 impl fmt::Display for TransfoResult {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f,
-               "{} -> {} [added: {}, removed: {}, order: {:?}]",
+               "{} : {} -> {} [added: {}, removed: {}, order: {:?}]",
+               self.name,
                self.start,
                self.end,
                self.added,
@@ -91,7 +108,8 @@ impl fmt::Display for TransfoResult {
 impl fmt::Debug for TransfoResult {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f,
-               "{} -> {} [added: {}, removed: {}, order: {:?}]",
+               "{} : {} -> {} [added: {}, removed: {}, order: {:?}]",
+               self.name,
                self.start,
                self.end,
                self.added,
