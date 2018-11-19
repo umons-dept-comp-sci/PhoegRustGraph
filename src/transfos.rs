@@ -95,7 +95,7 @@ impl TransfoResult {
 impl fmt::Display for TransfoResult {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f,
-               "{} : {} -> {} [added: {}, removed: {}, order: {:?}]",
+               "{}, {}, {}, {}, {}, {:?}",
                self.name,
                self.start,
                self.end,
