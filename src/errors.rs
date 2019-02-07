@@ -5,6 +5,7 @@ use std::io;
 
 /// Error returned by the functions charged with graph6 format handling when the given format is
 /// incorrect.
+#[repr(C)]
 #[derive(Debug)]
 pub struct InvalidGraph6 {
     details: String,
@@ -37,6 +38,7 @@ impl From<io::Error> for InvalidGraph6 {
 
 /// Error returned by algorithms supporting only connected graphs when they are given a
 /// non-connected graph.
+#[repr(C)]
 #[derive(Debug)]
 pub struct DisconnectedGraph {
     details: String,
