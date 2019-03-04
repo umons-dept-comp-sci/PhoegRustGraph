@@ -95,13 +95,19 @@ impl TransfoResult {
 impl fmt::Display for TransfoResult {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f,
-               "{}, \"{}\", \"{}\", \"{}\", \"{}\", {:?}",
+               "\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", ",
                self.name,
                self.start,
                self.end,
                self.added,
-               self.removed,
-               self.order)
+               self.removed)?;
+        for i in 0..self.order.len() {
+            if i > 0 {
+                write!(f,";")?;
+            }
+            write!(f,"{}",self.order[i])?;
+        }
+        Ok(())
     }
 }
 
