@@ -13,6 +13,7 @@ pub mod nauty;
 mod transfos_macros;
 pub mod transfos;
 pub mod subgraphs;
+pub mod transfo_result;
 
 use std::fmt;
 
