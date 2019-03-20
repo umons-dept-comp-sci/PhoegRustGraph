@@ -71,6 +71,10 @@ pub struct Set {
     size: u64,
 }
 
+//TODO Add method to "expand" the set by interleaving it with zeroes. Use full for
+//GraphTransformation.
+//This can be done using magic numbers :
+//http://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN
 impl Set {
     fn initfill<PF>(maxelem: u64, pfunc: PF, val: set, numelem: u64) -> Set
         where PF: Fn(u64) -> set
