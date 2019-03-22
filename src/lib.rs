@@ -71,10 +71,10 @@ pub struct Set {
     size: u64,
 }
 
-//TODO Add method to "expand" the set by interleaving it with zeroes. Use full for
-//GraphTransformation.
-//This can be done using magic numbers :
-//http://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN
+// TODO Add method to "expand" the set by interleaving it with zeroes. Use full for
+// GraphTransformation.
+// This can be done using magic numbers :
+// http://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN
 impl Set {
     fn initfill<PF>(maxelem: u64, pfunc: PF, val: set, numelem: u64) -> Set
         where PF: Fn(u64) -> set
@@ -633,6 +633,107 @@ impl Graph {
         }
     }
 
+    /// Returns a minimal binary form of the graph
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// //TODO Update tests
+    /// let mut n = 5;
+    /// let mut g = graph::Graph::new(n);
+    /// g.add_cycle(&((0..n).collect::<Vec<u64>>()));
+    /// let mut res = g.to_bin();
+    /// let expected = [0x1699000000000000];
+    /// assert_eq!(res.len(),expected.len());
+    /// for (e,r) in expected.iter().zip(res.iter()) {
+    ///     assert_eq!(e,r);
+    /// }
+    /// n = 30;
+    /// g = graph::Graph::new(n);
+    /// g.add_cycle(&((0..n).collect::<Vec<u64>>()));
+    /// res = g.to_bin();
+    /// let expected = [0x7a91082040402008,
+    ///                     0x0100100080020004,
+    ///                     0x0004000200008000,
+    ///                     0x1000010000080000,
+    ///                     0x2000004000004000,
+    ///                     0x0020000008000001,
+    ///                     0x0000001800000080];
+    /// assert_eq!(res.len(),expected.len());
+    /// for (e,r) in expected.iter().zip(res.iter()) {
+    ///     assert_eq!(e,r);
+    /// }
+    /// g = graph::Graph::new(142);
+    /// res = g.to_bin();
+    /// assert_eq!(0xfc008e0000000000,res[0]);
+    /// ```
+    pub fn to_bin(&self) -> Vec<u64> {
+        let mut res = vec![];
+        // First step : encode order of the graph
+        let mut cur = 0;
+        let mut dec = 58;
+        if self.n >= 63 {
+            cur |= 63 << 58; //Add 126 at end of word
+            dec = 40;
+        }
+        if self.n >= 258048 {
+            cur |= 63 << 52;
+            dec = 16;
+        }
+        cur |= self.n << dec;
+        let mut to_take = 1;
+        let mut to_add;
+        let mut rem;
+        let mut lp;
+        let mut taken;
+        // for each vertex
+        for p in (1..self.n).map(|x| x * self.w) {
+            lp = 0;
+            rem = to_take;
+            while rem > 0 {
+                //  if we can get a full 64 bit, we take them
+                if rem > 64 {
+                    to_add = self.data[(p + lp) as usize];
+                    lp += 1;
+                    taken = 64;
+                    rem -= 64;
+                }
+                //  otherwise, we take all the available ones
+                else {
+                    to_add = self.data[(p + lp) as usize].wrapping_shr(64 - rem as u32);
+                    taken = rem;
+                    rem = 0;
+                }
+                //  then we add these bits to cur
+                //  if there is too much to fit in the remaining bits in cur,
+                if taken > dec {
+                    //  we add as much as we can to cur,
+                    cur |= to_add.wrapping_shr(taken - dec);
+                    //  add it to res,
+                    res.push(cur);
+                    //  make cur a new u64
+                    cur = 0;
+                    taken -= dec;
+                    dec = 64;
+                    to_add = to_add & ((1u64 << taken) - 1);
+                }
+                cur |= to_add << (dec - taken);
+                dec -= taken;
+                if dec == 0 {
+                    res.push(cur);
+                    cur = 0;
+                    dec = 64;
+                }
+            }
+            //  take one more bit each time
+            to_take += 1;
+        }
+        if dec < 64 {
+            res.push(cur);
+        }
+        res
+    }
+
     /// Returns the order of the graph
     ///
     /// # Examples
@@ -819,6 +920,13 @@ impl Graph {
                 detail::delelement(row, u as int);
                 self.m -= 1;
             }
+        }
+    }
+
+    pub fn add_cycle(&mut self, lst: &[u64]) {
+        self.to_bin();
+        for (&i, &j) in lst.iter().zip(lst.iter().cycle().skip(1)) {
+            self.add_edge(i, j);
         }
     }
 
