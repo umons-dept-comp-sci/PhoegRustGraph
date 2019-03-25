@@ -39,35 +39,13 @@ fn length_g6(n: u64) -> u64 {
 /// ```
 pub fn to_g6(graph: &Graph) -> String {
     let n = graph.order();
-    let mut res = String::new();
-    res += &((n as u8 + 63) as char).to_string();
-    if graph.size() == 0 {
-        for _ in 1..length_g6(n) {
-            res += &'?'.to_string();
-        }
+    let m;
+    if n > 0 {
+        m = ((n * (n - 1) / 2) as f64 / 6.).ceil() as u64;
     } else {
-        let mut l = 0;
-        let mut r: u8 = 0;
-        for u in graph.vertices().skip(1) {
-            for v in graph.vertices().take_while(|x| *x != u) {
-                if l == 6 {
-                    res += &((r + 63) as char).to_string();
-                    l = 0;
-                    r = 0;
-                }
-                r <<= 1;
-                if graph.is_edge(u, v) {
-                    r += 1;
-                }
-                l += 1;
-            }
-        }
-        if l <= 6 {
-            r <<= 6 - l;
-            res += &((r + 63) as char).to_string();
-        }
+        m = 0;
     }
-    res
+    encode(&graph.to_bin(), 1 + m)
 }
 
 /// Returns a graph corresponding to the graph6 representation
@@ -250,7 +228,7 @@ pub fn encode(data: &[u64], l: u64) -> String {
                 v = data[pdata].to_be_bytes();
                 pdata += 1;
             } else {
-                //When we have 24 bytes, we convert them into 4 chars or less if not enough data
+                // When we have 24 bytes, we convert them into 4 chars or less if not enough data
                 // Reverse order of 6 bits sets
                 let x = ((r >> 18) ^ r) & 63;
                 let y = ((r >> 12) ^ (r >> 6)) & 63;

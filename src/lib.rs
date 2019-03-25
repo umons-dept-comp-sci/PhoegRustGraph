@@ -15,6 +15,7 @@ pub mod transfos;
 pub mod subgraphs;
 
 use std::fmt;
+use errors::InvalidBinary;
 
 
 #[allow(non_camel_case_types)]
@@ -734,6 +735,83 @@ impl Graph {
         res
     }
 
+    /// Returns a minimal binary form of the graph
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let data = [0x1699000000000000];
+    /// let mut n = 5;
+    /// let mut g = graph::Graph::from_bin(&data).unwrap();
+    /// assert_eq!(n,g.order());
+    /// assert!(g.is_cycle(&((0..n).collect::<Vec<u64>>())));
+    /// let data = [0x7a91082040402008,
+    ///                     0x0100100080020004,
+    ///                     0x0004000200008000,
+    ///                     0x1000010000080000,
+    ///                     0x2000004000004000,
+    ///                     0x0020000008000001,
+    ///                     0x0000001800000080];
+    /// n = 30;
+    /// let mut g = graph::Graph::from_bin(&data).unwrap();
+    /// assert_eq!(n,g.order());
+    /// assert!(g.is_cycle(&((0..n).collect::<Vec<u64>>())));
+    /// let data = [0xfc008e0000000000];
+    /// let res = graph::Graph::from_bin(&data);
+    /// assert!(res.is_err());
+    /// ```
+    pub fn from_bin(data: &[u64]) -> Result<Graph, InvalidBinary> {
+        if data.len() >= 1 {
+            let n;
+            let mut cur = data[0];
+            let mut rem;
+            if (cur.wrapping_shr(58)) == 63 {
+                if (cur.wrapping_shr(52)) == 4095 {
+                    n = (cur.wrapping_shr(16)) & ((1 << 36) - 1);
+                    cur = cur & ((1 << 48) - 1);
+                    rem = 48;
+                } else {
+                    n = (cur.wrapping_shr(40)) & ((1 << 18) - 1);
+                    cur = cur & ((1 << 24) - 1);
+                    rem = 24;
+                }
+            } else {
+                n = cur.wrapping_shr(58);
+                cur = cur & ((1 << 58) - 1);
+                rem = 58;
+            }
+            let mut g = Graph::new(n);
+            let mut p = 0;
+            // For each vertex
+            for i in 1..n {
+                // For each other vertex before this one
+                for j in 0..i {
+                    // if we reach the end of the current number
+                    // get the next one
+                    // if there's no next one, error
+                    if rem == 0 && p < data.len()-1 {
+                        p += 1;
+                        cur = data[p];
+                        rem = 64;
+                    } else if rem == 0 && p >= data.len()-1 {
+                        return Err(InvalidBinary::new("Not enough data"));
+                    }
+                    // if the bit is set
+                    if cur.wrapping_shr(rem - 1) == 1 {
+                        // add an edge
+                        g.add_edge(i, j);
+                    }
+                    rem = rem - 1;
+                    cur = cur & ((1 << rem) - 1);
+
+                }
+            }
+            Ok(g)
+        } else {
+            Err(InvalidBinary::new("Not enough data"))
+        }
+    }
+
     /// Returns the order of the graph
     ///
     /// # Examples
@@ -924,10 +1002,13 @@ impl Graph {
     }
 
     pub fn add_cycle(&mut self, lst: &[u64]) {
-        self.to_bin();
         for (&i, &j) in lst.iter().zip(lst.iter().cycle().skip(1)) {
             self.add_edge(i, j);
         }
+    }
+
+    pub fn is_cycle(&self, lst: &[u64]) -> bool {
+        lst.iter().zip(lst.iter().cycle().skip(1)).all(|(&x, &y)| self.is_edge(x, y))
     }
 
     /// Returns an iterator over the vertices of the graph.
