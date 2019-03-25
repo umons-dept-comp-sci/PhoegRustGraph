@@ -89,39 +89,8 @@ pub fn to_g6(graph: &Graph) -> String {
 /// }
 /// ```
 pub fn from_g6(s: &str) -> Result<Graph, InvalidGraph6> {
-    let mut chars = s.chars();
-    if let Some(n) = chars.next().and_then(|x| Some(u64::from((x as u8) - 63))) {
-        let mut g = Graph::new(n);
-        if n > 1 && s.len() == 1 + (((n * (n - 1)) as f64 / 12.0).ceil() as usize) {
-            let mut l = 6;
-            if let Some(mut v) = chars.next().and_then(|x| Some(x as u8 - 63)) {
-                for i in 1..n {
-                    for j in 0..i {
-                        if l == 0 {
-                            l = 6;
-                            v = match chars.next().and_then(|x| Some(x as u8 - 63)) {
-                                Some(x) => x,
-                                None => return Err(InvalidGraph6::new(s)),
-                            };
-                        }
-                        if (v % (1 << l)) >> (l - 1) > 0 {
-                            g.add_edge(i, j);
-                        }
-                        l -= 1;
-                    }
-                }
-                Ok(g)
-            } else {
-                Err(InvalidGraph6::new(s))
-            }
-        } else if n > 1 && s.len() != 1 + (((n * (n - 1)) as f64 / 12.0).floor() as usize) {
-            Err(InvalidGraph6::new(s))
-        } else {
-            Ok(g)
-        }
-    } else {
-        Err(InvalidGraph6::new(s))
-    }
+    let bin = decode(s);
+    Graph::from_bin(&bin).map_err(|x| x.into())
 }
 
 // Returns a graph corresponding to the graph6 representation

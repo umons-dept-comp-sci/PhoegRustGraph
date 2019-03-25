@@ -36,6 +36,12 @@ impl From<io::Error> for InvalidGraph6 {
     }
 }
 
+impl From<InvalidBinary> for InvalidGraph6 {
+    fn from(err: InvalidBinary) -> Self {
+        InvalidGraph6::new(err.description())
+    }
+}
+
 /// Error returned by the functions charged with binary format handling when the given format is
 /// incorrect.
 #[repr(C)]
