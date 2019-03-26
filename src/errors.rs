@@ -36,6 +36,39 @@ impl From<io::Error> for InvalidGraph6 {
     }
 }
 
+impl From<InvalidBinary> for InvalidGraph6 {
+    fn from(err: InvalidBinary) -> Self {
+        InvalidGraph6::new(err.description())
+    }
+}
+
+/// Error returned by the functions charged with binary format handling when the given format is
+/// incorrect.
+#[repr(C)]
+#[derive(Debug)]
+pub struct InvalidBinary {
+    details: String,
+}
+
+impl InvalidBinary {
+    /// Returns a new `InvalidBinary` error with the given error message.
+    pub fn new(msg: &str) -> InvalidBinary {
+        InvalidBinary { details: msg.to_string() }
+    }
+}
+
+impl fmt::Display for InvalidBinary {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.details)
+    }
+}
+
+impl Error for InvalidBinary {
+    fn description(&self) -> &str {
+        &self.details
+    }
+}
+
 /// Error returned by algorithms supporting only connected graphs when they are given a
 /// non-connected graph.
 #[repr(C)]
