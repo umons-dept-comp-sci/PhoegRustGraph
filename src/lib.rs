@@ -61,6 +61,22 @@ mod detail {
 }
 
 
+const DECS: [u64; 5] = [16, 8, 4, 2, 1];
+const MASKS: [u64; 5] = [0x0000FFFF0000FFFF,
+                         0x00FF00FF00FF00FF,
+                         0x0F0F0F0F0F0F0F0F,
+                         0x3333333333333333,
+                         0x5555555555555555];
+
+fn interleave(v: u64) -> u64 {
+    let mut p = v;
+    for i in 0..DECS.len() {
+        p = (p | (p << DECS[i])) & MASKS[i];
+    }
+    p
+}
+
+
 /// Structure to store a set of integers using binary words.
 /// This structure can store all integers from 0 to a maximum value given in parameters to the
 /// constructors. For example, a maximum value of 16 allows storing all integers from 0 to 15.
@@ -73,10 +89,6 @@ pub struct Set {
     size: u64,
 }
 
-// TODO Add method to "expand" the set by interleaving it with zeroes. Use full for
-// GraphTransformation.
-// This can be done using magic numbers :
-// http://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN
 impl Set {
     fn initfill<PF>(maxelem: u64, pfunc: PF, val: set, numelem: u64) -> Set
         where PF: Fn(u64) -> set
@@ -136,6 +148,45 @@ impl Set {
     /// ```
     pub fn full(max: u64) -> Set {
         unsafe { Set::initfill(max, |x| detail::allmask(x as int), detail::allbits(), max) }
+    }
+
+    /// Interleaves an empty set of the same maxsize with this one. e.g., if the set had elements
+    /// 0,1,2,3, it now has elements 1,3,5,7 and doesn't have elements 0,2,4,6.
+    ///
+    /// # Examples :
+    ///
+    /// ```
+    /// use graph::Set;
+    /// let mut s = Set::full(4);
+    /// let mut ns = s.expand();
+    /// for i in 0..8 {
+    ///     if i % 2 == 0 {
+    ///         assert!(!ns.contains(i));
+    ///     } else {
+    ///         assert!(ns.contains(i));
+    ///     }
+    /// }
+    /// s.remove(2);
+    /// ns = s.expand();
+    /// for &i in [1,3,7].iter() {
+    ///     assert!(ns.contains(i));
+    /// }
+    /// for &i in [0,2,4,5,6].iter() {
+    ///     assert!(!ns.contains(i));
+    /// }
+    /// ```
+    pub fn expand(&self) -> Self {
+        let mut vec = Vec::with_capacity(2 * self.data.len());
+        for v in self.data.iter() {
+            for mut p in [v.wrapping_shr(32), v & ((1 << 32) - 1)].iter() {
+                vec.push(interleave(*p));
+            }
+        }
+        Set {
+            data: vec,
+            size: self.size,
+            maxm: 2 * self.maxm,
+        }
     }
 
     /// Removes all elements from the set.
@@ -575,7 +626,16 @@ impl<'a> From<&'a [u64]> for Set {
     }
 }
 
-struct SetIter {
+impl std::iter::IntoIterator for Set {
+    type Item = u64;
+    type IntoIter = SetIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        SetIter::new(self.data.as_ptr(), self.data.len() as u64)
+    }
+}
+
+pub struct SetIter {
     data: *const set,
     len: u64,
     pos: i64,
@@ -790,11 +850,11 @@ impl Graph {
                     // if we reach the end of the current number
                     // get the next one
                     // if there's no next one, error
-                    if rem == 0 && p < data.len()-1 {
+                    if rem == 0 && p < data.len() - 1 {
                         p += 1;
                         cur = data[p];
                         rem = 64;
-                    } else if rem == 0 && p >= data.len()-1 {
+                    } else if rem == 0 && p >= data.len() - 1 {
                         return Err(InvalidBinary::new("Not enough data"));
                     }
                     // if the bit is set
