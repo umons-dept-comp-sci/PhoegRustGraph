@@ -4,6 +4,8 @@
 
 extern crate bit_vec;
 extern crate libc;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod format;
 pub mod invariants;
@@ -58,22 +60,6 @@ mod detail {
                         m: int,
                         n: int);
     }
-}
-
-
-const DECS: [u64; 5] = [16, 8, 4, 2, 1];
-const MASKS: [u64; 5] = [0x0000FFFF0000FFFF,
-                         0x00FF00FF00FF00FF,
-                         0x0F0F0F0F0F0F0F0F,
-                         0x3333333333333333,
-                         0x5555555555555555];
-
-fn interleave(v: u64) -> u64 {
-    let mut p = v;
-    for i in 0..DECS.len() {
-        p = (p | (p << DECS[i])) & MASKS[i];
-    }
-    p
 }
 
 
@@ -148,45 +134,6 @@ impl Set {
     /// ```
     pub fn full(max: u64) -> Set {
         unsafe { Set::initfill(max, |x| detail::allmask(x as int), detail::allbits(), max) }
-    }
-
-    /// Interleaves an empty set of the same maxsize with this one. e.g., if the set had elements
-    /// 0,1,2,3, it now has elements 1,3,5,7 and doesn't have elements 0,2,4,6.
-    ///
-    /// # Examples :
-    ///
-    /// ```
-    /// use graph::Set;
-    /// let mut s = Set::full(4);
-    /// let mut ns = s.expand();
-    /// for i in 0..8 {
-    ///     if i % 2 == 0 {
-    ///         assert!(!ns.contains(i));
-    ///     } else {
-    ///         assert!(ns.contains(i));
-    ///     }
-    /// }
-    /// s.remove(2);
-    /// ns = s.expand();
-    /// for &i in [1,3,7].iter() {
-    ///     assert!(ns.contains(i));
-    /// }
-    /// for &i in [0,2,4,5,6].iter() {
-    ///     assert!(!ns.contains(i));
-    /// }
-    /// ```
-    pub fn expand(&self) -> Self {
-        let mut vec = Vec::with_capacity(2 * self.data.len());
-        for v in self.data.iter() {
-            for mut p in [v.wrapping_shr(32), v & ((1 << 32) - 1)].iter() {
-                vec.push(interleave(*p));
-            }
-        }
-        Set {
-            data: vec,
-            size: self.size,
-            maxm: 2 * self.maxm,
-        }
     }
 
     /// Removes all elements from the set.

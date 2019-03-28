@@ -10,3 +10,4 @@ cc = "1.0"
 [dependencies]
 bit-vec = "0.4"
 libc = "0.2"
+lazy_static = "1.3"
