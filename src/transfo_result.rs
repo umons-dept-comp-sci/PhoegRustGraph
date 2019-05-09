@@ -1,12 +1,15 @@
 use Set;
 
 
+/// Structure storing the transformation applied to a graph in a compact way.
 pub struct GraphTransformation {
     prev_n: u64,
     n: u64,
     prev_m: u64,
     m: u64,
     data: Vec<Set>,
+    name: String,
+    result: Option<Graph>,
 }
 
 impl GraphTransformation {
@@ -47,7 +50,17 @@ impl GraphTransformation {
             prev_m: 0,
             m: 0,
             data: v,
+            name: "".to_owned(),
+            result: None,
         }
+    }
+
+    pub fn set_name(&mut self, s: String) {
+        self.name = s;
+    }
+
+    pub fn name(&self) -> String {
+        self.name.clone()
     }
 
     /// Returns the number of vertices of the GraphTransformation before applying the
@@ -98,6 +111,13 @@ impl GraphTransformation {
         self.data[i as usize].contains(2 * i + 1)
     }
 
+    /// Returns the maximal vertex index of the graph. i.e., if a graph had 0 to 5 vertices and we
+    /// remove vertex 3, it now has 5 vertices but its maximal index is still 5 since vertex 5 was
+    /// not removed.
+    pub fn max_vertex(&self) -> u64 {
+        self.data.len().saturating_sub(1) as u64
+    }
+
     /// Adds an edge to the current graph.
     ///
     /// # Examples :
@@ -133,6 +153,7 @@ impl GraphTransformation {
             self.data[j as usize].add(2 * i + 1);
             self.data[j as usize].flip(2 * i);
             self.m += 1;
+            self.result = None;
         }
     }
 
@@ -171,6 +192,7 @@ impl GraphTransformation {
             self.data[j as usize].remove(2 * i + 1);
             self.data[j as usize].flip(2 * i);
             self.m -= 1;
+            self.result = None;
         }
     }
 
@@ -218,6 +240,7 @@ impl GraphTransformation {
             self.data[i as usize].flip(2 * i);
             self.n += 1;
         }
+        self.result = None;
     }
 
     /// Removes a vertex to the current graph.
@@ -261,21 +284,153 @@ impl GraphTransformation {
                 self.remove_edge(i, j);
             }
             self.n -= 1;
+            self.result = None;
         }
+    }
+
+    /// Returns the initial graph used to construct the GraphTransformation.
+    ///
+    /// # Examples :
+    ///
+    /// ```
+    /// use graph::Graph;
+    /// use graph::transfo_result::GraphTransformation;
+    ///
+    /// let g = Graph::new(0);
+    /// let gt: GraphTransformation = (&g).into();
+    /// let g = gt.initial_graph();
+    /// assert_eq!(g.order(),0);
+    /// assert_eq!(g.size(),0);
+    /// assert_eq!(g.edges().count(),0);
+    /// let mut g = Graph::new(5);
+    /// let edges = [(0,1), (0,2), (3,4)];
+    /// for (i,j) in edges.iter() {
+    ///     g.add_edge(*i,*j);
+    /// }
+    /// let mut gt: GraphTransformation = (&g).into();
+    /// gt.remove_edge(0,1);
+    /// gt.add_edge(1,4);
+    /// gt.remove_vertex(1);
+    /// gt.add_vertex(5);
+    /// let res_g = gt.initial_graph();
+    /// assert_eq!(res_g.order(),5);
+    /// assert_eq!(res_g.size(),3);
+    /// for ((i,j),(ri,rj)) in res_g.edges().zip(edges.iter()) {
+    ///     assert_eq!(i,*ri);
+    ///     assert_eq!(j,*rj);
+    /// }
+    /// ```
+    pub fn initial_graph(&self) -> Graph {
+        let mut graph = Graph::new(self.initial_order());
+        let w = graph.w;
+        let mut res = graph.data;
+        let mut gp = 0;
+        let mut current;
+        let mut current_mask;
+        // For each vertex that was in the initial graph (0..prev_n)
+        for i in 0..(self.prev_n as usize) {
+            // For each word in this vertex's set that was not added afterwards (they can only be
+            // i.e., we only take as many words as needed for prev_n vertices
+            // at the end of a word)
+            for p in (0..w as usize).step_by(2) {
+                // extract the modified and the adjacency info
+                current = untwine(self.data[i].data[p]) << 32;
+                current_mask = untwine(self.data[i].data[p] >> 1) << 32;
+                if p < w as usize - 1 {
+                    current |= untwine(self.data[i].data[p + 1]);
+                    current_mask |= untwine(self.data[i].data[p + 1] >> 1);
+                }
+                // xor them together to get the initial value
+                current ^= current_mask;
+                // and add it as one word to the result
+                res[gp] = current;
+                gp += 1;
+            }
+        }
+        // then create a graph and return the result
+        graph.data = res;
+        graph.m = self.prev_m;
+        graph
+    }
+
+    /// Returns the graph obtained by applying the transformations to the initial graph
+    ///
+    /// # Examples :
+    /// ```
+    /// use graph::Graph;
+    /// use graph::transfo_result::GraphTransformation;
+    ///
+    /// let g = Graph::new(0);
+    /// let mut gt: GraphTransformation = (&g).into();
+    /// let g = gt.final_graph();
+    /// assert_eq!(g.order(),0);
+    /// assert_eq!(g.size(),0);
+    /// assert_eq!(g.edges().count(),0);
+    /// let mut g = Graph::new(5);
+    /// let mut edges = vec![(0,1), (0,2), (3,4)];
+    /// for (i,j) in edges.iter() {
+    ///     g.add_edge(*i,*j);
+    /// }
+    /// let mut gt: GraphTransformation = (&g).into();
+    /// gt.remove_edge(0,1);
+    /// gt.add_edge(1,4);
+    /// gt.remove_vertex(1);
+    /// gt.add_vertex(5);
+    /// gt.add_vertex(6);
+    /// gt.add_edge(2,6);
+    /// edges = vec![(0,1), (1,5), (2,3)];
+    /// let res_g = gt.final_graph();
+    /// assert_eq!(res_g.order(),6,"graph must have right order");
+    /// assert_eq!(res_g.size(),3, "graph must have right size");
+    /// for ((i,j),(ri,rj)) in res_g.edges().zip(edges.iter()) {
+    ///     assert_eq!(i,*ri, "edge must have fist vertex {}",i);
+    ///     assert_eq!(j,*rj, "edge must have last vertex {}",j);
+    /// }
+    /// ```
+    pub fn final_graph(&mut self) -> Graph {
+        if self.result.is_none()
+        {
+            let mut graph = Graph::new(self.order());
+            if self.n > 0 {
+                let vertices = (0..(self.max_vertex()+1))
+                    .filter(|&x| self.is_vertex(x as u64))
+                    .collect::<Vec<_>>();
+                // For each vertex that was not removed or was added
+                for i in (0..vertices.len()).take(self.n as usize - 1) {
+                    // We have to iterate over each vertex as we do not know which ones remains.
+                    for j in (i + 1)..vertices.len() {
+                        if self.is_edge(vertices[i], vertices[j]) {
+                            graph.add_edge(i as u64, j as u64);
+                        }
+                    }
+                }
+            }
+            self.result = Some(graph);
+        }
+        self.result.clone().unwrap()
     }
 }
 
-const DECS: [u64; 5] = [16, 8, 4, 2, 1];
-const MASKS: [u64; 5] = [0x0000FFFF0000FFFF,
+const DECS: [u64; 6] = [16, 8, 4, 2, 1, 0];
+const MASKS: [u64; 6] = [0x00000000FFFFFFFF,
+                         0x0000FFFF0000FFFF,
                          0x00FF00FF00FF00FF,
                          0x0F0F0F0F0F0F0F0F,
                          0x3333333333333333,
                          0x5555555555555555];
 
+fn untwine(v: u64) -> u64 {
+    let mut p = v;
+    for i in (0..DECS.len()).map(|x| DECS.len() - x - 1) {
+        p = (p | (p >> DECS[i])) & MASKS[i];
+    }
+    p
+}
+
 fn interleave(v: u32) -> u64 {
     let mut p: u64 = v as u64;
-    for i in 0..DECS.len() {
-        p = (p | (p << DECS[i])) & MASKS[i];
+    for i in 0..DECS.len() - 1 {
+        p = (p | (p << DECS[i])) & MASKS[i + 1];
     }
     p
 }
@@ -292,8 +447,8 @@ lazy_static! {
 
 fn num_bits(v: u32) -> u64 {
     let v = v as usize;
-    counters[v & 0xff] as u64 + counters[v.wrapping_shr(8) & 0xff] as u64 +
-    counters[v.wrapping_shr(16) & 0xff] as u64 + counters[v.wrapping_shr(24) & 0xff] as u64
+    counters[v & 0xff] as u64 + counters[v >> 8 & 0xff] as u64 + counters[v >> 16 & 0xff] as u64 +
+    counters[v >> 24 & 0xff] as u64
 }
 
 use Graph;
@@ -318,7 +473,7 @@ impl From<&Graph> for GraphTransformation {
             // for each word of this vertex line
             for p in (0..w as usize).map(|x| x + v) {
                 // expand the word into two words
-                tmp = repr[p].wrapping_shr(32) as u32;
+                tmp = (repr[p] >> 32) as u32;
                 size += num_bits(tmp);
                 cur.push(interleave(tmp));
                 tmp = (repr[p] & ((1 << 32) - 1)) as u32;
@@ -341,6 +496,8 @@ impl From<&Graph> for GraphTransformation {
             prev_m: m,
             m: m,
             data: res,
+            result: None,
+            name: "".to_owned(),
         }
     }
 }
@@ -365,5 +522,17 @@ mod tests {
                 assert!(!gt.is_edge_modified(i, j));
             }
         }
+    }
+
+    #[test]
+    fn test_interleave_untwine() {
+        let v1 = 0b11011001;
+        let v2 = 0b00111011;
+        let v = interleave(v1 as u32) | (interleave(v2 as u32) << 1);
+        assert_eq!(0b0101101111001011, v);
+        let res_v1 = untwine(v);
+        assert_eq!(v1, res_v1);
+        let res_v2 = untwine(v >> 1);
+        assert_eq!(v2, res_v2);
     }
 }
