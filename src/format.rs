@@ -278,6 +278,95 @@ pub fn decode(data: &str) -> Vec<u64> {
     res
 }
 
+pub struct Converter {
+    ws: u64,
+    mask: u64,
+    needed_p: usize,
+    needed: u64,
+    word_needed: u64,
+    word_res: u64,
+    added: u64,
+    scheme: Vec<u64>,
+    result: Vec<u64>,
+}
+
+impl Converter {
+    fn with_ws(scheme: &[u64], ws: u64) -> Converter {
+        let needed = if !scheme.is_empty() { scheme[0] } else { 0 };
+        Converter {
+            ws: ws,
+            mask: (((1 << (ws - 1)) - 1) << 1) + 1,
+            needed_p: 0,
+            needed: needed,
+            word_needed: std::cmp::min(ws, needed),
+            word_res: 0,
+            added: 0,
+            scheme: scheme.into(),
+            result: Vec::new(),
+        }
+    }
+
+    pub fn new(scheme: &[u64]) -> Converter {
+        Converter::with_ws(scheme, 64)
+    }
+
+    /// Add nbits bits of data to the converter.
+    pub fn feed(&mut self, nbits: u64, data: &[u64]) {
+        // If we still need data and there is actual data
+        if !data.is_empty() && nbits > 0 && self.needed > 0 {
+            let mut remaining = nbits;
+            let mut word_remaining = std::cmp::min(self.ws, remaining);
+            let mut p = 0;
+            let mut word = data[p];
+            let mut to_take;
+            let mut val;
+            // We consume all the data except if there's too much
+            while remaining > 0 {
+                // How much data we can add in the current word or take from the current word
+                to_take = dbg!(std::cmp::min(self.word_needed, word_remaining));
+                val = word >> (self.ws - to_take);
+                self.word_res |= val << (self.ws - to_take - self.added);
+                word = word.wrapping_shl(to_take as u32) & self.mask;
+                self.word_needed -= to_take;
+                self.needed -= to_take;
+                word_remaining -= to_take;
+                remaining -= to_take;
+                self.added += to_take;
+                // If we cannot add data to the current word
+                if self.word_needed == 0 {
+                    self.result.push(self.word_res);
+                    self.word_res = 0;
+                    self.added = 0;
+                    if self.needed == 0 {
+                        self.needed_p += 1;
+                        if self.needed_p < self.scheme.len() {
+                            self.needed = self.scheme[self.needed_p];
+                        } else {
+                            // If we have all the needed data, we can stop
+                            return;
+                        }
+                    }
+                    self.word_needed = std::cmp::min(self.needed, self.ws);
+                }
+                if word_remaining == 0 {
+                    if remaining > 0 {
+                        word_remaining = std::cmp::min(remaining, self.ws);
+                        p += 1;
+                        word = data[p]; // If out of bounds, input error
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn result(mut self) -> Vec<u64> {
+        while self.needed > 0 {
+            self.feed(64, &[0]);
+        }
+        self.result
+    }
+}
+
 #[cfg(test)]
 mod test {
 
@@ -289,5 +378,32 @@ mod test {
         assert!(length_g6(1) == 1);
         assert!(length_g6(2) == 2);
         assert!(length_g6(10) == 9);
+    }
+
+    #[test]
+    fn test_convert() {
+        let mut converter = Converter::with_ws(&[2, 2, 2, 2, 2], 2);
+        converter.feed(1, &[0b10]);
+        converter.feed(2, &[0b11]);
+        converter.feed(3, &[0b11, 0b10]);
+        converter.feed(4, &[0b11, 0b11]);
+        let mut res = converter.result();
+        assert_eq!(5, res.len(), "same length");
+        for (i, &r) in res.iter().enumerate() {
+            assert_eq!(3, r, "{} same value", i);
+        }
+
+        converter = Converter::with_ws(&[1,2,3,4],2);
+        converter.feed(2, &[0b11]);
+        converter.feed(2, &[0b11]);
+        converter.feed(2, &[0b11]);
+        converter.feed(2, &[0b11]);
+        converter.feed(2, &[0b11]);
+        res = converter.result();
+        let expected = [0b10,0b11,0b11,0b10,0b11,0b11];
+        assert_eq!(6, res.len(), "same length");
+        for (i, (&e,&r)) in res.iter().zip(expected.iter()).enumerate() {
+            assert_eq!(e, r, "{} same value", i);
+        }
     }
 }
