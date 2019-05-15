@@ -1,4 +1,5 @@
 use Set;
+use base64;
 
 
 /// Structure storing the transformation applied to a graph in a compact way.
@@ -204,8 +205,12 @@ impl GraphTransformation {
     /// use graph::transfo_result::GraphTransformation;
     /// use graph::Graph;
     ///
-    /// let mut g = Graph::new(3);
+    /// let mut g = Graph::new(0);
     /// let mut gt: GraphTransformation = (&g).into();
+    /// gt.add_vertex(0);
+    /// assert_eq!(gt.order(), 1);
+    /// g = Graph::new(3);
+    /// gt = (&g).into();
     /// gt.add_vertex(2);
     /// assert!(gt.is_vertex(2));
     /// assert!(!gt.is_vertex_modified(2));
@@ -225,7 +230,7 @@ impl GraphTransformation {
             let max = if self.data.len() > 0 {
                 self.data[0].getmax() + 2
             } else {
-                0
+                2
             };
             for v in self.data.iter_mut() {
                 (*v).setmax(max);
@@ -388,11 +393,10 @@ impl GraphTransformation {
     /// }
     /// ```
     pub fn final_graph(&mut self) -> Graph {
-        if self.result.is_none()
-        {
+        if self.result.is_none() {
             let mut graph = Graph::new(self.order());
             if self.n > 0 {
-                let vertices = (0..(self.max_vertex()+1))
+                let vertices = (0..(self.max_vertex() + 1))
                     .filter(|&x| self.is_vertex(x as u64))
                     .collect::<Vec<_>>();
                 // For each vertex that was not removed or was added
@@ -409,6 +413,97 @@ impl GraphTransformation {
         }
         self.result.clone().unwrap()
     }
+}
+
+use std::fmt;
+use format::Converter;
+impl fmt::Display for GraphTransformation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let n = self.max_vertex() as usize + 1;
+        if n == 0 {
+            write!(f, "{}", base64::encode(&[0]))
+        } else {
+            let num_bits = n * (n - 1) + 2 * n;
+            let num_words = (num_bits - 1) / 64 + 1;
+            let mut c = Converter::new(&vec![64; num_words]);
+            for i in 0..n {
+                c.feed(2 * (i + 1) as u64, &self.data[i].data);
+            }
+            let mut r = c.result();
+            let mut res = String::new();
+            unsafe {
+                let t = r.align_to_mut::<u8>().1;
+                for i in 0..num_words {
+                    t[i * 8..(i + 1) * 8].reverse();
+                }
+                let mut encode = encode_num(n as u64);
+                encode.extend_from_slice(&t[0..(num_bits / 8 + 1)]);
+                base64::encode_config_buf(&encode, base64::STANDARD, &mut res);
+            }
+            if !self.name.is_empty() {
+                write!(f, "{}:", self.name)?;
+            }
+            write!(f, "{}", res)
+        }
+    }
+}
+
+use std::convert::TryFrom;
+
+impl TryFrom<&str> for GraphTransformation {
+    type Error = ();
+    fn try_from(value: &str) -> Result<Self, ()> {
+        // TODO define error
+        let bytes = base64::decode(value).unwrap(); //TODO error
+        let (n, p) = decode_num(&bytes);
+        let mut r: [u8; 8] = [0; 8];
+        for i in (p..bytes.len()).step_by(8) {
+            for j in (0..8) {
+                r[7 - j] = if i + j < bytes.len() { bytes[i + j] } else { 0 };
+            }
+            // Add the converter
+            // Count number of bits to add to the converter
+        }
+        // Add the data to the GraphTransformation
+        // Recompute the symmetrical part that was removed
+        // Recompute the other data (initial_order, initial_size, order, size, ...)
+        Err(())
+    }
+}
+
+fn encode_num(n: u64) -> Vec<u8> {
+    let mut r = Vec::with_capacity(9);
+    let mut n = n;
+    let mut v: u8;
+    while n > 0 && r.len() < 9 {
+        v = (n & 127) as u8;
+        n = n.wrapping_shr(7);
+        if n > 0 {
+            v += 128;
+        }
+        r.push(v);
+    }
+    r
+}
+
+fn decode_num(data: &[u8]) -> (u64, usize) {
+    if data.len() == 0 {
+        return (0, 0);
+    }
+    let mut res = 0;
+    let mut p = 0;
+    let mut cont = true;
+    let mut val;
+    while cont && p < 9 {
+        val = data[p] & 127;
+        cont = data[p] > 127;
+        res |= (val as u64) << (p * 7);
+        p += 1;
+    }
+    if cont {
+        res |= 1 << 63;
+    }
+    (res, p)
 }
 
 const DECS: [u64; 6] = [16, 8, 4, 2, 1, 0];
@@ -505,6 +600,7 @@ impl From<&Graph> for GraphTransformation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::convert::TryInto;
 
     #[test]
     fn test_from() {
@@ -534,5 +630,47 @@ mod tests {
         assert_eq!(v1, res_v1);
         let res_v2 = untwine(v >> 1);
         assert_eq!(v2, res_v2);
+    }
+
+    #[test]
+    fn test_encode_num() {
+        let mut res = encode_num(7);
+        assert_eq!(&res, &[7]);
+        res = encode_num(0xffaa);
+        assert_eq!(&res, &[0xaa, 0xff, 0x3]);
+        res = encode_num(0xffffffffffffffff);
+        assert_eq!(&res,
+                   &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
+    }
+
+    #[test]
+    fn test_decode_num() {
+        let (res, p) = decode_num(&[7]);
+        assert_eq!(7, res);
+        assert_eq!(1, p);
+        let (res, p) = decode_num(&[0xaa, 0xff, 0x3]);
+        assert_eq!(res, 0xffaa);
+        assert_eq!(3, p);
+        let (res, p) = decode_num(&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
+        assert_eq!(res, 0xffffffffffffffff);
+        assert_eq!(9, p);
+    }
+
+    #[test]
+    fn test_fmt_graphtransformation() {
+        let mut g = Graph::new(0);
+        let mut gt: GraphTransformation = (&g).into();
+        let mut n = 20;
+        for i in 0..n {
+            gt.add_vertex(i);
+        }
+        for i in 0..(n - 1) {
+            for j in (i + 1)..n {
+                gt.add_edge(i, j);
+            }
+        }
+        let r = format!("{}", gt);
+        gt = (r.as_str()).try_into().unwrap();
+        assert!(false);
     }
 }

@@ -3,6 +3,7 @@
 //#![feature(trace_macros)]
 
 extern crate bit_vec;
+extern crate base64;
 extern crate libc;
 #[macro_use]
 extern crate lazy_static;

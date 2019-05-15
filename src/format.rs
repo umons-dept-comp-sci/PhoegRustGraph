@@ -240,7 +240,6 @@ pub fn encode(data: &[u64], l: u64) -> String {
 /// }
 /// ```
 pub fn decode(data: &str) -> Vec<u64> {
-    dbg!(data);
     let capa = (((data.len() * 6) as f64) / 64.).ceil() as usize;
     let mut res = Vec::with_capacity(capa);
     if data.len() > 0 {
@@ -323,7 +322,7 @@ impl Converter {
             // We consume all the data except if there's too much
             while remaining > 0 {
                 // How much data we can add in the current word or take from the current word
-                to_take = dbg!(std::cmp::min(self.word_needed, word_remaining));
+                to_take = std::cmp::min(self.word_needed, word_remaining);
                 val = word >> (self.ws - to_take);
                 self.word_res |= val << (self.ws - to_take - self.added);
                 word = word.wrapping_shl(to_take as u32) & self.mask;
@@ -405,5 +404,14 @@ mod test {
         for (i, (&e,&r)) in res.iter().zip(expected.iter()).enumerate() {
             assert_eq!(e, r, "{} same value", i);
         }
+        converter = Converter::new(&[64]);
+        converter.feed(2,&[0b11 << 62]);
+        converter.feed(4,&[0b1111 << 60]);
+        converter.feed(6,&[0b111111 << 58]);
+        converter.feed(8,&[0b11111111 << 56]);
+        converter.feed(10,&[0b1111111111 << 54]);
+        res = converter.result();
+        assert_eq!(1,res.len());
+        assert_eq!(0xfffffffc << 32,res[0]);
     }
 }
