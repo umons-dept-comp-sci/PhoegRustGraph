@@ -938,6 +938,12 @@ impl Graph {
         }
     }
 
+    /// Returns true if there is a vertex with number u and false otherwise.
+    /// This is basically a test if u < n (with n the order of the graph).
+    pub fn is_vertex(&self, u: u64) -> bool {
+        u < self.n
+    }
+
     /// Checks weither the vertices i and j are adjacent.
     ///
     /// # Examples

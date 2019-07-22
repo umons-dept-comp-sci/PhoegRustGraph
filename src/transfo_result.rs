@@ -454,20 +454,74 @@ impl TryFrom<&str> for GraphTransformation {
     type Error = ();
     fn try_from(value: &str) -> Result<Self, ()> {
         // TODO define error
+        let v: Vec<&str> = value.split(":").collect();
+        let mut name = "";
+        let mut value = value;
+        if v.len() > 1 {
+            name = v[0];
+            value = v[1];
+        }
         let bytes = base64::decode(value).unwrap(); //TODO error
         let (n, p) = decode_num(&bytes);
         let mut r: [u8; 8] = [0; 8];
-        for i in (p..bytes.len()).step_by(8) {
-            for j in (0..8) {
-                r[7 - j] = if i + j < bytes.len() { bytes[i + j] } else { 0 };
-            }
-            // Add the converter
-            // Count number of bits to add to the converter
+        let nbytes = n * (n - 1) + 2 * n;
+        let mut scheme = Vec::with_capacity(n as usize);
+        for i in 0..n {
+            scheme.push(2 * (i + 1));
         }
-        // Add the data to the GraphTransformation
+        let mut c = Converter::new(&scheme);
+        for i in (p..bytes.len()).step_by(8) {
+            for j in 0..(std::cmp::min(8, bytes.len() - i)) {
+                r[j] = bytes[i + j];
+            }
+            c.feed(std::cmp::min(64, nbytes - (i - p) as u64 * 8),
+                   &[u64::from_be_bytes(r)]);
+        }
+        let r = c.result();
+        let mut result = GraphTransformation::new(n);
+        let mut p = 0;
+        for i in 0..n {
+            for j in 0..(2 * (i + 1) - 1) / 64 + 1 {
+                result.data[i as usize].data[j as usize] = r[p];
+                p += 1;
+            }
+        }
         // Recompute the symmetrical part that was removed
+        for i in 1..n {
+            for j in 0..i {
+                for k in 0..2 {
+                    if result.data[i as usize].contains(2 * j + k) {
+                        result.data[j as usize].add(2 * i + k);
+                    }
+                }
+            }
+        }
         // Recompute the other data (initial_order, initial_size, order, size, ...)
-        Err(())
+        let (mut pn, mut nn, mut pm, mut nm) = (0, 0, 0, 0);
+        for i in 0..n {
+            if result.is_vertex(i) {
+                nn += 1;
+            }
+            if result.is_vertex_modified(i) ^ result.is_vertex(i) {
+                pn += 1;
+            }
+        }
+        for i in 1..n {
+            for j in 0..i {
+                if result.is_edge(i, j) {
+                    nm += 1;
+                }
+                if result.is_edge_modified(i, j) ^ result.is_edge(i, j) {
+                    pm += 1;
+                }
+            }
+        }
+        result.prev_n = pn;
+        result.n = nn;
+        result.prev_m = pm;
+        result.m = nm;
+        result.set_name(name.to_owned());
+        Ok(result)
     }
 }
 
@@ -600,6 +654,7 @@ impl From<&Graph> for GraphTransformation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use format::from_g6;
     use std::convert::TryInto;
 
     #[test]
@@ -658,19 +713,32 @@ mod tests {
 
     #[test]
     fn test_fmt_graphtransformation() {
-        let mut g = Graph::new(0);
+        let mut g: Graph = from_g6("DB{").unwrap();
+        let exp_res = from_g6("EAf?").unwrap();
         let mut gt: GraphTransformation = (&g).into();
-        let mut n = 20;
-        for i in 0..n {
-            gt.add_vertex(i);
-        }
-        for i in 0..(n - 1) {
-            for j in (i + 1)..n {
-                gt.add_edge(i, j);
-            }
-        }
+        gt.remove_vertex(2);
+        gt.add_vertex(5);
+        gt.remove_edge(1, 4);
+        gt.add_edge(1, 5);
+        gt.add_edge(0, 5);
         let r = format!("{}", gt);
         gt = (r.as_str()).try_into().unwrap();
-        assert!(false);
+        assert_eq!(gt.order(), 5);
+        assert_eq!(gt.size(), exp_res.size());
+        assert!(!gt.is_vertex(2));
+        assert!(gt.is_vertex_modified(2));
+        for i in (0..6 as u64).filter(|x| *x != 2) {
+            assert!(gt.is_vertex(i));
+            if i < 5 {
+                assert!(!gt.is_vertex_modified(i));
+            } else {
+                assert!(gt.is_vertex_modified(i));
+            }
+            for j in (0..6 as u64).filter(|x| *x != 2 && *x != i) {
+                assert_eq!(gt.is_edge(i, j), exp_res.is_edge(i, j));
+                assert_eq!(exp_res.is_edge(i, j) != g.is_edge(i, j),
+                           gt.is_edge_modified(i, j));
+            }
+        }
     }
 }
