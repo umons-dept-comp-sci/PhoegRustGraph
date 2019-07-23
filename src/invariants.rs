@@ -358,7 +358,7 @@ fn construct_paths(pths: &[Vec<u64>], s: u64, e: u64) -> Vec<Vec<u64>> {
         res
     } else {
         for &t in &pths[e as usize] {
-            let mut tres = construct_paths(pths, s, t);
+            let tres = construct_paths(pths, s, t);
             for mut p in tres {
                 p.push(e);
                 res.push(p);

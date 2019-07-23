@@ -124,6 +124,9 @@ macro_rules! operation {
     (($g:ident) (add ($a:ident , $b:ident))) => {
         $g.add_edge($a,$b);
     };
+    (($g:ident) (add ($a:ident))) => {
+        $g.add_vertex($a);
+    };
 }
 
 /// Parses the transformation list
@@ -152,7 +155,7 @@ macro_rules! build_iter {
     };
     (@iter ($($v:tt)*) () -> ($($a:tt)*)) => {};
     (@iter ($m:ident $f:ident $res:ident $g:ident $n:expr) (apply $($r:tt)+) -> ()) => {
-        let mut ng = TransfoResult::new(&$g);
+        let mut ng : GraphTransformation = $g.into();
         parse_transfo!((ng) ($($r)*) -> ());
         ng.set_name($n.to_string());
         $res.push(ng);
@@ -168,7 +171,7 @@ macro_rules! build_iter {
     };
     (($m:ident $g:ident $n:expr) let $($tts:tt)*) => {
         {
-            let mut res: Vec<TransfoResult> = Vec::new();
+            let mut res: Vec<GraphTransformation> = Vec::new();
             let mut fixed : Vec<Vec<u64>> = Vec::new();
             build_iter!(@iter ($m fixed res $g $n) ($($tts)*) -> ());
             res

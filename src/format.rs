@@ -3,6 +3,7 @@
 use Graph;
 use errors::*;
 
+#[allow(dead_code)]
 /// Returns the length of the graph6 format for a graph of order n
 fn length_g6(n: u64) -> u64 {
     if n > 0 {
@@ -39,12 +40,11 @@ fn length_g6(n: u64) -> u64 {
 /// ```
 pub fn to_g6(graph: &Graph) -> String {
     let n = graph.order();
-    let m;
-    if n > 0 {
-        m = ((n * (n - 1) / 2) as f64 / 6.).ceil() as u64;
+    let m = if n > 0 {
+        ((n * (n - 1) / 2) as f64 / 6.).ceil() as u64
     } else {
-        m = 0;
-    }
+        0
+    };
     encode(&graph.to_bin(), 1 + m)
 }
 
@@ -177,7 +177,7 @@ pub fn from_g6(s: &str) -> Result<Graph, InvalidGraph6> {
 /// ```
 pub fn encode(data: &[u64], l: u64) -> String {
     let mut res = String::with_capacity(l as usize);
-    if data.len() > 0 {
+    if !data.is_empty() {
         let mut l = l;
         let mut pdata = 1;
         let mut p = 0;
@@ -187,7 +187,7 @@ pub fn encode(data: &[u64], l: u64) -> String {
         while l > 0 {
             // We take 3 bytes or as many as available
             while n < 3 && p < 8 {
-                r += (v[p] as u64) << (8 * (2 - n));
+                r += (u64::from(v[p])) << (8 * (2 - n));
                 p += 1;
                 n += 1;
             }
@@ -201,7 +201,7 @@ pub fn encode(data: &[u64], l: u64) -> String {
                 // Reverse order of 6 bits sets
                 let x = ((r >> 18) ^ r) & 63;
                 let y = ((r >> 12) ^ (r >> 6)) & 63;
-                r = r ^ ((x << 18) | (y << 12) | (y << 6) | x);
+                r ^= (x << 18) | (y << 12) | (y << 6) | x;
                 for _ in 0..4.min(l) {
                     res.push(((r & 63) as u8 + 63) as char);
                     r /= 64;
@@ -242,7 +242,7 @@ pub fn encode(data: &[u64], l: u64) -> String {
 pub fn decode(data: &str) -> Vec<u64> {
     let capa = (((data.len() * 6) as f64) / 64.).ceil() as usize;
     let mut res = Vec::with_capacity(capa);
-    if data.len() > 0 {
+    if !data.is_empty() {
         let data = data.as_bytes();
         let mut cur = [0u8; 8];
         let mut pdata = 0;
@@ -251,9 +251,9 @@ pub fn decode(data: &str) -> Vec<u64> {
         while pdata < data.len() {
             // We take 4 chars or as many available
             for _ in 0..4 {
-                v = v << 6;
+                v <<= 6;
                 if pdata < data.len() {
-                    v += (data[pdata] as u64) - 63;
+                    v += u64::from(data[pdata]) - 63;
                     pdata += 1;
                 }
             }
@@ -347,12 +347,10 @@ impl Converter {
                     }
                     self.word_needed = std::cmp::min(self.needed, self.ws);
                 }
-                if word_remaining == 0 {
-                    if remaining > 0 {
-                        word_remaining = std::cmp::min(remaining, self.ws);
-                        p += 1;
-                        word = data[p]; // If out of bounds, input error
-                    }
+                if word_remaining == 0 && remaining > 0 {
+                    word_remaining = std::cmp::min(remaining, self.ws);
+                    p += 1;
+                    word = data[p]; // If out of bounds, input error
                 }
             }
         }
@@ -392,26 +390,26 @@ mod test {
             assert_eq!(3, r, "{} same value", i);
         }
 
-        converter = Converter::with_ws(&[1,2,3,4],2);
+        converter = Converter::with_ws(&[1, 2, 3, 4], 2);
         converter.feed(2, &[0b11]);
         converter.feed(2, &[0b11]);
         converter.feed(2, &[0b11]);
         converter.feed(2, &[0b11]);
         converter.feed(2, &[0b11]);
         res = converter.result();
-        let expected = [0b10,0b11,0b11,0b10,0b11,0b11];
+        let expected = [0b10, 0b11, 0b11, 0b10, 0b11, 0b11];
         assert_eq!(6, res.len(), "same length");
-        for (i, (&e,&r)) in res.iter().zip(expected.iter()).enumerate() {
+        for (i, (&e, &r)) in res.iter().zip(expected.iter()).enumerate() {
             assert_eq!(e, r, "{} same value", i);
         }
         converter = Converter::new(&[64]);
-        converter.feed(2,&[0b11 << 62]);
-        converter.feed(4,&[0b1111 << 60]);
-        converter.feed(6,&[0b111111 << 58]);
-        converter.feed(8,&[0b11111111 << 56]);
-        converter.feed(10,&[0b1111111111 << 54]);
+        converter.feed(2, &[0b11 << 62]);
+        converter.feed(4, &[0b1111 << 60]);
+        converter.feed(6, &[0b111111 << 58]);
+        converter.feed(8, &[0b11111111 << 56]);
+        converter.feed(10, &[0b1111111111 << 54]);
         res = converter.result();
-        assert_eq!(1,res.len());
-        assert_eq!(0xfffffffc << 32,res[0]);
+        assert_eq!(1, res.len());
+        assert_eq!(0xfffffffc << 32, res[0]);
     }
 }

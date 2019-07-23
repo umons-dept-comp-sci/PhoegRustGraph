@@ -568,7 +568,7 @@ impl<'a> From<&'a [u64]> for Set {
             if i >= set.getmax() {
                 set.setmax(i + 1);
             }
-            set.add(i.into());
+            set.add(i);
         }
         set
     }
@@ -681,15 +681,17 @@ impl Graph {
         let mut res = vec![];
         // First step : encode order of the graph
         let mut cur = 0;
-        let mut dec = 58;
-        if self.n >= 63 {
-            cur |= 63 << 58; //Add 126 at end of word
-            dec = 40;
+        let mut dec = if self.n >= 258_048 {
+            cur |= 4095 << 52;
+            16
         }
-        if self.n >= 258048 {
-            cur |= 63 << 52;
-            dec = 16;
+            else if self.n >= 63 {
+            cur |= 63 << 58;
+            40
         }
+        else {
+            58
+        };
         cur |= self.n << dec;
         let mut to_take = 1;
         let mut to_add;
@@ -725,7 +727,7 @@ impl Graph {
                     cur = 0;
                     taken -= dec;
                     dec = 64;
-                    to_add = to_add & ((1u64 << taken) - 1);
+                    to_add &= (1u64 << taken) - 1;
                 }
                 cur |= to_add << (dec - taken);
                 dec -= taken;
@@ -770,23 +772,23 @@ impl Graph {
     /// assert!(res.is_err());
     /// ```
     pub fn from_bin(data: &[u64]) -> Result<Graph, InvalidBinary> {
-        if data.len() >= 1 {
+        if !data.is_empty() {
             let n;
             let mut cur = data[0];
             let mut rem;
             if (cur.wrapping_shr(58)) == 63 {
                 if (cur.wrapping_shr(52)) == 4095 {
                     n = (cur.wrapping_shr(16)) & ((1 << 36) - 1);
-                    cur = cur & ((1 << 48) - 1);
+                    cur &= (1 << 48) - 1;
                     rem = 48;
                 } else {
                     n = (cur.wrapping_shr(40)) & ((1 << 18) - 1);
-                    cur = cur & ((1 << 24) - 1);
+                    cur &= (1 << 24) - 1;
                     rem = 24;
                 }
             } else {
                 n = cur.wrapping_shr(58);
-                cur = cur & ((1 << 58) - 1);
+                cur &= (1 << 58) - 1;
                 rem = 58;
             }
             let mut g = Graph::new(n);
@@ -810,8 +812,8 @@ impl Graph {
                         // add an edge
                         g.add_edge(i, j);
                     }
-                    rem = rem - 1;
-                    cur = cur & ((1 << rem) - 1);
+                    rem -= 1;
+                    cur &= (1 << rem) - 1;
 
                 }
             }

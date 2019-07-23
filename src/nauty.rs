@@ -27,7 +27,7 @@ fn init_fixed(n: u64, fixed: &[Vec<u64>]) -> (Vec<i32>, Vec<i32>) {
         }
         c += 1;
     }
-    for mut x in &mut cols {
+    for x in &mut cols {
         if *x == n + 1 {
             *x = c;
         }

@@ -1,5 +1,6 @@
 use Set;
 use base64;
+use nauty::canon_graph;
 
 
 /// Structure storing the transformation applied to a graph in a compact way.
@@ -11,6 +12,7 @@ pub struct GraphTransformation {
     data: Vec<Set>,
     name: String,
     result: Option<Graph>,
+    order: Option<Vec<u64>>,
 }
 
 impl GraphTransformation {
@@ -53,6 +55,7 @@ impl GraphTransformation {
             data: v,
             name: "".to_owned(),
             result: None,
+            order: None,
         }
     }
 
@@ -155,6 +158,7 @@ impl GraphTransformation {
             self.data[j as usize].flip(2 * i);
             self.m += 1;
             self.result = None;
+            self.order = None;
         }
     }
 
@@ -194,6 +198,7 @@ impl GraphTransformation {
             self.data[j as usize].flip(2 * i);
             self.m -= 1;
             self.result = None;
+            self.order = None;
         }
     }
 
@@ -227,7 +232,7 @@ impl GraphTransformation {
     pub fn add_vertex(&mut self, i: u64) {
         assert!(i as usize <= self.data.len());
         if i as usize == self.data.len() {
-            let max = if self.data.len() > 0 {
+            let max = if !self.data.is_empty() {
                 self.data[0].getmax() + 2
             } else {
                 2
@@ -246,6 +251,7 @@ impl GraphTransformation {
             self.n += 1;
         }
         self.result = None;
+        self.order = None;
     }
 
     /// Removes a vertex to the current graph.
@@ -290,6 +296,7 @@ impl GraphTransformation {
             }
             self.n -= 1;
             self.result = None;
+            self.order = None;
         }
     }
 
@@ -396,7 +403,7 @@ impl GraphTransformation {
         if self.result.is_none() {
             let mut graph = Graph::new(self.order());
             if self.n > 0 {
-                let vertices = (0..(self.max_vertex() + 1))
+                let vertices = (0..=self.max_vertex())
                     .filter(|&x| self.is_vertex(x as u64))
                     .collect::<Vec<_>>();
                 // For each vertex that was not removed or was added
@@ -410,8 +417,26 @@ impl GraphTransformation {
                 }
             }
             self.result = Some(graph);
+            self.order = None;
         }
         self.result.clone().unwrap()
+    }
+
+    /// Computes the canonical form of the result as well as the order of the vertices in this
+    /// form.
+    pub fn canon(&mut self) {
+        let (cg, ord, _) = canon_graph(&self.final_graph());
+        self.result = Some(cg);
+        self.order = Some(ord);
+    }
+
+    /// Computes the canonical form of the result as well as the order of the vertices in this form
+    /// (if not already computed). And returns the canonical ordering of the vertices.
+    pub fn canon_order(&mut self) -> Vec<u64> {
+        if self.order.is_none() {
+            self.canon();
+        }
+        self.order.clone().unwrap()
     }
 }
 
@@ -437,7 +462,7 @@ impl fmt::Display for GraphTransformation {
                     t[i * 8..(i + 1) * 8].reverse();
                 }
                 let mut encode = encode_num(n as u64);
-                encode.extend_from_slice(&t[0..(num_bits / 8 + 1)]);
+                encode.extend_from_slice(&t[0..=num_bits / 8]);
                 base64::encode_config_buf(&encode, base64::STANDARD, &mut res);
             }
             if !self.name.is_empty() {
@@ -448,19 +473,33 @@ impl fmt::Display for GraphTransformation {
     }
 }
 
+impl fmt::Debug for GraphTransformation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f,
+               "{} : {} -> {:?} [changes: {}, order: {:?}]",
+               self.name,
+               self.initial_graph(),
+               self.result,
+               self,
+               self.order)
+    }
+}
+
 use std::convert::TryFrom;
 
 impl TryFrom<&str> for GraphTransformation {
     type Error = ();
     fn try_from(value: &str) -> Result<Self, ()> {
         // TODO define error
-        let v: Vec<&str> = value.split(":").collect();
+        let v: Vec<&str> = value.split(':').collect();
         let mut name = "";
-        let mut value = value;
-        if v.len() > 1 {
+        let value = if v.len() > 1 {
             name = v[0];
-            value = v[1];
+            v[1]
         }
+        else {
+            value
+        };
         let bytes = base64::decode(value).unwrap(); //TODO error
         let (n, p) = decode_num(&bytes);
         let mut r: [u8; 8] = [0; 8];
@@ -471,9 +510,11 @@ impl TryFrom<&str> for GraphTransformation {
         }
         let mut c = Converter::new(&scheme);
         for i in (p..bytes.len()).step_by(8) {
-            for j in 0..(std::cmp::min(8, bytes.len() - i)) {
-                r[j] = bytes[i + j];
-            }
+            let lim = std::cmp::min(8,bytes.len()-i);
+            r[..lim].clone_from_slice(&bytes[i..lim+i]);
+            //for j in 0..(std::cmp::min(8, bytes.len() - i)) {
+                //r[j] = bytes[i + j];
+            //}
             c.feed(std::cmp::min(64, nbytes - (i - p) as u64 * 8),
                    &[u64::from_be_bytes(r)]);
         }
@@ -481,7 +522,7 @@ impl TryFrom<&str> for GraphTransformation {
         let mut result = GraphTransformation::new(n);
         let mut p = 0;
         for i in 0..n {
-            for j in 0..(2 * (i + 1) - 1) / 64 + 1 {
+            for j in 0..=(2 * (i + 1) - 1) / 64 {
                 result.data[i as usize].data[j as usize] = r[p];
                 p += 1;
             }
@@ -541,7 +582,7 @@ fn encode_num(n: u64) -> Vec<u8> {
 }
 
 fn decode_num(data: &[u8]) -> (u64, usize) {
-    if data.len() == 0 {
+    if data.is_empty() {
         return (0, 0);
     }
     let mut res = 0;
@@ -551,7 +592,7 @@ fn decode_num(data: &[u8]) -> (u64, usize) {
     while cont && p < 9 {
         val = data[p] & 127;
         cont = data[p] > 127;
-        res |= (val as u64) << (p * 7);
+        res |= u64::from(val) << (p * 7);
         p += 1;
     }
     if cont {
@@ -561,12 +602,12 @@ fn decode_num(data: &[u8]) -> (u64, usize) {
 }
 
 const DECS: [u64; 6] = [16, 8, 4, 2, 1, 0];
-const MASKS: [u64; 6] = [0x00000000FFFFFFFF,
-                         0x0000FFFF0000FFFF,
-                         0x00FF00FF00FF00FF,
-                         0x0F0F0F0F0F0F0F0F,
-                         0x3333333333333333,
-                         0x5555555555555555];
+const MASKS: [u64; 6] = [0x0000_0000_FFFF_FFFF,
+                         0x0000_FFFF_0000_FFFF,
+                         0x00FF_00FF_00FF_00FF,
+                         0x0F0F_0F0F_0F0F_0F0F,
+                         0x3333_3333_3333_3333,
+                         0x5555_5555_5555_5555];
 
 fn untwine(v: u64) -> u64 {
     let mut p = v;
@@ -577,7 +618,7 @@ fn untwine(v: u64) -> u64 {
 }
 
 fn interleave(v: u32) -> u64 {
-    let mut p: u64 = v as u64;
+    let mut p: u64 = u64::from(v);
     for i in 0..DECS.len() - 1 {
         p = (p | (p << DECS[i])) & MASKS[i + 1];
     }
@@ -585,7 +626,7 @@ fn interleave(v: u32) -> u64 {
 }
 
 lazy_static! {
-    static ref counters: [u8; 256] = {
+    static ref COUNTERS: [u8; 256] = {
         let mut c = [0; 256];
         for i in 0..256 {
             c[i as usize] = (i & 1) as u8 + c[(i/2) as usize];
@@ -596,8 +637,8 @@ lazy_static! {
 
 fn num_bits(v: u32) -> u64 {
     let v = v as usize;
-    counters[v & 0xff] as u64 + counters[v >> 8 & 0xff] as u64 + counters[v >> 16 & 0xff] as u64 +
-    counters[v >> 24 & 0xff] as u64
+    u64::from(COUNTERS[v & 0xff]) + u64::from(COUNTERS[v >> 8 & 0xff]) + u64::from(COUNTERS[v >> 16 & 0xff]) +
+    u64::from(COUNTERS[v >> 24 & 0xff]) 
 }
 
 use Graph;
@@ -646,6 +687,7 @@ impl From<&Graph> for GraphTransformation {
             m: m,
             data: res,
             result: None,
+            order: None,
             name: "".to_owned(),
         }
     }
@@ -713,7 +755,7 @@ mod tests {
 
     #[test]
     fn test_fmt_graphtransformation() {
-        let mut g: Graph = from_g6("DB{").unwrap();
+        let g: Graph = from_g6("DB{").unwrap();
         let exp_res = from_g6("EAf?").unwrap();
         let mut gt: GraphTransformation = (&g).into();
         gt.remove_vertex(2);

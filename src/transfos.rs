@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use Graph;
 use nauty::{canon_graph, orbits};
 use std::fmt;
+use transfo_result::GraphTransformation;
 
 /// Result obtained by applying a transformation to a graph.
 pub struct TransfoResult {
@@ -125,7 +126,7 @@ impl fmt::Debug for TransfoResult {
 }
 
 /// Adds an edge.
-pub fn add_edge(g: &Graph) -> Vec<TransfoResult> {
+pub fn add_edge(g: &Graph) -> Vec<GraphTransformation> {
     transformation! (
         "add_edge",
         for g,
@@ -137,7 +138,7 @@ pub fn add_edge(g: &Graph) -> Vec<TransfoResult> {
 }
 
 /// Removes a vertex.
-pub fn remove_vertex(g: &Graph) -> Vec<TransfoResult> {
+pub fn remove_vertex(g: &Graph) -> Vec<GraphTransformation> {
     transformation! (
         "remove_vertex",
         for g,
@@ -148,7 +149,7 @@ pub fn remove_vertex(g: &Graph) -> Vec<TransfoResult> {
 }
 
 /// Removes an edge.
-pub fn remove_edge(g: &Graph) -> Vec<TransfoResult> {
+pub fn remove_edge(g: &Graph) -> Vec<GraphTransformation> {
     transformation!(
         "remove_edge",
         for g,
@@ -166,7 +167,7 @@ pub fn remove_edge(g: &Graph) -> Vec<TransfoResult> {
 ///        ->   /
 /// a -- b    a   b
 /// </pre>
-pub fn rotation(g: &Graph) -> Vec<TransfoResult> {
+pub fn rotation(g: &Graph) -> Vec<GraphTransformation> {
     transformation!(
         "rotation",
         for g,
@@ -186,7 +187,7 @@ pub fn rotation(g: &Graph) -> Vec<TransfoResult> {
 ///      | ->   / |
 /// a -- b    a   b
 /// </pre>
-pub fn slide(g: &Graph) -> Vec<TransfoResult> {
+pub fn slide(g: &Graph) -> Vec<GraphTransformation> {
     transformation!(
         "slide",
         for g,
@@ -206,7 +207,7 @@ pub fn slide(g: &Graph) -> Vec<TransfoResult> {
 ///         ->
 ///  c    d    c -- d
 /// </pre>
-pub fn move_distinct(g: &Graph) -> Vec<TransfoResult> {
+pub fn move_distinct(g: &Graph) -> Vec<GraphTransformation> {
     transformation! (
         "move_distinct",
         for g,
@@ -227,7 +228,7 @@ pub fn move_distinct(g: &Graph) -> Vec<TransfoResult> {
 ///         -> |    |
 ///  c -- d    c    d
 /// </pre>
-pub fn two_opt(g: &Graph) -> Vec<TransfoResult> {
+pub fn two_opt(g: &Graph) -> Vec<GraphTransformation> {
     transformation! (
         "two_opt",
         for g,
@@ -250,7 +251,7 @@ pub fn two_opt(g: &Graph) -> Vec<TransfoResult> {
 ///   /    ->      |
 /// a    c    a -- c
 /// </pre>
-pub fn detour(g: &Graph) -> Vec<TransfoResult> {
+pub fn detour(g: &Graph) -> Vec<GraphTransformation> {
     transformation!(
         "detour",
         for g,
@@ -271,7 +272,7 @@ pub fn detour(g: &Graph) -> Vec<TransfoResult> {
 ///      | ->   /
 /// a -- c    a    c
 /// </pre>
-pub fn shortcut(g: &Graph) -> Vec<TransfoResult> {
+pub fn shortcut(g: &Graph) -> Vec<GraphTransformation> {
     transformation! (
         "shortcut",
         for g,
@@ -287,22 +288,22 @@ pub fn shortcut(g: &Graph) -> Vec<TransfoResult> {
 
 #[cfg(test)]
 mod tests {
-    use super::TransfoResult;
+    use super::GraphTransformation;
     use super::Graph;
     use format::{from_g6, to_g6};
 
     fn test_transfo<F>(sig: &str, trsf: F, expected: &mut Vec<&str>)
-        where F: Fn(&Graph) -> Vec<TransfoResult>
+        where F: Fn(&Graph) -> Vec<GraphTransformation>
     {
         let g = from_g6(&String::from(sig)).unwrap();
-        let mut r: Vec<TransfoResult> = trsf(&g);
+        let mut r: Vec<GraphTransformation> = trsf(&g);
         for rg in r.iter_mut() {
             rg.canon();
         }
         eprintln!("{:?}", r);
         assert_eq!(r.len(), expected.len());
-        for rg in r {
-            let s = to_g6(&rg.end);
+        for rg in r.iter_mut() {
+            let s = to_g6(&rg.final_graph());
             assert!(expected.contains(&s.as_str()));
             let i = expected.iter()
                 .enumerate()
