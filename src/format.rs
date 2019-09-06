@@ -277,6 +277,7 @@ pub fn decode(data: &str) -> Vec<u64> {
     res
 }
 
+#[repr(C)]
 pub struct Converter {
     ws: u64,
     mask: u64,

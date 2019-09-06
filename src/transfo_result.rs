@@ -4,6 +4,7 @@ use nauty::canon_graph;
 
 
 /// Structure storing the transformation applied to a graph in a compact way.
+#[repr(C)]
 pub struct GraphTransformation {
     prev_n: u64,
     n: u64,

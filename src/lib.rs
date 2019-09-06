@@ -31,7 +31,6 @@ type int = libc::c_int;
 #[allow(non_camel_case_types)]
 type graph = set;
 
-
 mod detail {
     use super::set;
     use super::int;
@@ -69,6 +68,7 @@ mod detail {
 /// constructors. For example, a maximum value of 16 allows storing all integers from 0 to 15.
 /// Since it uses 64 bits binary words, a maximum size of 64 allows using only one word and is thus
 /// faster.
+#[repr(C)]
 #[derive(Clone,Debug)]
 pub struct Set {
     data: Vec<set>,
@@ -583,6 +583,7 @@ impl std::iter::IntoIterator for Set {
     }
 }
 
+#[repr(C)]
 pub struct SetIter {
     data: *const set,
     len: u64,
@@ -620,6 +621,7 @@ impl Iterator for SetIter {
 }
 
 /// Structure representing a undirected simple graph.
+#[repr(C)]
 #[derive(Clone)]
 pub struct Graph {
     data: Vec<graph>,
@@ -946,7 +948,7 @@ impl Graph {
         u < self.n
     }
 
-    /// Checks weither the vertices i and j are adjacent.
+    /// Checks whether the vertices i and j are adjacent.
     ///
     /// # Examples
     ///
@@ -1099,6 +1101,36 @@ impl Graph {
         unsafe {
             let row = detail::graphrow(self.data.as_ptr(), u as int, self.w as int);
             SetIter::new(row, self.w)
+        }
+    }
+
+    /// Tests whether two vertices are twins.
+    /// i.e., if they are adjacent and have the same neighbors.
+    /// # Examples
+    /// ```
+    /// let mut g = graph::Graph::new(6);
+    /// for x in (1..5) {
+    ///     g.add_edge(0,x);
+    ///     g.add_edge(5,x);
+    /// }
+    /// g.add_edge(0,5);
+    /// assert!(g.are_twins(0,5));
+    /// g.remove_edge(0,5);
+    /// assert!(!g.are_twins(0,5));
+    /// g.add_edge(0,5);
+    /// g.remove_edge(1,5);
+    /// assert!(!g.are_twins(0,5));
+    /// g.remove_edge(1,0);
+    /// assert!(g.are_twins(0,5));
+    /// ```
+    pub fn are_twins(&self, u: u64, v: u64) -> bool {
+        unsafe {
+            //TODO we should add loops for u and v without changing the graph to enable comparison
+            //of the rows (clone ?)
+            //Rather find where to add it and simply use an addition in the comparison.
+            let urow = detail::graphrow(self.data.as_ptr(), u as int,self.w as int);
+            let vrow = detail::graphrow(self.data.as_ptr(), v as int,self.w as int);
+            unimplemented!()
         }
     }
 }

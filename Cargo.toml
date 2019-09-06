@@ -4,11 +4,15 @@ version = "1.1.0-alpha"
 authors = ["Gauvain Devillez <gauvain.devillez@umons.ac.be>"]
 build = "build.rs"
 
+[lib]
+name="graph"
+crate-type=["cdylib","rlib"]
+
 [build-dependencies]
 cc = "1.0"
 
 [dependencies]
-bit-vec = "0.4"
+bit-vec = "0.6"
 libc = "0.2"
-lazy_static = "1.3"
+lazy_static = "1.4"
 base64 = "0.10"

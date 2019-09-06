@@ -13,6 +13,7 @@ trait VF2Data {
     fn compute_pairs(&self) -> Vec<(u64, u64)>;
 }
 
+#[repr(C)]
 struct VF2DataImpl<'a> {
     g1: &'a Graph,
     g2: &'a Graph,
@@ -179,6 +180,7 @@ impl<'a> VF2DataImpl<'a> {
     }
 }
 
+#[repr(C)]
 struct VF2DataOrb<'a> {
     data: VF2DataImpl<'a>,
     fixed: Vec<Vec<u64>>,
@@ -235,6 +237,7 @@ impl<'a> VF2Data for VF2DataOrb<'a> {
     }
 }
 
+#[repr(C)]
 struct SubgraphIter<D>
     where D: VF2Data
 {

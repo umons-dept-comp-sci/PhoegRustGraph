@@ -23,6 +23,7 @@ use std::collections::VecDeque;
 /// }
 /// assert!(a < Distance::Inf);
 /// ```
+#[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub enum Distance {
     /// Infinite distance
