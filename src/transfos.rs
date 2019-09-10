@@ -286,6 +286,19 @@ pub fn shortcut(g: &Graph) -> Vec<GraphTransformation> {
         )
 }
 
+/// Given two twin vertices (i.e., adjacent with exactly the same neighbors), removes the edge
+/// between them.
+pub fn disco_twins(g: &Graph) -> Vec<GraphTransformation> {
+    transformation! (
+        "disco_twins",
+        for g,
+        let a,
+        b sym a (after a and twin a),
+        apply
+        remove(a,b);
+        )
+}
+
 #[cfg(test)]
 mod tests {
     use super::GraphTransformation;
@@ -368,5 +381,11 @@ mod tests {
     fn test_shortcut() {
         let mut expected = vec!["DBw", "DB[", "D`["];
         test_transfo("Dd[", super::shortcut, &mut expected);
+    }
+
+    #[test]
+    fn test_disco_twins() {
+        let mut expected = vec!["E?~w","E@~o"];
+        test_transfo("E@~w", super::disco_twins, &mut expected);
     }
 }

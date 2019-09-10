@@ -17,6 +17,7 @@ mod transfos_macros;
 pub mod transfos;
 pub mod subgraphs;
 pub mod transfo_result;
+pub mod algorithm;
 
 use std::fmt;
 use errors::InvalidBinary;
@@ -59,6 +60,20 @@ mod detail {
                         workg: *mut graph,
                         m: int,
                         n: int);
+    }
+    pub fn complement_set(s: *mut set, len: u64, maxm: u64) {
+        if len > 0 {
+            let mut s = s;
+            let mut maxm = maxm;
+            unsafe {
+                for _ in 0..(len - 1) {
+                    *s = !*s;
+                    maxm -= wordsize() as u64;
+                    s = s.add(1);
+                }
+                *s = !*s & allmask(maxm as int);
+            }
+        }
     }
 }
 
@@ -501,21 +516,6 @@ impl Set {
         }
     }
 
-    fn complement_set(s: *mut set, len: u64, maxm: u64) {
-        if len > 0 {
-            let mut s = s;
-            let mut maxm = maxm;
-            unsafe {
-                for _ in 0..(len - 1) {
-                    *s = !*s;
-                    maxm -= detail::wordsize() as u64;
-                    s = s.add(1);
-                }
-                *s = !*s & detail::allmask(maxm as int);
-            }
-        }
-    }
-
     /// Flips every element of the set. i.e., each element between 0 and max-1 that was in the set
     /// is removed and every other element is added.
     ///
@@ -530,7 +530,7 @@ impl Set {
     /// assert_eq!(s.size(),334-4);
     /// ```
     pub fn complement(&mut self) {
-        Set::complement_set(self.data.as_mut_ptr(), self.data.len() as u64, self.maxm);
+        detail::complement_set(self.data.as_mut_ptr(), self.data.len() as u64, self.maxm);
         self.size = self.maxm - self.size;
     }
 }
@@ -1114,24 +1114,81 @@ impl Graph {
     ///     g.add_edge(5,x);
     /// }
     /// g.add_edge(0,5);
-    /// assert!(g.are_twins(0,5));
+    /// assert!(g.are_twins(0,5),"basic test");
     /// g.remove_edge(0,5);
-    /// assert!(!g.are_twins(0,5));
+    /// assert!(!g.are_twins(0,5),"not connected");
     /// g.add_edge(0,5);
     /// g.remove_edge(1,5);
-    /// assert!(!g.are_twins(0,5));
+    /// assert!(!g.are_twins(0,5),"neighbor removed from one");
     /// g.remove_edge(1,0);
-    /// assert!(g.are_twins(0,5));
+    /// assert!(g.are_twins(0,5),"neighbor removed from both");
+    /// g = graph::Graph::new(30);
+    /// for i in 0..29 {
+    ///     for j in i+1..30 {
+    ///        g.add_edge(i,j);
+    ///     }
+    /// }
+    /// assert!(g.are_twins(5,29),"big graph");
+    /// g.remove_edge(5,29);
+    /// assert!(!g.are_twins(5,29),"big graph, not twins");
     /// ```
     pub fn are_twins(&self, u: u64, v: u64) -> bool {
         unsafe {
-            //TODO we should add loops for u and v without changing the graph to enable comparison
-            //of the rows (clone ?)
-            //Rather find where to add it and simply use an addition in the comparison.
-            let urow = detail::graphrow(self.data.as_ptr(), u as int,self.w as int);
-            let vrow = detail::graphrow(self.data.as_ptr(), v as int,self.w as int);
-            unimplemented!()
+            let (mut u, mut v) = (u,v); //We need to change them later
+            let (mut udone, mut vdone) = (false, false);
+            let urow = std::slice::from_raw_parts(detail::graphrow(self.data.as_ptr(), u as int,self.w as int),self.w as usize);
+            let vrow = std::slice::from_raw_parts(detail::graphrow(self.data.as_ptr(), v as int,self.w as int),self.w as usize);
+            for i in 0..self.w {
+                let mut up = urow[i as usize];
+                let mut vp = vrow[i as usize];
+                // We could just compare the two rows if they had loops. So we add loops for the
+                // comparison.
+                if !udone && u < 64 {
+                    up += 1 << (63-u);
+                    udone = ! udone;
+                }
+                if !vdone && v < 64 {
+                    vp += 1 << (63-v);
+                    vdone = !vdone;
+                }
+                if up != vp {
+                    return false;
+                }
+                u = u.saturating_sub(64);
+                v = v.saturating_sub(64);
+            }
+            return true;
         }
+    }
+
+    /// Returns the complement of the graph. i.e., the graph G' with same vertex set but where uv
+    /// is in E' if and only if uv is not in E.
+    /// # Examples :
+    /// ```
+    /// let mut g = graph::Graph::new(5);
+    /// g = g.complement();
+    /// for i in 0..5 {
+    ///     for j in 0..5 {
+    ///         if i != j {
+    ///             assert!(g.is_edge(i,j));
+    ///         } else {
+    ///             assert!(!g.is_edge(i,j));
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    pub fn complement(&self) -> Graph {
+        let mut ng = self.clone();
+        let n = ng.order();
+        ng.m = n * (n-1) / 2 + n - ng.m; //There will be loops once we negate the data
+        for v in ng.vertices() {
+            unsafe {
+                let row = detail::graphrowmut(ng.data.as_mut_ptr(), v as int, ng.w as int);
+                detail::complement_set(row,ng.w,ng.n);
+                ng.remove_edge(v,v);
+            }
+        }
+        ng
     }
 }
 

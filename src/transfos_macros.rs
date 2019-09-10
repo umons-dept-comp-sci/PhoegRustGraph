@@ -58,6 +58,12 @@ macro_rules! cond{
     (@translate $g:ident $x:ident (not adj $b:ident)) => {
         !$g.is_edge($x,$b)
     };
+    (@translate $g:ident $x:ident (twin $b:ident)) => {
+        $g.are_twins($x,$b)
+    };
+    (@translate $g:ident $x:ident (not twin $b:ident)) => {
+        !$g.are_twins($x,$b)
+    };
     ($g:ident $x:ident () -> ()) => {};
     ($g:ident $x:ident () -> ($($p:tt)+)) => {
         cond!(@translate $g $x ($($p)*))
