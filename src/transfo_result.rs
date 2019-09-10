@@ -1,7 +1,6 @@
-use Set;
 use base64;
 use nauty::canon_graph;
-
+use Set;
 
 /// Structure storing the transformation applied to a graph in a compact way.
 #[repr(C)]
@@ -439,10 +438,27 @@ impl GraphTransformation {
         }
         self.order.clone().unwrap()
     }
+
+    pub fn tocsv(&self) -> String {
+        format!(
+            "{}, {}, {:?}, {}, {}",
+            self.name,
+            self.initial_graph(),
+            self.result.clone().unwrap(),
+            self,
+            self.order
+                .clone()
+                .unwrap()
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<String>>()
+                .join(";")
+        )
+    }
 }
 
-use std::fmt;
 use format::Converter;
+use std::fmt;
 impl fmt::Display for GraphTransformation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let n = self.max_vertex() as usize + 1;
@@ -466,9 +482,10 @@ impl fmt::Display for GraphTransformation {
                 encode.extend_from_slice(&t[0..=num_bits / 8]);
                 base64::encode_config_buf(&encode, base64::STANDARD, &mut res);
             }
-            if !self.name.is_empty() {
-                write!(f, "{}:", self.name)?;
-            }
+            //TODO add an option to output it or not
+            //if !self.name.is_empty() {
+            //write!(f, "{}:", self.name)?;
+            //}
             write!(f, "{}", res)
         }
     }
@@ -476,13 +493,15 @@ impl fmt::Display for GraphTransformation {
 
 impl fmt::Debug for GraphTransformation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,
-               "{} : {} -> {:?} [changes: {}, order: {:?}]",
-               self.name,
-               self.initial_graph(),
-               self.result,
-               self,
-               self.order)
+        write!(
+            f,
+            "{} : {} -> {:?} [changes: {}, order: {:?}]",
+            self.name,
+            self.initial_graph(),
+            self.result,
+            self,
+            self.order
+        )
     }
 }
 
@@ -497,8 +516,7 @@ impl TryFrom<&str> for GraphTransformation {
         let value = if v.len() > 1 {
             name = v[0];
             v[1]
-        }
-        else {
+        } else {
             value
         };
         let bytes = base64::decode(value).unwrap(); //TODO error
@@ -511,13 +529,15 @@ impl TryFrom<&str> for GraphTransformation {
         }
         let mut c = Converter::new(&scheme);
         for i in (p..bytes.len()).step_by(8) {
-            let lim = std::cmp::min(8,bytes.len()-i);
-            r[..lim].clone_from_slice(&bytes[i..lim+i]);
+            let lim = std::cmp::min(8, bytes.len() - i);
+            r[..lim].clone_from_slice(&bytes[i..lim + i]);
             //for j in 0..(std::cmp::min(8, bytes.len() - i)) {
-                //r[j] = bytes[i + j];
+            //r[j] = bytes[i + j];
             //}
-            c.feed(std::cmp::min(64, nbytes - (i - p) as u64 * 8),
-                   &[u64::from_be_bytes(r)]);
+            c.feed(
+                std::cmp::min(64, nbytes - (i - p) as u64 * 8),
+                &[u64::from_be_bytes(r)],
+            );
         }
         let r = c.result();
         let mut result = GraphTransformation::new(n);
@@ -603,12 +623,14 @@ fn decode_num(data: &[u8]) -> (u64, usize) {
 }
 
 const DECS: [u64; 6] = [16, 8, 4, 2, 1, 0];
-const MASKS: [u64; 6] = [0x0000_0000_FFFF_FFFF,
-                         0x0000_FFFF_0000_FFFF,
-                         0x00FF_00FF_00FF_00FF,
-                         0x0F0F_0F0F_0F0F_0F0F,
-                         0x3333_3333_3333_3333,
-                         0x5555_5555_5555_5555];
+const MASKS: [u64; 6] = [
+    0x0000_0000_FFFF_FFFF,
+    0x0000_FFFF_0000_FFFF,
+    0x00FF_00FF_00FF_00FF,
+    0x0F0F_0F0F_0F0F_0F0F,
+    0x3333_3333_3333_3333,
+    0x5555_5555_5555_5555,
+];
 
 fn untwine(v: u64) -> u64 {
     let mut p = v;
@@ -630,7 +652,7 @@ lazy_static! {
     static ref COUNTERS: [u8; 256] = {
         let mut c = [0; 256];
         for i in 0..256 {
-            c[i as usize] = (i & 1) as u8 + c[(i/2) as usize];
+            c[i as usize] = (i & 1) as u8 + c[(i / 2) as usize];
         }
         c
     };
@@ -638,12 +660,14 @@ lazy_static! {
 
 fn num_bits(v: u32) -> u64 {
     let v = v as usize;
-    u64::from(COUNTERS[v & 0xff]) + u64::from(COUNTERS[v >> 8 & 0xff]) + u64::from(COUNTERS[v >> 16 & 0xff]) +
-    u64::from(COUNTERS[v >> 24 & 0xff]) 
+    u64::from(COUNTERS[v & 0xff])
+        + u64::from(COUNTERS[v >> 8 & 0xff])
+        + u64::from(COUNTERS[v >> 16 & 0xff])
+        + u64::from(COUNTERS[v >> 24 & 0xff])
 }
 
-use Graph;
 use std::convert::From;
+use Graph;
 impl From<&Graph> for GraphTransformation {
     fn from(graph: &Graph) -> Self {
         // Get number of words per vertex
@@ -737,8 +761,10 @@ mod tests {
         res = encode_num(0xffaa);
         assert_eq!(&res, &[0xaa, 0xff, 0x3]);
         res = encode_num(0xffffffffffffffff);
-        assert_eq!(&res,
-                   &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
+        assert_eq!(
+            &res,
+            &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]
+        );
     }
 
     #[test]
@@ -779,8 +805,10 @@ mod tests {
             }
             for j in (0..6 as u64).filter(|x| *x != 2 && *x != i) {
                 assert_eq!(gt.is_edge(i, j), exp_res.is_edge(i, j));
-                assert_eq!(exp_res.is_edge(i, j) != g.is_edge(i, j),
-                           gt.is_edge_modified(i, j));
+                assert_eq!(
+                    exp_res.is_edge(i, j) != g.is_edge(i, j),
+                    gt.is_edge_modified(i, j)
+                );
             }
         }
     }
