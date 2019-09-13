@@ -1176,6 +1176,12 @@ impl Graph {
     ///         }
     ///     }
     /// }
+    /// g = graph::Graph::new(3).complement();
+    /// for i in 0..2 {
+    ///     for j in (i+1)..3 {
+    ///         assert!(g.is_edge(i,j));
+    ///     }
+    /// }
     /// ```
     pub fn complement(&self) -> Graph {
         let mut ng = self.clone();
