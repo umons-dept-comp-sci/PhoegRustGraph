@@ -7,6 +7,9 @@ macro_rules! count
 }
 
 macro_rules! build_map {
+    (@ident ($m:ident) (some $($r:tt)+) ($($counts:tt)*) ($($ids:tt)*)) => {
+        build_map!(@ident ($m) ($($r)+) ($($counts)*) ($($ids)*));
+    };
     (@ident ($m:ident) ($a:ident ($($_r:tt)*)) ($($counts:tt)*) ($($ids:tt)*)) => {
         build_map!(@ident ($m) ($a) ($($counts)*) ($($ids)*));
     };
@@ -64,6 +67,12 @@ macro_rules! cond{
     (@translate $g:ident $x:ident (not twin $b:ident)) => {
         !$g.are_twins($x,$b)
     };
+    (@translate $g:ident $x:ident (incl $b:ident)) => {
+        has_neighborhood_included(&$g,$b,$x)
+    };
+    (@translate $g:ident $x:ident (not incl $b:ident)) => {
+        !has_neighborhood_included(&$g,$b,$x)
+    };
     ($g:ident $x:ident () -> ()) => {};
     ($g:ident $x:ident () -> ($($p:tt)+)) => {
         cond!(@translate $g $x ($($p)*))
@@ -76,27 +85,38 @@ macro_rules! cond{
     };
 }
 
-/// Parses weither we need conditions on a vertex
+/// Parses whether we need conditions on a vertex
 /// (vars) (vertex) (to parse) -> (parsed) (rest)
 macro_rules! ifcond {
     //Nothing left to parse
-    (($($v:tt)*) ($a:ident) () -> ($($b:tt)*) ($($t:tt)*)) => {
+    (($($v:tt)*) ($a:ident) () -> ($($b:tt)*) ($($t:tt)*) (some)) => {
+        index!(($($v)*) ($a $($b)*) ($($t)*));
+        break;
+    };
+    (($($v:tt)*) ($a:ident) () -> ($($b:tt)*) ($($t:tt)*) ()) => {
         index!(($($v)*) ($a $($b)*) ($($t)*));
     };
     //No conditions
-    (($($v:tt)*) ($a:ident) (()) -> ($($b:tt)*) ($($t:tt)*)) => {
-        ifcond!(($($v)*) ($a) () -> ($($b)*) ($($t)*));
+    (($($v:tt)*) ($a:ident) (()) -> ($($b:tt)*) ($($t:tt)*) ($($s:tt)*)) => {
+        ifcond!(($($v)*) ($a) () -> ($($b)*) ($($t)*) ());
     };
     //Found condition block
-    (($m:ident $f:ident $res:ident $g:ident $n:expr) ($a:ident) (($($p:tt)+)) -> ($($b:tt)*) ($($t:tt)*)) => {
+    (($m:ident $f:ident $res:ident $g:ident $n:ident) ($a:ident) (($($p:tt)+)) -> ($($b:tt)*) ($($t:tt)*) (some)) => {
+        if cond!($g $a ($($p)*) -> ())
+        {
+            index!(($m $f $res $g $n) ($a $($b)*) ($($t)*));
+            break;
+        }
+    };
+    (($m:ident $f:ident $res:ident $g:ident $n:ident) ($a:ident) (($($p:tt)+)) -> ($($b:tt)*) ($($t:tt)*) ()) => {
         if cond!($g $a ($($p)*) -> ())
         {
             index!(($m $f $res $g $n) ($a $($b)*) ($($t)*));
         }
     };
-    //Looking for condition block (could be sym constraint before the ()'s)
-    (($($v:tt)*) ($a:ident) ($tok:tt $($p:tt)*) -> ($($b:tt)*) ($($t:tt)*)) => {
-        ifcond!(($($v)*) ($a) ($($p)*) -> ($($b)* $tok) ($($t)*));
+    //Looking for condition block (there could be sym constraint before the ()'s)
+    (($($v:tt)*) ($a:ident) ($tok:tt $($p:tt)*) -> ($($b:tt)*) ($($t:tt)*) ($($s:tt)*)) => {
+        ifcond!(($($v)*) ($a) ($($p)*) -> ($($b)* $tok) ($($t)*) ());
     };
 }
 
@@ -133,6 +153,9 @@ macro_rules! operation {
     (($g:ident) (add ($a:ident))) => {
         $g.add_vertex($a);
     };
+    (($g:ident) (isolate ($a:ident))) => {
+        isolate_transfo(&mut $g,$a);
+    };
 }
 
 /// Parses the transformation list
@@ -154,16 +177,21 @@ macro_rules! parse_transfo {
 }
 
 macro_rules! build_iter {
-    (@loop ($m:ident $f:ident $res:ident $g:ident $n:expr) ($a:ident $($r:tt)*) ($($t:tt)*)) => {
+    (@loop ($m:ident $f:ident $res:ident $g:ident $n:ident) (some $a:ident $($r:tt)*) ($($t:tt)*)) => {
         for &$a in &orbits(&$g, $f.as_slice()) {
-            ifcond!( ($m $f $res $g $n) ($a) ($($r)*) -> () ($($t)*));
+            ifcond!( ($m $f $res $g $n) ($a) ($($r)*) -> () ($($t)*) (some));
+        }
+    };
+    (@loop ($m:ident $f:ident $res:ident $g:ident $n:ident) ($a:ident $($r:tt)*) ($($t:tt)*)) => {
+        for &$a in &orbits(&$g, $f.as_slice()) {
+            ifcond!( ($m $f $res $g $n) ($a) ($($r)*) -> () ($($t)*) ());
         }
     };
     (@iter ($($v:tt)*) () -> ($($a:tt)*)) => {};
-    (@iter ($m:ident $f:ident $res:ident $g:ident $n:expr) (apply $($r:tt)+) -> ()) => {
+    (@iter ($m:ident $f:ident $res:ident $g:ident $n:ident) (apply $($r:tt)+) -> ()) => {
         let mut ng : GraphTransformation = $g.into();
         parse_transfo!((ng) ($($r)*) -> ());
-        ng.set_name($n.to_string());
+        ng.set_name(stringify!($n).to_string());
         $res.push(ng);
     };
     (@iter ($($v:tt)*) (apply $($r:tt)+) -> ($($a:tt)+)) => {
@@ -175,7 +203,7 @@ macro_rules! build_iter {
     (@iter ($($v:tt)*) ($tok:tt $($r:tt)*) -> ($($a:tt)*)) => {
         build_iter!(@iter ($($v)*) ($($r)*) -> ($($a)* $tok));
     };
-    (($m:ident $g:ident $n:expr) let $($tts:tt)*) => {
+    (($m:ident $g:ident $n:ident) let $($tts:tt)*) => {
         {
             let mut res: Vec<GraphTransformation> = Vec::new();
             let mut fixed : Vec<Vec<u64>> = Vec::new();
@@ -189,8 +217,16 @@ macro_rules! build_iter {
 }
 
 macro_rules! transformation {
-    ($n:expr, for $g:ident, $($r:tt)*) => {
-        {
+    ($doc:expr, $n:ident, for $g:ident, $($r:tt)*) => {
+        #[doc=$doc]
+        pub fn $n($g: &Graph) -> Vec<GraphTransformation> {
+            #[allow(unused_variables)]
+            let m = build_map!($($r)*);
+            build_iter!((m $g $n) $($r)*)
+        }
+    };
+    ($n:ident, for $g:ident, $($r:tt)*) => {
+        pub fn $n($g: &Graph) -> Vec<GraphTransformation> {
             #[allow(unused_variables)]
             let m = build_map!($($r)*);
             build_iter!((m $g $n) $($r)*)

@@ -1,4 +1,5 @@
 use Graph;
+use transfo_result::GraphTransformation;
 use std::collections::VecDeque;
 
 trait Visitor {
@@ -68,4 +69,35 @@ pub fn is_connected(g: &Graph) -> bool {
     let mut v = VisitorConnected { num: 0 };
     bfs(&g, &mut v, None);
     v.is_connected(&g)
+}
+
+// TODO test
+/// Remove all edges containing u.
+pub fn isolate(g: &mut Graph, u: u64) {
+    for x in g.neighbors(u) {
+        g.remove_edge(u, x);
+    }
+}
+
+// TODO test
+/// Remove all edges containing u.
+pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
+    for x in 0..=g.max_vertex() {
+        if g.is_vertex(x) && g.is_edge(u, x) {
+            g.remove_edge(u, x);
+        }
+    }
+}
+
+// TODO test
+/// Tests whether every neighbor of u is a neighbor of v.
+pub fn has_neighborhood_included(g: &Graph, u: u64, v: u64) -> bool {
+    let mut i = 0;
+    for x in g.neighbors(u).filter(|x| *x != v) {
+        if !g.is_edge(x, v) {
+            return false;
+        }
+        i += 1;
+    }
+    i > 0
 }

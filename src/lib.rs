@@ -1116,7 +1116,7 @@ impl Graph {
     /// g.add_edge(0,5);
     /// assert!(g.are_twins(0,5),"basic test");
     /// g.remove_edge(0,5);
-    /// assert!(!g.are_twins(0,5),"not connected");
+    /// assert!(g.are_twins(0,5),"not connected");
     /// g.add_edge(0,5);
     /// g.remove_edge(1,5);
     /// assert!(!g.are_twins(0,5),"neighbor removed from one");
@@ -1130,6 +1130,8 @@ impl Graph {
     /// }
     /// assert!(g.are_twins(5,29),"big graph");
     /// g.remove_edge(5,29);
+    /// assert!(g.are_twins(5,29),"big graph, not connected");
+    /// g.remove_edge(5,28);
     /// assert!(!g.are_twins(5,29),"big graph, not twins");
     /// ```
     pub fn are_twins(&self, u: u64, v: u64) -> bool {
@@ -1141,14 +1143,16 @@ impl Graph {
             for i in 0..self.w {
                 let mut up = urow[i as usize];
                 let mut vp = vrow[i as usize];
-                // We could just compare the two rows if they had loops. So we add loops for the
-                // comparison.
+                // We could just compare the two rows if they had loops. So we add loops and
+                // connect them for the comparison.
                 if !udone && u < 64 {
-                    up += 1 << (63-u);
+                    up |= 1 << (63-u);
+                    vp |= 1 << (63-u);
                     udone = ! udone;
                 }
                 if !vdone && v < 64 {
-                    vp += 1 << (63-v);
+                    up |= 1 << (63-v);
+                    vp |= 1 << (63-v);
                     vdone = !vdone;
                 }
                 if up != vp {
