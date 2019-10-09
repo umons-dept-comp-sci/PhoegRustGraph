@@ -1,28 +1,69 @@
-use Graph;
-use transfo_result::GraphTransformation;
 use std::collections::VecDeque;
+use transfo_result::GraphTransformation;
+use Graph;
 
-trait Visitor {
-    fn visit(&mut self, g: &Graph, v: u64);
+pub trait Visitor {
+    fn visit_vertex(&mut self, g: &Graph, u: u64);
+    fn visit_edge(&mut self, g: &Graph, u: u64, v: u64);
 }
 
-fn bfs<V>(g: &Graph, visitor: &mut V, start: Option<u64>)
-    where V: Visitor
+trait Queue {
+    fn enqueue(&mut self, u: u64);
+    fn dequeue(&mut self) -> u64;
+    fn is_empty(&self) -> bool;
+}
+
+impl Queue for VecDeque<u64> {
+    fn enqueue(&mut self, u: u64) {
+        self.push_back(u);
+    }
+
+    fn dequeue(&mut self) -> u64 {
+        self.pop_front().unwrap()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
+}
+
+struct Fifo {
+    v: VecDeque<u64>,
+}
+
+impl Queue for Fifo {
+    fn enqueue(&mut self, u: u64) {
+        self.v.push_back(u);
+    }
+
+    fn dequeue(&mut self) -> u64 {
+        self.v.pop_front().unwrap()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.v.is_empty()
+    }
+}
+
+fn visit<V, Q>(g: &Graph, visitor: &mut V, queue: &mut Q, start: Option<u64>)
+where
+    V: Visitor,
+    Q: Queue,
 {
     if g.order() > 0 {
         let start = start.unwrap_or(0);
-        let mut queue = VecDeque::new();
-        queue.push_back(start);
+        queue.enqueue(start);
         let mut visited = vec![false; g.order() as usize];
         visited[start as usize] = true;
         while !queue.is_empty() {
-            let current = queue.pop_front().unwrap();
+            let current = queue.dequeue();
             if g.is_vertex(current) {
-                visitor.visit(&g, current);
+                visitor.visit_vertex(&g, current);
                 for x in g.neighbors(current) {
+                    visitor.visit_edge(&g, current, x);
                     if !visited[x as usize] {
                         visited[x as usize] = true;
-                        queue.push_back(x);
+                        queue.enqueue(x);
                     }
                 }
             }
@@ -30,45 +71,20 @@ fn bfs<V>(g: &Graph, visitor: &mut V, start: Option<u64>)
     }
 }
 
-struct VisitorConnected {
-    num: u64,
+pub fn bfs<V>(g: &Graph, visitor: &mut V, start: Option<u64>)
+where
+    V: Visitor,
+{
+    let mut queue = VecDeque::new();
+    visit(g, visitor, &mut queue, start);
 }
 
-impl VisitorConnected {
-    fn is_connected(&self, g: &Graph) -> bool {
-        self.num == g.order()
-    }
-}
-
-impl Visitor for VisitorConnected {
-    fn visit(&mut self, _: &Graph, _: u64) {
-        self.num += 1;
-    }
-}
-
-/// Tests whether the graph is connected. i.e., if each vertex can reach every other vertex.
-/// # Examples :
-/// ```
-/// let mut g = graph::Graph::new(3);
-/// for i in 0..2 {
-///    for j in (i+1)..3 {
-///         g.add_edge(i,j);
-///    }
-/// }
-/// assert!(graph::algorithm::is_connected(&g));
-/// g = graph::Graph::new(5);
-/// assert!(!graph::algorithm::is_connected(&g));
-/// g.add_cycle(&[0,1,2,3,4]);
-/// assert!(graph::algorithm::is_connected(&g));
-/// g.remove_edge(0,1);
-/// assert!(graph::algorithm::is_connected(&g));
-/// g.remove_edge(2,3);
-/// assert!(!graph::algorithm::is_connected(&g));
-/// ```
-pub fn is_connected(g: &Graph) -> bool {
-    let mut v = VisitorConnected { num: 0 };
-    bfs(&g, &mut v, None);
-    v.is_connected(&g)
+pub fn dfs<V>(g: &Graph, visitor: &mut V, start: Option<u64>)
+where
+    V: Visitor,
+{
+    let mut queue = Fifo { v: VecDeque::new() };
+    visit(g, visitor, &mut queue, start);
 }
 
 // TODO test
