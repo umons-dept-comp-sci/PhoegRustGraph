@@ -87,15 +87,34 @@ where
     visit(g, visitor, &mut queue, start);
 }
 
-// TODO test
 /// Remove all edges containing u.
+/// # Examples:
+/// ```
+/// use graph::Graph;
+/// use graph::algorithm::isolate;
+/// let mut g = Graph::new(5);
+/// for i in 0..4 {
+///     for j in i..5 {
+///         g.add_edge(i,j);
+///     }
+/// }
+/// isolate(&mut g, 2);
+/// for i in 0..5 {
+///     assert!(!g.is_edge(2,i));
+/// }
+/// g.add_edge(2,3);
+/// isolate(&mut g, 3);
+/// for i in 0..5 {
+///     assert!(!g.is_edge(3,i));
+/// }
+/// ```
 pub fn isolate(g: &mut Graph, u: u64) {
     for x in g.neighbors(u) {
         g.remove_edge(u, x);
     }
 }
 
-// TODO test
+// TODO test or merge it with isolate for graphs
 /// Remove all edges containing u.
 pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
     for x in 0..=g.max_vertex() {
@@ -105,8 +124,23 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
     }
 }
 
-// TODO test
 /// Tests whether every neighbor of u is a neighbor of v.
+///
+/// # Examples:
+/// ```
+/// use graph::{Graph, algorithm::has_neighborhood_included};
+/// let mut g = Graph::new(5);
+/// for i in 0..4 {
+///     for j in i..5 {
+///         g.add_edge(i,j);
+///     }
+/// }
+/// assert!(has_neighborhood_included(&g,0,1));
+/// g.remove_edge(0,2);
+/// assert!(has_neighborhood_included(&g,0,1));
+/// g.remove_edge(1,3);
+/// assert!(!has_neighborhood_included(&g,0,1));
+/// ```
 pub fn has_neighborhood_included(g: &Graph, u: u64, v: u64) -> bool {
     let mut i = 0;
     for x in g.neighbors(u).filter(|x| *x != v) {
