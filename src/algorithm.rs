@@ -1,10 +1,10 @@
 use std::collections::VecDeque;
 use transfo_result::GraphTransformation;
-use Graph;
+use GraphNauty;
 
 pub trait Visitor {
-    fn visit_vertex(&mut self, g: &Graph, u: u64);
-    fn visit_edge(&mut self, g: &Graph, u: u64, v: u64);
+    fn visit_vertex(&mut self, g: &GraphNauty, u: u64);
+    fn visit_edge(&mut self, g: &GraphNauty, u: u64, v: u64);
 }
 
 trait Queue {
@@ -45,7 +45,7 @@ impl Queue for Fifo {
     }
 }
 
-fn visit<V, Q>(g: &Graph, visitor: &mut V, queue: &mut Q, start: Option<u64>)
+fn visit<V, Q>(g: &GraphNauty, visitor: &mut V, queue: &mut Q, start: Option<u64>)
 where
     V: Visitor,
     Q: Queue,
@@ -71,7 +71,7 @@ where
     }
 }
 
-pub fn bfs<V>(g: &Graph, visitor: &mut V, start: Option<u64>)
+pub fn bfs<V>(g: &GraphNauty, visitor: &mut V, start: Option<u64>)
 where
     V: Visitor,
 {
@@ -79,7 +79,7 @@ where
     visit(g, visitor, &mut queue, start);
 }
 
-pub fn dfs<V>(g: &Graph, visitor: &mut V, start: Option<u64>)
+pub fn dfs<V>(g: &GraphNauty, visitor: &mut V, start: Option<u64>)
 where
     V: Visitor,
 {
@@ -90,9 +90,9 @@ where
 /// Remove all edges containing u.
 /// # Examples:
 /// ```
-/// use graph::Graph;
+/// use graph::GraphNauty;
 /// use graph::algorithm::isolate;
-/// let mut g = Graph::new(5);
+/// let mut g = GraphNauty::new(5);
 /// for i in 0..4 {
 ///     for j in i..5 {
 ///         g.add_edge(i,j);
@@ -108,7 +108,7 @@ where
 ///     assert!(!g.is_edge(3,i));
 /// }
 /// ```
-pub fn isolate(g: &mut Graph, u: u64) {
+pub fn isolate(g: &mut GraphNauty, u: u64) {
     for x in g.neighbors(u) {
         g.remove_edge(u, x);
     }
@@ -128,8 +128,8 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
 ///
 /// # Examples:
 /// ```
-/// use graph::{Graph, algorithm::has_neighborhood_included};
-/// let mut g = Graph::new(5);
+/// use graph::{GraphNauty, algorithm::has_neighborhood_included};
+/// let mut g = GraphNauty::new(5);
 /// for i in 0..4 {
 ///     for j in i..5 {
 ///         g.add_edge(i,j);
@@ -141,7 +141,7 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
 /// g.remove_edge(1,3);
 /// assert!(!has_neighborhood_included(&g,0,1));
 /// ```
-pub fn has_neighborhood_included(g: &Graph, u: u64, v: u64) -> bool {
+pub fn has_neighborhood_included(g: &GraphNauty, u: u64, v: u64) -> bool {
     let mut i = 0;
     for x in g.neighbors(u).filter(|x| *x != v) {
         if !g.is_edge(x, v) {

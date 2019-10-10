@@ -623,20 +623,20 @@ impl Iterator for SetIter {
 /// Structure representing a undirected simple graph.
 #[repr(C)]
 #[derive(Clone)]
-pub struct Graph {
+pub struct GraphNauty {
     data: Vec<graph>,
     n: u64,
     m: u64,
     w: u64,
 }
 
-impl Graph {
+impl GraphNauty {
     /// Constructs a new graph with 0 edges and n vertices.
-    pub fn new(ord: u64) -> Graph {
+    pub fn new(ord: u64) -> GraphNauty {
         unsafe {
             let words = detail::setwordsneeded(ord as int) as u64;
             let v = vec![0; (ord*words) as usize];
-            Graph {
+            GraphNauty {
                 data: v,
                 n: ord,
                 m: 0,
@@ -652,7 +652,7 @@ impl Graph {
     /// ```
     /// //TODO Update tests
     /// let mut n = 5;
-    /// let mut g = graph::Graph::new(n);
+    /// let mut g = graph::GraphNauty::new(n);
     /// g.add_cycle(&((0..n).collect::<Vec<u64>>()));
     /// let mut res = g.to_bin();
     /// let expected = [0x1699000000000000];
@@ -661,7 +661,7 @@ impl Graph {
     ///     assert_eq!(e,r);
     /// }
     /// n = 30;
-    /// g = graph::Graph::new(n);
+    /// g = graph::GraphNauty::new(n);
     /// g.add_cycle(&((0..n).collect::<Vec<u64>>()));
     /// res = g.to_bin();
     /// let expected = [0x7a91082040402008,
@@ -675,7 +675,7 @@ impl Graph {
     /// for (e,r) in expected.iter().zip(res.iter()) {
     ///     assert_eq!(e,r);
     /// }
-    /// g = graph::Graph::new(142);
+    /// g = graph::GraphNauty::new(142);
     /// res = g.to_bin();
     /// assert_eq!(0xfc008e0000000000,res[0]);
     /// ```
@@ -755,7 +755,7 @@ impl Graph {
     /// ```
     /// let data = [0x1699000000000000];
     /// let mut n = 5;
-    /// let mut g = graph::Graph::from_bin(&data).unwrap();
+    /// let mut g = graph::GraphNauty::from_bin(&data).unwrap();
     /// assert_eq!(n,g.order());
     /// assert!(g.is_cycle(&((0..n).collect::<Vec<u64>>())));
     /// let data = [0x7a91082040402008,
@@ -766,14 +766,14 @@ impl Graph {
     ///                     0x0020000008000001,
     ///                     0x0000001800000080];
     /// n = 30;
-    /// let mut g = graph::Graph::from_bin(&data).unwrap();
+    /// let mut g = graph::GraphNauty::from_bin(&data).unwrap();
     /// assert_eq!(n,g.order());
     /// assert!(g.is_cycle(&((0..n).collect::<Vec<u64>>())));
     /// let data = [0xfc008e0000000000];
-    /// let res = graph::Graph::from_bin(&data);
+    /// let res = graph::GraphNauty::from_bin(&data);
     /// assert!(res.is_err());
     /// ```
-    pub fn from_bin(data: &[u64]) -> Result<Graph, InvalidBinary> {
+    pub fn from_bin(data: &[u64]) -> Result<GraphNauty, InvalidBinary> {
         if !data.is_empty() {
             let n;
             let mut cur = data[0];
@@ -793,7 +793,7 @@ impl Graph {
                 cur &= (1 << 58) - 1;
                 rem = 58;
             }
-            let mut g = Graph::new(n);
+            let mut g = GraphNauty::new(n);
             let mut p = 0;
             // For each vertex
             for i in 1..n {
@@ -830,7 +830,7 @@ impl Graph {
     /// # Examples
     ///
     /// ```
-    /// let mut g = graph::Graph::new(0);
+    /// let mut g = graph::GraphNauty::new(0);
     /// assert!(g.order() == 0);
     /// for _ in 0..11
     /// {
@@ -847,7 +847,7 @@ impl Graph {
     /// #Examples
     ///
     /// ```
-    /// let mut g = graph::Graph::new(11);
+    /// let mut g = graph::GraphNauty::new(11);
     /// assert!(g.size() == 0);
     /// for i in 1..11
     /// {
@@ -868,7 +868,7 @@ impl Graph {
     /// # Examples
     ///
     /// ```
-    /// let mut g = graph::Graph::new(0);
+    /// let mut g = graph::GraphNauty::new(0);
     /// assert!(g.order() == 0);
     /// for i in 0..11
     /// {
@@ -906,7 +906,7 @@ impl Graph {
     /// # Examples
     ///
     /// ```
-    /// let mut g = graph::Graph::new(7);
+    /// let mut g = graph::GraphNauty::new(7);
     /// for i in g.vertices().skip(1) {
     ///     g.add_edge(i-1,i);
     /// }
@@ -953,7 +953,7 @@ impl Graph {
     /// # Examples
     ///
     /// ```
-    /// let mut g = graph::Graph::new(11);
+    /// let mut g = graph::GraphNauty::new(11);
     /// for i in 0..10
     /// {
     ///     g.add_edge(i,i+1);
@@ -974,7 +974,7 @@ impl Graph {
     /// # Examples
     ///
     /// ```
-    /// let mut g = graph::Graph::new(11);
+    /// let mut g = graph::GraphNauty::new(11);
     /// for i in 0..10
     /// {
     ///     g.add_edge(i,i+1);
@@ -996,7 +996,7 @@ impl Graph {
     /// # Examples
     ///
     /// ```
-    /// let mut g = graph::Graph::new(11);
+    /// let mut g = graph::GraphNauty::new(11);
     /// for i in 0..10
     /// {
     ///     g.add_edge(i,i+1);
@@ -1035,7 +1035,7 @@ impl Graph {
     /// # Examples
     ///
     /// ```
-    /// let g = graph::Graph::new(11);
+    /// let g = graph::GraphNauty::new(11);
     /// let mut i = 0;
     /// for n in g.vertices()
     /// {
@@ -1053,7 +1053,7 @@ impl Graph {
     /// # Examples
     ///
     /// ```
-    /// let mut g = graph::Graph::new(11);
+    /// let mut g = graph::GraphNauty::new(11);
     /// for i in 0..10
     /// {
     ///     g.add_edge(i,i+1);
@@ -1083,7 +1083,7 @@ impl Graph {
     /// # Examples
     ///
     /// ```
-    /// let mut g = graph::Graph::new(11);
+    /// let mut g = graph::GraphNauty::new(11);
     /// let neighs = vec![2,6,8,9];
     /// for i in neighs.iter()
     /// {
@@ -1108,7 +1108,7 @@ impl Graph {
     /// i.e., if they are adjacent and have the same neighbors.
     /// # Examples
     /// ```
-    /// let mut g = graph::Graph::new(6);
+    /// let mut g = graph::GraphNauty::new(6);
     /// for x in (1..5) {
     ///     g.add_edge(0,x);
     ///     g.add_edge(5,x);
@@ -1122,7 +1122,7 @@ impl Graph {
     /// assert!(!g.are_twins(0,5),"neighbor removed from one");
     /// g.remove_edge(1,0);
     /// assert!(g.are_twins(0,5),"neighbor removed from both");
-    /// g = graph::Graph::new(30);
+    /// g = graph::GraphNauty::new(30);
     /// for i in 0..29 {
     ///     for j in i+1..30 {
     ///        g.add_edge(i,j);
@@ -1169,7 +1169,7 @@ impl Graph {
     /// is in E' if and only if uv is not in E.
     /// # Examples :
     /// ```
-    /// let mut g = graph::Graph::new(5);
+    /// let mut g = graph::GraphNauty::new(5);
     /// g = g.complement();
     /// for i in 0..5 {
     ///     for j in 0..5 {
@@ -1180,14 +1180,14 @@ impl Graph {
     ///         }
     ///     }
     /// }
-    /// g = graph::Graph::new(3).complement();
+    /// g = graph::GraphNauty::new(3).complement();
     /// for i in 0..2 {
     ///     for j in (i+1)..3 {
     ///         assert!(g.is_edge(i,j));
     ///     }
     /// }
     /// ```
-    pub fn complement(&self) -> Graph {
+    pub fn complement(&self) -> GraphNauty {
         let mut ng = self.clone();
         let n = ng.order();
         ng.m = n * (n-1) / 2 + n - ng.m; //There will be loops once we negate the data
@@ -1202,13 +1202,13 @@ impl Graph {
     }
 }
 
-impl fmt::Debug for Graph {
+impl fmt::Debug for GraphNauty {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", format::to_g6(self))
     }
 }
 
-impl fmt::Display for Graph {
+impl fmt::Display for GraphNauty {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", format::to_g6(self))
     }

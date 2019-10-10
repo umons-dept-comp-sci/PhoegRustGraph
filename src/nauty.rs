@@ -1,7 +1,7 @@
 //! Module containg methods to call the nauty library in order to compute the canonical form or the
 //! orbits of the vertices of a graph.
 extern crate libc;
-use Graph;
+use GraphNauty;
 use super::{int, graph};
 
 #[allow(non_camel_case_types)]
@@ -60,8 +60,8 @@ fn init_fixed(n: u64, fixed: &[Vec<u64>]) -> (Vec<i32>, Vec<i32>) {
 ///
 /// ```
 /// use graph::nauty::canon_graph_fixed;
-/// use graph::Graph;
-/// let mut g = Graph::new(5);
+/// use graph::GraphNauty;
+/// let mut g = GraphNauty::new(5);
 /// let (_,_,orbits) = canon_graph_fixed(&g, &vec![vec![1]]);
 /// println!("ORBITS {:?}", orbits);
 /// let exp_orbits = vec![0,1,0,0,0];
@@ -90,7 +90,7 @@ fn init_fixed(n: u64, fixed: &[Vec<u64>]) -> (Vec<i32>, Vec<i32>) {
 ///     assert!(orbits[i] == exp_orbits[i]);
 /// }
 /// ```
-pub fn canon_graph_fixed(g: &Graph, fixed: &[Vec<u64>]) -> (Graph, Vec<u64>, Vec<u64>) {
+pub fn canon_graph_fixed(g: &GraphNauty, fixed: &[Vec<u64>]) -> (GraphNauty, Vec<u64>, Vec<u64>) {
     unsafe {
         let n = g.order();
         let m = g.w;
@@ -104,7 +104,7 @@ pub fn canon_graph_fixed(g: &Graph, fixed: &[Vec<u64>]) -> (Graph, Vec<u64>, Vec
                       ptn.as_mut_slice().as_mut_ptr(),
                       orbits.as_mut_slice().as_mut_ptr());
 
-        let mut ng = Graph::new(n);
+        let mut ng = GraphNauty::new(n);
         for i in 1..n {
             for j in 0..i {
                 if g.is_edge(lab[i as usize] as u64, lab[j as usize] as u64) {
@@ -120,7 +120,7 @@ pub fn canon_graph_fixed(g: &Graph, fixed: &[Vec<u64>]) -> (Graph, Vec<u64>, Vec
 
 /// Given a graph, returns the canonical form of the graph, the order of the vertices of g in the
 /// new graph and the orbits with same format as nauty. The return values are in this order.
-pub fn canon_graph(g: &Graph) -> (Graph, Vec<u64>, Vec<u64>) {
+pub fn canon_graph(g: &GraphNauty) -> (GraphNauty, Vec<u64>, Vec<u64>) {
     canon_graph_fixed(g, &[])
 }
 
@@ -141,9 +141,9 @@ fn orbits_sample(orbits: &[u64]) -> Vec<u64> {
 /// Example:
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::GraphNauty;
 /// use graph::nauty::orbits;
-/// let mut g = Graph::new(5);
+/// let mut g = GraphNauty::new(5);
 /// let fixed: Vec<Vec<u64>> = vec![];
 /// let orbsexp = vec![0,1,3];
 /// g.add_edge(0,1);
@@ -154,7 +154,7 @@ fn orbits_sample(orbits: &[u64]) -> Vec<u64> {
 ///     assert!(orbs[i] == orbsexp[i]);
 /// }
 /// ```
-pub fn orbits(g: &Graph, fixed: &[Vec<u64>]) -> Vec<u64> {
+pub fn orbits(g: &GraphNauty, fixed: &[Vec<u64>]) -> Vec<u64> {
     let (_, _, orbits) = canon_graph_fixed(g, fixed);
     orbits_sample(&orbits)
 }

@@ -1,7 +1,7 @@
 //! Module containing graph transformations.
 //! Each transformation uses the orbits of the homomorphism group to filter out symmetries.
 use std::collections::HashMap;
-use Graph;
+use GraphNauty;
 use algorithm::{has_neighborhood_included,isolate_transfo};
 use nauty::{orbits};
 use transfo_result::GraphTransformation;
@@ -184,11 +184,11 @@ removes all its edges).",
 #[cfg(test)]
 mod tests {
     use super::GraphTransformation;
-    use super::Graph;
+    use super::GraphNauty;
     use format::{from_g6, to_g6};
 
     fn test_transfo<F>(sig: &str, trsf: F, expected: &mut Vec<&str>)
-        where F: Fn(&Graph) -> Vec<GraphTransformation>
+        where F: Fn(&GraphNauty) -> Vec<GraphTransformation>
     {
         let g = from_g6(&String::from(sig)).unwrap();
         let mut r: Vec<GraphTransformation> = trsf(&g);

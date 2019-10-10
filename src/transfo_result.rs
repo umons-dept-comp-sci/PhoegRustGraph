@@ -11,7 +11,7 @@ pub struct GraphTransformation {
     m: u64,
     data: Vec<Set>,
     name: String,
-    result: Option<Graph>,
+    result: Option<GraphNauty>,
     order: Option<Vec<u64>>,
 }
 
@@ -128,9 +128,9 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::Graph;
+    /// use graph::GraphNauty;
     ///
-    /// let mut g = Graph::new(3);
+    /// let mut g = GraphNauty::new(3);
     /// g.add_edge(1,0);
     /// let mut gt: GraphTransformation = (&g).into();
     /// gt.add_edge(1,0);
@@ -168,9 +168,9 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::Graph;
+    /// use graph::GraphNauty;
     ///
-    /// let mut g = Graph::new(3);
+    /// let mut g = GraphNauty::new(3);
     /// g.add_edge(1,2);
     /// let mut gt: GraphTransformation = (&g).into();
     /// gt.remove_edge(1,0);
@@ -208,13 +208,13 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::Graph;
+    /// use graph::GraphNauty;
     ///
-    /// let mut g = Graph::new(0);
+    /// let mut g = GraphNauty::new(0);
     /// let mut gt: GraphTransformation = (&g).into();
     /// gt.add_vertex(0);
     /// assert_eq!(gt.order(), 1);
-    /// g = Graph::new(3);
+    /// g = GraphNauty::new(3);
     /// gt = (&g).into();
     /// gt.add_vertex(2);
     /// assert!(gt.is_vertex(2));
@@ -260,9 +260,9 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::Graph;
+    /// use graph::GraphNauty;
     ///
-    /// let mut g = Graph::new(4);
+    /// let mut g = GraphNauty::new(4);
     /// g.add_edge(2,1);
     /// g.add_edge(2,3);
     /// let mut gt: GraphTransformation = (&g).into();
@@ -305,16 +305,16 @@ impl GraphTransformation {
     /// # Examples :
     ///
     /// ```
-    /// use graph::Graph;
+    /// use graph::GraphNauty;
     /// use graph::transfo_result::GraphTransformation;
     ///
-    /// let g = Graph::new(0);
+    /// let g = GraphNauty::new(0);
     /// let gt: GraphTransformation = (&g).into();
     /// let g = gt.initial_graph();
     /// assert_eq!(g.order(),0);
     /// assert_eq!(g.size(),0);
     /// assert_eq!(g.edges().count(),0);
-    /// let mut g = Graph::new(5);
+    /// let mut g = GraphNauty::new(5);
     /// let edges = [(0,1), (0,2), (3,4)];
     /// for (i,j) in edges.iter() {
     ///     g.add_edge(*i,*j);
@@ -332,8 +332,8 @@ impl GraphTransformation {
     ///     assert_eq!(j,*rj);
     /// }
     /// ```
-    pub fn initial_graph(&self) -> Graph {
-        let mut graph = Graph::new(self.initial_order());
+    pub fn initial_graph(&self) -> GraphNauty {
+        let mut graph = GraphNauty::new(self.initial_order());
         let w = graph.w;
         let mut res = graph.data;
         let mut gp = 0;
@@ -369,16 +369,16 @@ impl GraphTransformation {
     ///
     /// # Examples :
     /// ```
-    /// use graph::Graph;
+    /// use graph::GraphNauty;
     /// use graph::transfo_result::GraphTransformation;
     ///
-    /// let g = Graph::new(0);
+    /// let g = GraphNauty::new(0);
     /// let mut gt: GraphTransformation = (&g).into();
     /// let g = gt.final_graph();
     /// assert_eq!(g.order(),0);
     /// assert_eq!(g.size(),0);
     /// assert_eq!(g.edges().count(),0);
-    /// let mut g = Graph::new(5);
+    /// let mut g = GraphNauty::new(5);
     /// let mut edges = vec![(0,1), (0,2), (3,4)];
     /// for (i,j) in edges.iter() {
     ///     g.add_edge(*i,*j);
@@ -399,9 +399,9 @@ impl GraphTransformation {
     ///     assert_eq!(j,*rj, "edge must have last vertex {}",j);
     /// }
     /// ```
-    pub fn final_graph(&mut self) -> Graph {
+    pub fn final_graph(&mut self) -> GraphNauty {
         if self.result.is_none() {
-            let mut graph = Graph::new(self.order());
+            let mut graph = GraphNauty::new(self.order());
             if self.n > 0 {
                 let vertices = (0..=self.max_vertex())
                     .filter(|&x| self.is_vertex(x as u64))
@@ -667,9 +667,9 @@ fn num_bits(v: u32) -> u64 {
 }
 
 use std::convert::From;
-use Graph;
-impl From<&Graph> for GraphTransformation {
-    fn from(graph: &Graph) -> Self {
+use GraphNauty;
+impl From<&GraphNauty> for GraphTransformation {
+    fn from(graph: &GraphNauty) -> Self {
         // Get number of words per vertex
         let w = graph.w;
         // Get binary representation
@@ -726,7 +726,7 @@ mod tests {
 
     #[test]
     fn test_from() {
-        let mut g = Graph::new(5);
+        let mut g = GraphNauty::new(5);
         g.add_cycle(&(0..5).collect::<Vec<_>>());
         let gt = GraphTransformation::from(&g);
         for i in 0u64..5 {
@@ -782,7 +782,7 @@ mod tests {
 
     #[test]
     fn test_fmt_graphtransformation() {
-        let g: Graph = from_g6("DB{").unwrap();
+        let g: GraphNauty = from_g6("DB{").unwrap();
         let exp_res = from_g6("EAf?").unwrap();
         let mut gt: GraphTransformation = (&g).into();
         gt.remove_vertex(2);

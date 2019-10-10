@@ -219,7 +219,7 @@ macro_rules! build_iter {
 macro_rules! transformation {
     ($doc:expr, $n:ident, for $g:ident, $($r:tt)*) => {
         #[doc=$doc]
-        pub fn $n($g: &Graph) -> Vec<GraphTransformation> {
+        pub fn $n($g: &GraphNauty) -> Vec<GraphTransformation> {
             #[allow(unused_variables)]
             let m = build_map!($($r)*);
             build_iter!((m $g $n) $($r)*)

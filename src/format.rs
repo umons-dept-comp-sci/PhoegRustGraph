@@ -1,6 +1,6 @@
 //! Module containing functions to handle different graph formats such as graph6
 
-use Graph;
+use GraphNauty;
 use errors::*;
 
 #[allow(dead_code)]
@@ -18,9 +18,9 @@ fn length_g6(n: u64) -> u64 {
 /// # Examples
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::GraphNauty;
 /// use graph::format;
-/// let mut g = Graph::new(0);
+/// let mut g = GraphNauty::new(0);
 /// assert!("?" == format::to_g6(&g));
 /// g.add_vertex();
 /// assert!("@" == format::to_g6(&g));
@@ -38,7 +38,7 @@ fn length_g6(n: u64) -> u64 {
 /// }
 /// assert!("JhCGGC@?G?_" == format::to_g6(&g));
 /// ```
-pub fn to_g6(graph: &Graph) -> String {
+pub fn to_g6(graph: &GraphNauty) -> String {
     let n = graph.order();
     let m = if n > 0 {
         ((n * (n - 1) / 2) as f64 / 6.).ceil() as u64
@@ -88,9 +88,9 @@ pub fn to_g6(graph: &Graph) -> String {
 ///     _ => assert!(false),
 /// }
 /// ```
-pub fn from_g6(s: &str) -> Result<Graph, InvalidGraph6> {
+pub fn from_g6(s: &str) -> Result<GraphNauty, InvalidGraph6> {
     let bin = decode(s);
-    Graph::from_bin(&bin).map_err(|x| x.into())
+    GraphNauty::from_bin(&bin).map_err(|x| x.into())
 }
 
 // Returns a graph corresponding to the graph6 representation
