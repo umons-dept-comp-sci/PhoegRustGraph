@@ -4,9 +4,9 @@ use GraphNauty;
 use Graph;
 use GraphIter;
 
-pub trait Visitor {
-    fn visit_vertex(&mut self, g: &GraphNauty, u: u64);
-    fn visit_edge(&mut self, g: &GraphNauty, u: u64, v: u64);
+pub trait Visitor<G:Graph> {
+    fn visit_vertex(&mut self, g: &G, u: u64);
+    fn visit_edge(&mut self, g: &G, u: u64, v: u64);
 }
 
 trait Queue {
@@ -47,9 +47,10 @@ impl Queue for Fifo {
     }
 }
 
-fn visit<V, Q>(g: &GraphNauty, visitor: &mut V, queue: &mut Q, start: Option<u64>)
+fn visit<'a, G, V, Q>(g: &'a G, visitor: &mut V, queue: &mut Q, start: Option<u64>)
 where
-    V: Visitor,
+    G: GraphIter<'a>,
+    V: Visitor<G>,
     Q: Queue,
 {
     if g.order() > 0 {
@@ -60,9 +61,9 @@ where
         while !queue.is_empty() {
             let current = queue.dequeue();
             if g.is_vertex(current) {
-                visitor.visit_vertex(&g, current);
+                visitor.visit_vertex(g, current);
                 for x in g.neighbors(current) {
-                    visitor.visit_edge(&g, current, x);
+                    visitor.visit_edge(g, current, x);
                     if !visited[x as usize] {
                         visited[x as usize] = true;
                         queue.enqueue(x);
@@ -73,17 +74,19 @@ where
     }
 }
 
-pub fn bfs<V>(g: &GraphNauty, visitor: &mut V, start: Option<u64>)
+pub fn bfs<'a,G,V>(g: &'a G, visitor: &mut V, start: Option<u64>)
 where
-    V: Visitor,
+    V: Visitor<G>,
+    G: Graph+GraphIter<'a>,
 {
     let mut queue = VecDeque::new();
     visit(g, visitor, &mut queue, start);
 }
 
-pub fn dfs<V>(g: &GraphNauty, visitor: &mut V, start: Option<u64>)
+pub fn dfs<'a,G,V>(g: &'a G, visitor: &mut V, start: Option<u64>)
 where
-    V: Visitor,
+    G:Graph+GraphIter<'a>,
+    V: Visitor<G>,
 {
     let mut queue = Fifo { v: VecDeque::new() };
     visit(g, visitor, &mut queue, start);

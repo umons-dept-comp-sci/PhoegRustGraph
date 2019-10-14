@@ -620,8 +620,6 @@ impl Iterator for SetIter {
 }
 
 pub trait Graph: Sized {
-    fn to_bin(&self) -> Vec<u64>;
-    fn from_bin(data: &[u64]) -> Result<Self, InvalidBinary>;
     fn order(&self) -> u64;
     fn size(&self) -> u64;
     fn add_vertex(&mut self);
@@ -630,10 +628,27 @@ pub trait Graph: Sized {
     fn is_edge(&self, u: u64, w: u64) -> bool;
     fn add_edge(&mut self, u: u64, w: u64);
     fn remove_edge(&mut self, u: u64, w: u64);
-    fn add_cycle(&mut self, lst: &[u64]);
-    fn is_cycle(&self, lst: &[u64]) -> bool;
-    fn are_twins(&self, u: u64, v: u64) -> bool;
+
     fn complement(&self) -> Self;
+
+    fn add_cycle(&mut self, lst: &[u64]) {
+        for (&i, &j) in lst.iter().zip(lst.iter().cycle().skip(1)) {
+            self.add_edge(i, j);
+        }
+    }
+
+    fn is_cycle(&self, lst: &[u64]) -> bool {
+        lst.iter().zip(lst.iter().cycle().skip(1)).all(|(&x, &y)| self.is_edge(x, y))
+    }
+
+    fn are_twins(&self, u: u64, v: u64) -> bool {
+        for i in 0..self.order() {
+            if i != u && i != v && self.is_edge(u,i) && !self.is_edge(v,i) {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 pub trait GraphIter<'a>: Graph {
@@ -643,6 +658,11 @@ pub trait GraphIter<'a>: Graph {
     fn vertices(&self) -> Self::VertIter;
     fn edges(&'a self) -> Self::EdgeIter;
     fn neighbors(&self, u: u64) -> Self::NeighIter;
+}
+
+pub trait GraphFormat: Graph {
+    fn to_bin(&self) -> Vec<u64>;
+    fn from_bin(data: &[u64]) -> Result<Self, InvalidBinary>;
 }
 
 /// Structure representing a undirected simple graph.
@@ -672,7 +692,7 @@ impl GraphNauty {
 
 }
 
-impl Graph for GraphNauty {
+impl GraphFormat for GraphNauty {
 
     /// Returns a minimal binary form of the graph
     ///
@@ -680,7 +700,7 @@ impl Graph for GraphNauty {
     ///
     /// ```
     /// //TODO Update tests
-    /// use graph::{Graph,GraphNauty};
+    /// use graph::{Graph,GraphNauty,GraphFormat};
     /// let mut n = 5;
     /// let mut g = GraphNauty::new(n);
     /// g.add_cycle(&((0..n).collect::<Vec<u64>>()));
@@ -783,7 +803,7 @@ impl Graph for GraphNauty {
     /// # Examples
     ///
     /// ```
-    /// use graph::{Graph,GraphNauty};
+    /// use graph::{Graph,GraphNauty,GraphFormat};
     /// let data = [0x1699000000000000];
     /// let mut n = 5;
     /// let mut g = graph::GraphNauty::from_bin(&data).unwrap();
@@ -855,6 +875,9 @@ impl Graph for GraphNauty {
             Err(InvalidBinary::new("Not enough data"))
         }
     }
+}
+
+impl Graph for GraphNauty {
 
     /// Returns the order of the graph
     ///
@@ -1056,16 +1079,6 @@ impl Graph for GraphNauty {
                 self.m -= 1;
             }
         }
-    }
-
-    fn add_cycle(&mut self, lst: &[u64]) {
-        for (&i, &j) in lst.iter().zip(lst.iter().cycle().skip(1)) {
-            self.add_edge(i, j);
-        }
-    }
-
-    fn is_cycle(&self, lst: &[u64]) -> bool {
-        lst.iter().zip(lst.iter().cycle().skip(1)).all(|(&x, &y)| self.is_edge(x, y))
     }
 
     /// Tests whether two vertices are twins.

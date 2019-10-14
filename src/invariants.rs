@@ -1,7 +1,6 @@
 //! Module containing implementations of different graph invariants
 
 use Graph;
-use GraphNauty;
 use GraphIter;
 use algorithm::{bfs, dfs, Visitor};
 use errors::*;
@@ -190,7 +189,9 @@ impl ::std::cmp::Ord for Distance {
 ///     }
 /// }
 /// ```
-pub fn floyd_warshall(g: &GraphNauty) -> Vec<Vec<Distance>> {
+pub fn floyd_warshall<'a, G>(g: &'a G) -> Vec<Vec<Distance>>
+    where G: GraphIter<'a>
+{
     use self::Distance::{Inf, Val};
     let n = g.order() as usize;
     let mut matrix = vec![vec![Inf; n]; n];
@@ -238,11 +239,12 @@ pub fn floyd_warshall(g: &GraphNauty) -> Vec<Vec<Distance>> {
 /// assert!(diam.is_finite());
 /// assert_eq!(diam.get_val().unwrap(),1);
 /// ```
-pub fn diameter(g: &GraphNauty) -> Distance {
+pub fn diameter<'a, G>(g: &'a G) -> Distance
+    where G: GraphIter<'a>
+{
     if g.order() > 0 {
-        let distances = floyd_warshall(&g);
-        *distances
-            .iter()
+        let distances = floyd_warshall(g);
+        *distances.iter()
             .map(|x| x.iter().max().unwrap())
             .max()
             .unwrap()
@@ -256,10 +258,10 @@ struct AllPathsVisitor {
     paths: Vec<Vec<u64>>,
 }
 
-impl Visitor for AllPathsVisitor {
-    fn visit_vertex(&mut self, _: &GraphNauty, _: u64) {}
+impl<G: Graph> Visitor<G> for AllPathsVisitor {
+    fn visit_vertex(&mut self, _: &G, _: u64) {}
 
-    fn visit_edge(&mut self, _: &GraphNauty, u: u64, v: u64) {
+    fn visit_edge(&mut self, _: &G, u: u64, v: u64) {
         let cdist = self.dists[u as usize] + Distance::Val(1);
         let ndist = self.dists[v as usize];
         // ndist was infinite (we know it because it is a bfs)
@@ -267,7 +269,7 @@ impl Visitor for AllPathsVisitor {
             self.dists[v as usize] = cdist;
             self.paths[v as usize].clear();
             self.paths[v as usize].push(u);
-        // there is another shortest path to join n
+            // there is another shortest path to join n
         } else if ndist == cdist {
             self.paths[v as usize].push(u);
         }
@@ -302,7 +304,9 @@ impl Visitor for AllPathsVisitor {
 ///     }
 ///  }
 ///  ```
-pub fn shortest_paths_from(g: &GraphNauty, start: u64) -> (Vec<Distance>, Vec<Vec<u64>>) {
+pub fn shortest_paths_from<'a, G>(g: &'a G, start: u64) -> (Vec<Distance>, Vec<Vec<u64>>)
+    where G: GraphIter<'a>
+{
     let mut dists: Vec<Distance> = vec![Distance::Inf; g.order() as usize];
     let paths: Vec<Vec<u64>> = vec![Vec::new(); g.order() as usize];
     dists[start as usize] = Distance::Val(0);
@@ -324,15 +328,17 @@ pub fn shortest_paths_from(g: &GraphNauty, start: u64) -> (Vec<Distance>, Vec<Ve
 /// use graph::format::from_g6;
 ///
 /// let g = from_g6(&String::from("FiGoG")).unwrap();
-/// let expected:Vec<Distance> = [4,3,2,3,3,3,4].iter().map(|&x| Distance::Val(x)).collect();
 /// let r = eccentricities(&g);
+/// let expected:Vec<Distance> = [4,3,2,3,3,3,4].iter().map(|&x| Distance::Val(x)).collect();
 /// assert_eq!(r.len(), expected.len());
 /// for (i,e) in r.iter().enumerate() {
 ///     assert_eq!(*e,expected[i]);
 /// }
 /// ```
-pub fn eccentricities(g: &GraphNauty) -> Vec<Distance> {
-    floyd_warshall(&g)
+pub fn eccentricities<'a, G>(g: &'a G) -> Vec<Distance>
+    where G: GraphIter<'a>
+{
+    floyd_warshall(g)
         .iter()
         .map(|x| *x.iter().max().unwrap())
         .collect()
@@ -378,8 +384,10 @@ fn construct_paths(pths: &[Vec<u64>], s: u64, e: u64) -> Vec<Vec<u64>> {
 ///     }
 /// }
 /// ```
-pub fn diametral_paths(g: &GraphNauty) -> Vec<Vec<u64>> {
-    let eccs = eccentricities(&g);
+pub fn diametral_paths<'a, G>(g: &'a G) -> Vec<Vec<u64>>
+    where G: GraphIter<'a>
+{
+    let eccs = eccentricities(g);
     let diam = eccs.iter().max().unwrap();
     let extms: Vec<u64> = (0..g.order())
         .filter(|&x| eccs[x as usize] == *diam)
@@ -387,7 +395,7 @@ pub fn diametral_paths(g: &GraphNauty) -> Vec<Vec<u64>> {
     let mut res = vec![];
     // println!("{:?}", extms);
     for e in extms {
-        let (dsts, pths) = shortest_paths_from(&g, e);
+        let (dsts, pths) = shortest_paths_from(g, e);
         for (i, _dst) in dsts.iter().enumerate().filter(|&(_x, y)| y == diam) {
             let mut tres = construct_paths(&pths, e, i as u64);
             res.append(&mut tres);
@@ -401,16 +409,18 @@ struct ComponentVisitor<'a> {
     visited: &'a mut Vec<bool>,
 }
 
-impl<'a> Visitor for ComponentVisitor<'a> {
-    fn visit_vertex(&mut self, _: &GraphNauty, v: u64) {
+impl<'a, G: Graph> Visitor<G> for ComponentVisitor<'a> {
+    fn visit_vertex(&mut self, _: &G, v: u64) {
         self.verts.push(v);
         self.visited[v as usize] = true;
     }
 
-    fn visit_edge(&mut self, _: &GraphNauty, _: u64, _: u64) {}
+    fn visit_edge(&mut self, _: &G, _: u64, _: u64) {}
 }
 
-fn connected_component_with(g: &GraphNauty, u: u64, visited: &mut Vec<bool>) -> Vec<u64> {
+fn connected_component_with<'a, G>(g: &'a G, u: u64, visited: &mut Vec<bool>) -> Vec<u64>
+    where G: GraphIter<'a>
+{
     let mut visitor = ComponentVisitor {
         verts: Vec::new(),
         visited: visited,
@@ -444,12 +454,14 @@ fn connected_component_with(g: &GraphNauty, u: u64, visited: &mut Vec<bool>) -> 
 /// assert!(comps[0].len() == 5);
 /// assert!(comps[1].len() == 5);
 /// ```
-pub fn connected_components(g: &GraphNauty) -> Vec<Vec<u64>> {
+pub fn connected_components<'a, G>(g: &'a G) -> Vec<Vec<u64>>
+    where G: GraphIter<'a>
+{
     let mut comps = vec![];
     let mut visited = vec![false; g.order() as usize];
     for u in g.vertices() {
         if !visited[u as usize] {
-            comps.push(connected_component_with(&g, u, &mut visited));
+            comps.push(connected_component_with(g, u, &mut visited));
         }
     }
     comps
@@ -476,13 +488,15 @@ pub fn connected_components(g: &GraphNauty) -> Vec<Vec<u64>> {
 /// g.remove_edge(2,3);
 /// assert!(!is_connected(&g));
 /// ```
-pub fn is_connected(g: &GraphNauty) -> bool {
+pub fn is_connected<'a, G>(g: &'a G) -> bool
+    where G: GraphIter<'a>
+{
     let mut vis = vec![false; g.order() as usize];
     let mut v = ComponentVisitor {
         verts: Vec::new(),
         visited: &mut vis,
     };
-    bfs(&g, &mut v, None);
+    bfs(g, &mut v, None);
     v.verts.len() == g.order() as usize
 }
 
@@ -498,12 +512,10 @@ fn combine_paths(p1: &[Vec<u64>], p2: &[Vec<u64>]) -> Vec<Vec<u64>> {
     let mut res = vec![];
     for a in p1.iter() {
         for b in p2.iter() {
-            res.push(
-                a.iter()
-                    .chain(b.iter().skip(1))
-                    .cloned()
-                    .collect::<Vec<_>>(),
-            );
+            res.push(a.iter()
+                .chain(b.iter().skip(1))
+                .cloned()
+                .collect::<Vec<_>>());
         }
     }
     res
@@ -528,7 +540,9 @@ fn combine_paths(p1: &[Vec<u64>], p2: &[Vec<u64>]) -> Vec<Vec<u64>> {
 /// g.add_edge(10,0);
 /// shortests_paths(&g);
 /// ```
-pub fn shortests_paths(g: &GraphNauty) -> Vec<Vec<Vec<Vec<u64>>>> {
+pub fn shortests_paths<'a, G>(g: &'a G) -> Vec<Vec<Vec<Vec<u64>>>>
+    where G: GraphIter<'a>
+{
     let n = g.order() as usize;
     let mut paths = vec![vec![vec![]; n]; n];
     for u in g.vertices().map(|x| x as usize) {
@@ -540,11 +554,9 @@ pub fn shortests_paths(g: &GraphNauty) -> Vec<Vec<Vec<Vec<u64>>>> {
     }
     for k in g.vertices().map(|x| x as usize) {
         for u in g.vertices().map(|x| x as usize).filter(|&x| x != k) {
-            for v in g
-                .vertices()
+            for v in g.vertices()
                 .map(|x| x as usize)
-                .filter(|&x| x != k && x != u)
-            {
+                .filter(|&x| x != k && x != u) {
                 let duk = shortests_paths_length(&paths[u][k]);
                 let dkv = shortests_paths_length(&paths[k][v]);
                 let duv = shortests_paths_length(&paths[u][v]);
@@ -575,13 +587,14 @@ pub fn shortests_paths(g: &GraphNauty) -> Vec<Vec<Vec<Vec<u64>>>> {
 /// }
 /// assert!((avecc(&g) - 2f64).abs() < 1e-10);
 /// ```
-pub fn avecc(g: &GraphNauty) -> f64 {
+pub fn avecc<'a, G>(g: &'a G) -> f64
+    where G: GraphIter<'a>
+{
     if g.order() == 0 {
         0f64
     } else {
-        let dm = floyd_warshall(&g);
-        let t: Distance = dm
-            .iter()
+        let dm = floyd_warshall(g);
+        let t: Distance = dm.iter()
             .map(|x| x.iter().max().unwrap_or(&Distance::Val(0)))
             .fold(Distance::Val(0), |acc, &x| acc + x);
         match t {
@@ -604,13 +617,14 @@ pub fn avecc(g: &GraphNauty) -> f64 {
 /// }
 /// assert!((avdist(&g) - 1.5).abs() < 1e-10);
 /// ```
-pub fn avdist(g: &GraphNauty) -> f64 {
+pub fn avdist<'a, G>(g: &'a G) -> f64
+    where G: GraphIter<'a>
+{
     if g.order() == 0 {
         0f64
     } else {
-        let dm = floyd_warshall(&g);
-        let s: Distance = dm
-            .iter()
+        let dm = floyd_warshall(g);
+        let s: Distance = dm.iter()
             .flat_map(|x| x.iter())
             .fold(Distance::Val(0), |acc, &x| acc + x);
         let n = g.order();
@@ -640,23 +654,21 @@ pub fn avdist(g: &GraphNauty) -> f64 {
 /// g.remove_edge(4,2);
 /// assert!((minus_avecc_avdist(&g) - 18.0/20.0).abs() < 1e-10);
 /// ```
-pub fn minus_avecc_avdist(g: &GraphNauty) -> f64 {
-    let dm = floyd_warshall(&g);
+pub fn minus_avecc_avdist<'a, G>(g: &'a G) -> f64
+    where G: GraphIter<'a>
+{
+    let dm = floyd_warshall(g);
     let default_max = Distance::Val(0);
     let n: f64 = g.order() as f64;
-    let sum: f64 = match dm
-        .iter()
+    let sum: f64 = match dm.iter()
         .flat_map(|x| x.iter())
-        .fold(Distance::Val(0), |acc, &x| acc + x)
-    {
+        .fold(Distance::Val(0), |acc, &x| acc + x) {
         Distance::Val(v) => v as f64,
         _ => f64::INFINITY,
     };
-    let sum_ecc: f64 = match dm
-        .iter()
+    let sum_ecc: f64 = match dm.iter()
         .map(|x| x.iter().max().unwrap_or(&default_max))
-        .fold(Distance::Val(0), |acc, &x| acc + x)
-    {
+        .fold(Distance::Val(0), |acc, &x| acc + x) {
         Distance::Val(v) => v as f64,
         _ => f64::INFINITY,
     };
@@ -689,11 +701,12 @@ pub fn minus_avecc_avdist(g: &GraphNauty) -> f64 {
 /// g.add_edge(3,5);
 /// assert!(eci(&g).unwrap() == 35);
 /// ```
-pub fn eci(g: &GraphNauty) -> Result<u64, DisconnectedGraph> {
-    let dm = floyd_warshall(&g);
+pub fn eci<'a, G>(g: &'a G) -> Result<u64, DisconnectedGraph>
+    where G: GraphIter<'a>
+{
+    let dm = floyd_warshall(g);
     let eccs: Vec<Distance> = dm.iter().map(|x| (*x.iter().max().unwrap())).collect();
-    let degrees: Vec<u64> = g
-        .vertices()
+    let degrees: Vec<u64> = g.vertices()
         .map(|x| g.neighbors(x).count() as u64)
         .collect();
     eccs.iter()
@@ -734,7 +747,9 @@ pub fn eci(g: &GraphNauty) -> Result<u64, DisconnectedGraph> {
 /// }
 /// assert!(num_dom(&g) == 3);
 /// ```
-pub fn num_dom(g: &GraphNauty) -> u64 {
+pub fn num_dom<'a, G>(g: &G) -> u64
+    where G: GraphIter<'a>
+{
     let n = g.order();
     g.vertices()
         .map(|x| g.neighbors(x).count() as u64)
@@ -761,7 +776,9 @@ pub fn num_dom(g: &GraphNauty) -> u64 {
 /// g.add_edge(4,1);
 /// assert!(num_pending(&g) == 0);
 /// ```
-pub fn num_pending(g: &GraphNauty) -> u64 {
+pub fn num_pending<'a, G>(g: &G) -> u64
+    where G: GraphIter<'a>
+{
     g.vertices()
         .map(|x| g.neighbors(x).count() as u64)
         .filter(|&x| x == 1)
@@ -782,7 +799,9 @@ pub fn num_pending(g: &GraphNauty) -> u64 {
 /// }
 /// dnm(&g);
 /// ```
-pub fn dnm(g: &GraphNauty) -> u64 {
+pub fn dnm<G>(g: &G) -> u64
+    where G: Graph
+{
     let n = g.order() as f64;
     let m = g.size() as f64;
     ((2f64 * n + 1f64 - (17f64 + 8f64 * (m - n)).sqrt()) / 2f64).floor() as u64
@@ -802,7 +821,9 @@ pub fn dnm(g: &GraphNauty) -> u64 {
 /// println!("{}",deg_max(&g));
 /// assert!(deg_max(&g) == 4);
 /// ```
-pub fn deg_max(g: &GraphNauty) -> u64 {
+pub fn deg_max<'a, G>(g: &G) -> u64
+    where G: GraphIter<'a>
+{
     g.vertices()
         .map(|x| g.neighbors(x).count() as u64)
         .max()
@@ -822,7 +843,9 @@ pub fn deg_max(g: &GraphNauty) -> u64 {
 /// }
 /// assert!(deg_min(&g) == 1);
 /// ```
-pub fn deg_min(g: &GraphNauty) -> u64 {
+pub fn deg_min<'a, G>(g: &G) -> u64
+    where G: GraphIter<'a>
+{
     g.vertices()
         .map(|x| g.neighbors(x).count() as u64)
         .min()
@@ -848,9 +871,10 @@ pub fn deg_min(g: &GraphNauty) -> u64 {
 /// g = from_g6(&"D??".to_string()).unwrap();
 /// assert!(irregularity(&g) == 0);
 /// ```
-pub fn irregularity(g: &GraphNauty) -> u64 {
-    let degrees = g
-        .vertices()
+pub fn irregularity<'a, G>(g: &'a G) -> u64
+    where G: GraphIter<'a>
+{
+    let degrees = g.vertices()
         .map(|x| g.neighbors(x).count() as isize)
         .collect::<Vec<isize>>();
     g.edges()

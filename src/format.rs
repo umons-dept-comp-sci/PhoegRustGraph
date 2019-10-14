@@ -2,6 +2,7 @@
 
 use GraphNauty;
 use Graph;
+use GraphFormat;
 use errors::*;
 
 #[allow(dead_code)]
