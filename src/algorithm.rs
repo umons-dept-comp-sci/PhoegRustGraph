@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 use transfo_result::GraphTransformation;
 use GraphNauty;
+use Graph;
 
 pub trait Visitor {
     fn visit_vertex(&mut self, g: &GraphNauty, u: u64);
@@ -90,7 +91,7 @@ where
 /// Remove all edges containing u.
 /// # Examples:
 /// ```
-/// use graph::GraphNauty;
+/// use graph::{Graph,GraphNauty};
 /// use graph::algorithm::isolate;
 /// let mut g = GraphNauty::new(5);
 /// for i in 0..4 {
@@ -128,7 +129,7 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
 ///
 /// # Examples:
 /// ```
-/// use graph::{GraphNauty, algorithm::has_neighborhood_included};
+/// use graph::{Graph,GraphNauty, algorithm::has_neighborhood_included};
 /// let mut g = GraphNauty::new(5);
 /// for i in 0..4 {
 ///     for j in i..5 {

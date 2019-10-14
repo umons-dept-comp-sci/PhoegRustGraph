@@ -1,6 +1,7 @@
 //! Module containing functions to handle different graph formats such as graph6
 
 use GraphNauty;
+use Graph;
 use errors::*;
 
 #[allow(dead_code)]
@@ -18,7 +19,7 @@ fn length_g6(n: u64) -> u64 {
 /// # Examples
 ///
 /// ```
-/// use graph::GraphNauty;
+/// use graph::{Graph,GraphNauty,GraphIter};
 /// use graph::format;
 /// let mut g = GraphNauty::new(0);
 /// assert!("?" == format::to_g6(&g));
@@ -53,6 +54,7 @@ pub fn to_g6(graph: &GraphNauty) -> String {
 /// # Examples
 ///
 /// ```
+/// use graph::Graph;
 /// use graph::format;
 /// use graph::errors::*;
 /// let mut g;

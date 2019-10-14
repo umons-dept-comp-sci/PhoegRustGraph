@@ -128,7 +128,7 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::GraphNauty;
+    /// use graph::{Graph,GraphNauty};
     ///
     /// let mut g = GraphNauty::new(3);
     /// g.add_edge(1,0);
@@ -168,7 +168,7 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::GraphNauty;
+    /// use graph::{Graph,GraphNauty};
     ///
     /// let mut g = GraphNauty::new(3);
     /// g.add_edge(1,2);
@@ -208,7 +208,7 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::GraphNauty;
+    /// use graph::{Graph,GraphNauty};
     ///
     /// let mut g = GraphNauty::new(0);
     /// let mut gt: GraphTransformation = (&g).into();
@@ -260,7 +260,7 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::GraphNauty;
+    /// use graph::{Graph,GraphNauty};
     ///
     /// let mut g = GraphNauty::new(4);
     /// g.add_edge(2,1);
@@ -305,7 +305,7 @@ impl GraphTransformation {
     /// # Examples :
     ///
     /// ```
-    /// use graph::GraphNauty;
+    /// use graph::{Graph,GraphNauty};
     /// use graph::transfo_result::GraphTransformation;
     ///
     /// let g = GraphNauty::new(0);
@@ -369,7 +369,7 @@ impl GraphTransformation {
     ///
     /// # Examples :
     /// ```
-    /// use graph::GraphNauty;
+    /// use graph::{Graph,GraphNauty};
     /// use graph::transfo_result::GraphTransformation;
     ///
     /// let g = GraphNauty::new(0);
@@ -668,6 +668,7 @@ fn num_bits(v: u32) -> u64 {
 
 use std::convert::From;
 use GraphNauty;
+use Graph;
 impl From<&GraphNauty> for GraphTransformation {
     fn from(graph: &GraphNauty) -> Self {
         // Get number of words per vertex

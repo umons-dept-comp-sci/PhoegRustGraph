@@ -2,6 +2,7 @@
 //! orbits of the vertices of a graph.
 extern crate libc;
 use GraphNauty;
+use Graph;
 use super::{int, graph};
 
 #[allow(non_camel_case_types)]
@@ -60,7 +61,7 @@ fn init_fixed(n: u64, fixed: &[Vec<u64>]) -> (Vec<i32>, Vec<i32>) {
 ///
 /// ```
 /// use graph::nauty::canon_graph_fixed;
-/// use graph::GraphNauty;
+/// use graph::{Graph,GraphNauty};
 /// let mut g = GraphNauty::new(5);
 /// let (_,_,orbits) = canon_graph_fixed(&g, &vec![vec![1]]);
 /// println!("ORBITS {:?}", orbits);
@@ -141,7 +142,7 @@ fn orbits_sample(orbits: &[u64]) -> Vec<u64> {
 /// Example:
 ///
 /// ```
-/// use graph::GraphNauty;
+/// use graph::{Graph,GraphNauty};
 /// use graph::nauty::orbits;
 /// let mut g = GraphNauty::new(5);
 /// let fixed: Vec<Vec<u64>> = vec![];
