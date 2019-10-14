@@ -305,7 +305,7 @@ impl GraphTransformation {
     /// # Examples :
     ///
     /// ```
-    /// use graph::{Graph,GraphNauty};
+    /// use graph::{Graph,GraphNauty,GraphIter};
     /// use graph::transfo_result::GraphTransformation;
     ///
     /// let g = GraphNauty::new(0);
@@ -369,7 +369,7 @@ impl GraphTransformation {
     ///
     /// # Examples :
     /// ```
-    /// use graph::{Graph,GraphNauty};
+    /// use graph::{Graph,GraphNauty,GraphIter};
     /// use graph::transfo_result::GraphTransformation;
     ///
     /// let g = GraphNauty::new(0);

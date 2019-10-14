@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use transfo_result::GraphTransformation;
 use GraphNauty;
 use Graph;
+use GraphIter;
 
 pub trait Visitor {
     fn visit_vertex(&mut self, g: &GraphNauty, u: u64);
