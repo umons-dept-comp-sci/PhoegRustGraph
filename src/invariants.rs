@@ -285,7 +285,7 @@ impl<G: Graph> Visitor<G> for AllPathsVisitor {
 ///  use graph::invariants::{shortest_paths_from, Distance};
 ///  use graph::format::from_g6;
 ///
-///  let g = from_g6(&String::from("GiGoG?")).unwrap();
+///  let g: GraphNauty = from_g6(&String::from("GiGoG?")).unwrap();
 ///  let res = shortest_paths_from(&g,0);
 ///  let dists : Vec<Distance> = [0,1,2,2,3,3,4].iter().map(|&x|
 ///  Distance::Val(x)).chain([Distance::Inf].iter().cloned()).collect();
@@ -327,7 +327,7 @@ pub fn shortest_paths_from<'a, G>(g: &'a G, start: u64) -> (Vec<Distance>, Vec<V
 /// use graph::invariants::{eccentricities, Distance};
 /// use graph::format::from_g6;
 ///
-/// let g = from_g6(&String::from("FiGoG")).unwrap();
+/// let g: GraphNauty = from_g6(&String::from("FiGoG")).unwrap();
 /// let r = eccentricities(&g);
 /// let expected:Vec<Distance> = [4,3,2,3,3,3,4].iter().map(|&x| Distance::Val(x)).collect();
 /// assert_eq!(r.len(), expected.len());
@@ -370,7 +370,7 @@ fn construct_paths(pths: &[Vec<u64>], s: u64, e: u64) -> Vec<Vec<u64>> {
 /// use graph::invariants::{diametral_paths, Distance};
 /// use graph::format::from_g6;
 ///
-/// let g = from_g6(&String::from("FiGoG")).unwrap();
+/// let g: GraphNauty = from_g6(&String::from("FiGoG")).unwrap();
 /// let r = diametral_paths(&g);
 /// let expected = vec![
 ///     vec![0,1,2,5,6],
@@ -862,7 +862,7 @@ pub fn deg_min<'a, G>(g: &G) -> u64
 /// use graph::invariants::irregularity;
 /// use graph::format::from_g6;
 ///
-/// let mut g = from_g6(&"C^".to_string()).unwrap();
+/// let mut g: GraphNauty = from_g6(&"C^".to_string()).unwrap();
 /// assert!(irregularity(&g) == 4);
 ///
 /// g = from_g6(&"DDW".to_string()).unwrap();

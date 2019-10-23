@@ -365,6 +365,25 @@ impl GraphTransformation {
         graph
     }
 
+    fn compute_final_graph(&self) -> GraphNauty {
+        let mut graph = GraphNauty::new(self.order());
+        if self.n > 0 {
+            let vertices = (0..=self.max_vertex())
+                .filter(|&x| self.is_vertex(x as u64))
+                .collect::<Vec<_>>();
+            // For each vertex that was not removed or was added
+            for i in (0..vertices.len()).take(self.n as usize - 1) {
+                // We have to iterate over each vertex as we do not know which ones remains.
+                for j in (i + 1)..vertices.len() {
+                    if self.is_edge(vertices[i], vertices[j]) {
+                        graph.add_edge(i as u64, j as u64);
+                    }
+                }
+            }
+        }
+        graph
+    }
+
     /// Returns the graph obtained by applying the transformations to the initial graph
     ///
     /// # Examples :
@@ -401,21 +420,7 @@ impl GraphTransformation {
     /// ```
     pub fn final_graph(&mut self) -> GraphNauty {
         if self.result.is_none() {
-            let mut graph = GraphNauty::new(self.order());
-            if self.n > 0 {
-                let vertices = (0..=self.max_vertex())
-                    .filter(|&x| self.is_vertex(x as u64))
-                    .collect::<Vec<_>>();
-                // For each vertex that was not removed or was added
-                for i in (0..vertices.len()).take(self.n as usize - 1) {
-                    // We have to iterate over each vertex as we do not know which ones remains.
-                    for j in (i + 1)..vertices.len() {
-                        if self.is_edge(vertices[i], vertices[j]) {
-                            graph.add_edge(i as u64, j as u64);
-                        }
-                    }
-                }
-            }
+            let graph = self.compute_final_graph();
             self.result = Some(graph);
             self.order = None;
         }
@@ -719,6 +724,13 @@ impl From<&GraphNauty> for GraphTransformation {
     }
 }
 
+use std::convert::Into;
+impl Into<GraphNauty> for GraphTransformation {
+    fn into(self) -> GraphNauty {
+        self.compute_final_graph()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -784,7 +796,7 @@ mod tests {
     #[test]
     fn test_fmt_graphtransformation() {
         let g: GraphNauty = from_g6("DB{").unwrap();
-        let exp_res = from_g6("EAf?").unwrap();
+        let exp_res: GraphNauty = from_g6("EAf?").unwrap();
         let mut gt: GraphTransformation = (&g).into();
         gt.remove_vertex(2);
         gt.add_vertex(5);

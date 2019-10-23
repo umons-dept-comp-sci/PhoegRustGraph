@@ -1,7 +1,5 @@
 //! Module containing functions to handle different graph formats such as graph6
 
-use GraphNauty;
-use Graph;
 use GraphFormat;
 use errors::*;
 
@@ -40,7 +38,9 @@ fn length_g6(n: u64) -> u64 {
 /// }
 /// assert!("JhCGGC@?G?_" == format::to_g6(&g));
 /// ```
-pub fn to_g6(graph: &GraphNauty) -> String {
+pub fn to_g6<G>(graph: &G) -> String
+    where G:GraphFormat
+{
     let n = graph.order();
     let m = if n > 0 {
         ((n * (n - 1) / 2) as f64 / 6.).ceil() as u64
@@ -56,9 +56,10 @@ pub fn to_g6(graph: &GraphNauty) -> String {
 ///
 /// ```
 /// use graph::Graph;
+/// use graph::GraphNauty;
 /// use graph::format;
 /// use graph::errors::*;
-/// let mut g;
+/// let mut g: GraphNauty;
 /// g = format::from_g6(&"?".to_string()).unwrap();
 /// assert!(g.order() == 0);
 /// g = format::from_g6(&"@".to_string()).unwrap();
@@ -86,14 +87,16 @@ pub fn to_g6(graph: &GraphNauty) -> String {
 ///         }
 ///     }
 /// }
-/// match format::from_g6(&"Z".to_string()) {
+/// match format::from_g6::<GraphNauty>(&"Z".to_string()) {
 ///     Err(InvalidGraph6) => (),
 ///     _ => assert!(false),
 /// }
 /// ```
-pub fn from_g6(s: &str) -> Result<GraphNauty, InvalidGraph6> {
+pub fn from_g6<G>(s: &str) -> Result<G, InvalidGraph6>
+    where G:GraphFormat
+{
     let bin = decode(s);
-    GraphNauty::from_bin(&bin).map_err(|x| x.into())
+    G::from_bin(&bin).map_err(|x| x.into())
 }
 
 // Returns a graph corresponding to the graph6 representation

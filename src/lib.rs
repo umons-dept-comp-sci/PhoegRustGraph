@@ -665,6 +665,14 @@ pub trait GraphFormat: Graph {
     fn from_bin(data: &[u64]) -> Result<Self, InvalidBinary>;
 }
 
+pub trait GraphIso: Graph {
+    fn canon_fixed(&self, fixed: &[Vec<u64>]) -> (Self, Vec<u64>, Vec<u64>);
+    fn canon(&self) -> (Self, Vec<u64>, Vec<u64>) {
+        self.canon_fixed(&[])
+    }
+    fn orbits(&self, fixed: &[Vec<u64>]) -> Vec<u64>;
+}
+
 /// Structure representing a undirected simple graph.
 #[repr(C)]
 #[derive(Clone)]
@@ -1296,6 +1304,18 @@ impl<'a> GraphIter<'a> for GraphNauty {
             let row = detail::graphrow(self.data.as_ptr(), u as int, self.w as int);
             SetIter::new(row, self.w)
         }
+    }
+}
+
+impl GraphIso for GraphNauty {
+    fn canon_fixed(&self, fixed: &[Vec<u64>]) -> (Self, Vec<u64>, Vec<u64>) {
+        nauty::canon_graph_fixed(self, fixed)
+    }
+    fn canon(&self) -> (Self, Vec<u64>, Vec<u64>) {
+        self.canon_fixed(&[])
+    }
+    fn orbits(&self, fixed: &[Vec<u64>]) -> Vec<u64> {
+        nauty::orbits(self, fixed)
     }
 }
 

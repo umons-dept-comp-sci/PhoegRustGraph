@@ -68,10 +68,10 @@ macro_rules! cond{
         !$g.are_twins($x,$b)
     };
     (@translate $g:ident $x:ident (incl $b:ident)) => {
-        has_neighborhood_included(&$g,$b,$x)
+        has_neighborhood_included($g,$b,$x)
     };
     (@translate $g:ident $x:ident (not incl $b:ident)) => {
-        !has_neighborhood_included(&$g,$b,$x)
+        !has_neighborhood_included($g,$b,$x)
     };
     ($g:ident $x:ident () -> ()) => {};
     ($g:ident $x:ident () -> ($($p:tt)+)) => {
@@ -219,7 +219,8 @@ macro_rules! build_iter {
 macro_rules! transformation {
     ($doc:expr, $n:ident, for $g:ident, $($r:tt)*) => {
         #[doc=$doc]
-        pub fn $n($g: &GraphNauty) -> Vec<GraphTransformation> {
+        pub fn $n($g: &GraphNauty) -> Vec<GraphTransformation>
+        {
             #[allow(unused_variables)]
             let m = build_map!($($r)*);
             build_iter!((m $g $n) $($r)*)

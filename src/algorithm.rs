@@ -1,6 +1,5 @@
 use std::collections::VecDeque;
 use transfo_result::GraphTransformation;
-use GraphNauty;
 use Graph;
 use GraphIter;
 
@@ -113,7 +112,9 @@ where
 ///     assert!(!g.is_edge(3,i));
 /// }
 /// ```
-pub fn isolate(g: &mut GraphNauty, u: u64) {
+pub fn isolate<'a,G>(g: &mut G, u: u64)
+    where G:GraphIter<'a>
+{
     for x in g.neighbors(u) {
         g.remove_edge(u, x);
     }
@@ -146,7 +147,9 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
 /// g.remove_edge(1,3);
 /// assert!(!has_neighborhood_included(&g,0,1));
 /// ```
-pub fn has_neighborhood_included(g: &GraphNauty, u: u64, v: u64) -> bool {
+pub fn has_neighborhood_included<'a,G>(g: &G, u: u64, v: u64) -> bool
+    where G:GraphIter<'a>
+{
     let mut i = 0;
     for x in g.neighbors(u).filter(|x| *x != v) {
         if !g.is_edge(x, v) {

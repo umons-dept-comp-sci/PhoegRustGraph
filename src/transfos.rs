@@ -2,6 +2,7 @@
 //! Each transformation uses the orbits of the homomorphism group to filter out symmetries.
 use std::collections::HashMap;
 use GraphNauty;
+use GraphIter;
 use Graph;
 use algorithm::{has_neighborhood_included,isolate_transfo};
 use nauty::{orbits};
