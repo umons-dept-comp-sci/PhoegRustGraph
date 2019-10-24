@@ -2,6 +2,7 @@
 //! Each transformation uses the orbits of the homomorphism group to filter out symmetries.
 use std::collections::HashMap;
 use GraphNauty;
+use GraphIso;
 use GraphIter;
 use Graph;
 use algorithm::{has_neighborhood_included,isolate_transfo};
@@ -186,13 +187,13 @@ removes all its edges).",
 #[cfg(test)]
 mod tests {
     use super::GraphTransformation;
-    use super::GraphNauty;
+    use GraphNauty;
     use format::{from_g6, to_g6};
 
     fn test_transfo<F>(sig: &str, trsf: F, expected: &mut Vec<&str>)
         where F: Fn(&GraphNauty) -> Vec<GraphTransformation>
     {
-        let g = from_g6(&String::from(sig)).unwrap();
+        let g: GraphNauty = from_g6(&String::from(sig)).unwrap();
         let mut r: Vec<GraphTransformation> = trsf(&g);
         for rg in r.iter_mut() {
             rg.canon();

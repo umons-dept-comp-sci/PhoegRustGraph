@@ -147,7 +147,7 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
 /// g.remove_edge(1,3);
 /// assert!(!has_neighborhood_included(&g,0,1));
 /// ```
-pub fn has_neighborhood_included<'a,G>(g: &G, u: u64, v: u64) -> bool
+pub fn has_neighborhood_included<'a, G>(g: &'a G, u: u64, v: u64) -> bool
     where G:GraphIter<'a>
 {
     let mut i = 0;

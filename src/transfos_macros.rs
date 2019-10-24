@@ -178,12 +178,12 @@ macro_rules! parse_transfo {
 
 macro_rules! build_iter {
     (@loop ($m:ident $f:ident $res:ident $g:ident $n:ident) (some $a:ident $($r:tt)*) ($($t:tt)*)) => {
-        for &$a in &orbits(&$g, $f.as_slice()) {
+        for &$a in &$g.orbits($f.as_slice()) {
             ifcond!( ($m $f $res $g $n) ($a) ($($r)*) -> () ($($t)*) (some));
         }
     };
     (@loop ($m:ident $f:ident $res:ident $g:ident $n:ident) ($a:ident $($r:tt)*) ($($t:tt)*)) => {
-        for &$a in &orbits(&$g, $f.as_slice()) {
+        for &$a in &$g.orbits($f.as_slice()) {
             ifcond!( ($m $f $res $g $n) ($a) ($($r)*) -> () ($($t)*) ());
         }
     };
@@ -219,15 +219,11 @@ macro_rules! build_iter {
 macro_rules! transformation {
     ($doc:expr, $n:ident, for $g:ident, $($r:tt)*) => {
         #[doc=$doc]
-        pub fn $n($g: &GraphNauty) -> Vec<GraphTransformation>
-        {
-            #[allow(unused_variables)]
-            let m = build_map!($($r)*);
-            build_iter!((m $g $n) $($r)*)
-        }
+        transformation!($n, for $g, $($r)*);
     };
     ($n:ident, for $g:ident, $($r:tt)*) => {
-        pub fn $n($g: &Graph) -> Vec<GraphTransformation> {
+        pub fn $n($g: &GraphNauty) -> Vec<GraphTransformation>
+        {
             #[allow(unused_variables)]
             let m = build_map!($($r)*);
             build_iter!((m $g $n) $($r)*)
