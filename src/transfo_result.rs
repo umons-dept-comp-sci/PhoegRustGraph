@@ -313,7 +313,15 @@ impl GraphTransformation {
     /// let g = gt.initial_graph();
     /// assert_eq!(g.order(),0);
     /// assert_eq!(g.size(),0);
-    /// assert_eq!(g.edges().count(),0);
+    /// let mut m = 0;
+    /// let mut vi = g.vertices();
+    /// while let Some(v) = vi.next() {
+    ///     let mut wi = vi.clone();
+    ///     for w in wi.filter(|x| g.is_edge(v,*x)) {
+    ///         m += 1; 
+    ///     }
+    /// }
+    /// assert_eq!(m,0);
     /// let mut g = GraphNauty::new(5);
     /// let edges = [(0,1), (0,2), (3,4)];
     /// for (i,j) in edges.iter() {
@@ -327,9 +335,16 @@ impl GraphTransformation {
     /// let res_g = gt.initial_graph();
     /// assert_eq!(res_g.order(),5);
     /// assert_eq!(res_g.size(),3);
-    /// for ((i,j),(ri,rj)) in res_g.edges().zip(edges.iter()) {
-    ///     assert_eq!(i,*ri);
-    ///     assert_eq!(j,*rj);
+    /// let mut vi = res_g.vertices();
+    /// let mut i = 0;
+    /// while let Some(v) = vi.next() {
+    ///     let mut wi = vi.clone();
+    ///     for w in wi.filter(|x| res_g.is_edge(v,*x)) {
+    ///         let (ri,rj) = edges[i];
+    ///         assert_eq!(v,ri);
+    ///         assert_eq!(w,rj);
+    ///         i += 1;
+    ///     }
     /// }
     /// ```
     pub fn initial_graph(&self) -> GraphNauty {
@@ -396,7 +411,8 @@ impl GraphTransformation {
     /// let g = gt.final_graph();
     /// assert_eq!(g.order(),0);
     /// assert_eq!(g.size(),0);
-    /// assert_eq!(g.edges().count(),0);
+    /// let m = g.vertices().flat_map(|x| g.neighbors(x).zip(std::iter::repeat(x))).count();
+    /// assert_eq!(m,0);
     /// let mut g = GraphNauty::new(5);
     /// let mut edges = vec![(0,1), (0,2), (3,4)];
     /// for (i,j) in edges.iter() {
@@ -413,9 +429,19 @@ impl GraphTransformation {
     /// let res_g = gt.final_graph();
     /// assert_eq!(res_g.order(),6,"graph must have right order");
     /// assert_eq!(res_g.size(),3, "graph must have right size");
-    /// for ((i,j),(ri,rj)) in res_g.edges().zip(edges.iter()) {
-    ///     assert_eq!(i,*ri, "edge must have fist vertex {}",i);
-    ///     assert_eq!(j,*rj, "edge must have last vertex {}",j);
+    /// let mut edges_iter = edges.iter();
+    /// let mut verts = res_g.vertices();
+    /// while let Some(i) = verts.next() {
+    ///     let mut verts2 = verts.clone();
+    ///     while let Some(j) = verts2.next() {
+    ///         if res_g.is_edge(i,j) {
+    ///             let e = edges_iter.next();
+    ///             assert!(e.is_some());
+    ///             let (ri,rj) = e.unwrap();
+    ///             assert_eq!(i,*ri, "edge must have fist vertex {}",i);
+    ///             assert_eq!(j,*rj, "edge must have last vertex {}",j);
+    ///         }
+    ///     }
     /// }
     /// ```
     pub fn final_graph(&mut self) -> GraphNauty {

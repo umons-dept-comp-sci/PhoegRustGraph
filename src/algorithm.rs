@@ -48,7 +48,7 @@ impl Queue for Fifo {
 
 fn visit<'a, G, V, Q>(g: &'a G, visitor: &mut V, queue: &mut Q, start: Option<u64>)
 where
-    G: GraphIter<'a>,
+    G: GraphIter,
     V: Visitor<G>,
     Q: Queue,
 {
@@ -76,7 +76,7 @@ where
 pub fn bfs<'a,G,V>(g: &'a G, visitor: &mut V, start: Option<u64>)
 where
     V: Visitor<G>,
-    G: Graph+GraphIter<'a>,
+    G: Graph+GraphIter,
 {
     let mut queue = VecDeque::new();
     visit(g, visitor, &mut queue, start);
@@ -84,7 +84,7 @@ where
 
 pub fn dfs<'a,G,V>(g: &'a G, visitor: &mut V, start: Option<u64>)
 where
-    G:Graph+GraphIter<'a>,
+    G:Graph+GraphIter,
     V: Visitor<G>,
 {
     let mut queue = Fifo { v: VecDeque::new() };
@@ -113,7 +113,7 @@ where
 /// }
 /// ```
 pub fn isolate<'a,G>(g: &mut G, u: u64)
-    where G:GraphIter<'a>
+    where G:GraphIter
 {
     for x in g.neighbors(u) {
         g.remove_edge(u, x);
@@ -148,7 +148,7 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
 /// assert!(!has_neighborhood_included(&g,0,1));
 /// ```
 pub fn has_neighborhood_included<'a, G>(g: &'a G, u: u64, v: u64) -> bool
-    where G:GraphIter<'a>
+    where G:GraphIter
 {
     let mut i = 0;
     for x in g.neighbors(u).filter(|x| *x != v) {

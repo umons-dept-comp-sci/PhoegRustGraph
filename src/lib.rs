@@ -583,6 +583,7 @@ impl std::iter::IntoIterator for Set {
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct SetIter {
     data: *const set,
     len: u64,
@@ -651,12 +652,13 @@ pub trait Graph: Sized {
     }
 }
 
-pub trait GraphIter<'a>: Graph {
-    type VertIter: Iterator<Item=u64>;
-    type EdgeIter: Iterator<Item=(u64,u64)>;
-    type NeighIter: Iterator<Item=u64>;
+//pub trait GraphIter: Graph {
+pub trait GraphIter: Graph {
+    type VertIter: Iterator<Item=u64> + Clone;
+    //type EdgeIter: Iterator<Item=(u64,u64)>;
+    type NeighIter: Iterator<Item=u64> + Clone;
     fn vertices(&self) -> Self::VertIter;
-    fn edges(&'a self) -> Self::EdgeIter;
+    //fn edges(&'a self) -> Self::EdgeIter;
     fn neighbors(&self, u: u64) -> Self::NeighIter;
 }
 
@@ -1228,7 +1230,8 @@ impl<'a,G:Graph> std::iter::Iterator for EdgeIterator<'a,G> {
     }
 }
 
-impl<'a> GraphIter<'a> for GraphNauty {
+//impl<'a> GraphIter for GraphNauty {
+impl GraphIter for GraphNauty {
     type VertIter = std::ops::Range<u64>;
 
     /// Returns an iterator over the vertices of the graph.
@@ -1250,33 +1253,33 @@ impl<'a> GraphIter<'a> for GraphNauty {
         (0..self.n)
     }
 
-    type EdgeIter = EdgeIterator<'a,Self>;
-    /// Returns an iterator over the edges of the graph.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use graph::{Graph,GraphNauty,GraphIter};
-    /// let mut g = GraphNauty::new(11);
-    /// for i in 0..10
-    /// {
-    ///     g.add_edge(i,i+1);
-    /// }
-    /// let mut i = 0;
-    /// for e in g.edges()
-    /// {
-    ///     assert!(e.1 == i+1 && e.0 == i);
-    ///     i += 1;
-    /// }
-    /// assert!(i == g.size());
-    /// ```
-    fn edges(&'a self) -> EdgeIterator<'a,Self> {
-        EdgeIterator {
-            g: self,
-            u: 0,
-            v: 0,
-        }
-    }
+    //type EdgeIter = EdgeIterator<'a,Self>;
+    ///// Returns an iterator over the edges of the graph.
+    /////
+    ///// # Examples
+    /////
+    ///// ```
+    ///// use graph::{Graph,GraphNauty,GraphIter};
+    ///// let mut g = GraphNauty::new(11);
+    ///// for i in 0..10
+    ///// {
+    /////     g.add_edge(i,i+1);
+    ///// }
+    ///// let mut i = 0;
+    ///// for e in g.edges()
+    ///// {
+    /////     assert!(e.1 == i+1 && e.0 == i);
+    /////     i += 1;
+    ///// }
+    ///// assert!(i == g.size());
+    ///// ```
+    //fn edges(&'a self) -> EdgeIterator<'a,Self> {
+        //EdgeIterator {
+            //g: self,
+            //u: 0,
+            //v: 0,
+        //}
+    //}
 
     type NeighIter = SetIter;
     /// Returns an iterator over the neighbors of the vertx v in the graph.
