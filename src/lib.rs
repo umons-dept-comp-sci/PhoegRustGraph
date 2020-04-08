@@ -7,6 +7,8 @@ extern crate bit_vec;
 extern crate libc;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate doc_comment;
 
 pub mod errors;
 pub mod format;

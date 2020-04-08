@@ -218,8 +218,10 @@ macro_rules! build_iter {
 
 macro_rules! transformation {
     ($doc:expr, $n:ident, for $g:ident, $($r:tt)*) => {
-        #[doc=$doc]
-        transformation!($n, for $g, $($r)*);
+        doc_comment!(
+            $doc,
+            transformation!($n, for $g, $($r)*);
+        );
     };
     ($n:ident, for $g:ident, $($r:tt)*) => {
         pub fn $n($g: &GraphNauty) -> Vec<GraphTransformation>
