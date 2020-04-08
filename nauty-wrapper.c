@@ -1,17 +1,17 @@
 #ifndef NAUTY_WRAPPER_C
 #define NAUTY_WRAPPER_C
 
-#include <nauty/naututil.h>
-#include <nauty/nauty.h>
 #include <stdio.h>
+#include <nauty/naututil.h>
+#include <nauty/nautinv.h>
+#include <nauty/nauty.h>
 
 typedef unsigned long long int ullong;
 
-void nauty_wrapper(
-    unsigned long long n, unsigned long long m, graph* g, int* lab, int* ptn, int* orbits)
+void _nauty_wrapper(
+    ullong n, ullong m, graph* g, int* lab, int* ptn, int* orbits, optionblk options)
 {
     if (m > 0) {
-        static DEFAULTOPTIONS_GRAPH(options);
         options.getcanon = 1;
         options.defaultptn = 0;
         statsblk stats;
@@ -35,6 +35,16 @@ void nauty_wrapper(
             ++p;
         }
     }
+}
+
+void nauty_wrapper(ullong n, ullong m, graph* g, int* lab, int* ptn, int* orbits) {
+    static DEFAULTOPTIONS_GRAPH(options);
+    _nauty_wrapper(n, m, g, lab, ptn, orbits, options);
+}
+
+void nauty_wrapper_directed(ullong n, ullong m, graph* g, int* lab, int* ptn, int* orbits) {
+    static DEFAULTOPTIONS_DIGRAPH(options);
+    _nauty_wrapper(n, m, g, lab, ptn, orbits, options);
 }
 
 int wordsize() { return WORDSIZE; }

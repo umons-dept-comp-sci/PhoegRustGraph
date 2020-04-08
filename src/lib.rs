@@ -2,25 +2,25 @@
 
 //#![feature(trace_macros)]
 
-extern crate bit_vec;
 extern crate base64;
+extern crate bit_vec;
 extern crate libc;
 #[macro_use]
 extern crate lazy_static;
 
+pub mod errors;
 pub mod format;
 pub mod invariants;
-pub mod errors;
 pub mod nauty;
 #[macro_use]
 mod transfos_macros;
-pub mod transfos;
+pub mod algorithm;
 pub mod subgraphs;
 pub mod transfo_result;
-pub mod algorithm;
+pub mod transfos;
 
-use std::fmt;
 use errors::InvalidBinary;
+use std::fmt;
 
 #[allow(non_camel_case_types)]
 type set = libc::c_ulonglong;
@@ -32,9 +32,9 @@ type int = libc::c_int;
 type graph = set;
 
 mod detail {
-    use super::set;
-    use super::int;
     use super::graph;
+    use super::int;
+    use super::set;
     extern "C" {
         pub fn setwordsneeded(n: int) -> int;
         pub fn emptyset(input: *mut set, size: int);
@@ -53,12 +53,14 @@ mod detail {
         pub fn graphrow(graph: *const graph, v: int, m: int) -> *const set;
         pub fn graphrowmut(graph: *mut graph, v: int, m: int) -> *mut set;
         pub fn addoneedge(graph: *mut graph, v: int, w: int, m: int);
-        pub fn sublabel(graph: *mut graph,
-                        perm: *const int,
-                        nperm: int,
-                        workg: *mut graph,
-                        m: int,
-                        n: int);
+        pub fn sublabel(
+            graph: *mut graph,
+            perm: *const int,
+            nperm: int,
+            workg: *mut graph,
+            m: int,
+            n: int,
+        );
     }
     pub fn complement_set(s: *mut set, len: u64, maxm: u64) {
         if len > 0 {
@@ -76,14 +78,13 @@ mod detail {
     }
 }
 
-
 /// Structure to store a set of integers using binary words.
 /// This structure can store all integers from 0 to a maximum value given in parameters to the
 /// constructors. For example, a maximum value of 16 allows storing all integers from 0 to 15.
 /// Since it uses 64 bits binary words, a maximum size of 64 allows using only one word and is thus
 /// faster.
 #[repr(C)]
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub struct Set {
     data: Vec<set>,
     maxm: u64,
@@ -92,7 +93,8 @@ pub struct Set {
 
 impl Set {
     fn initfill<PF>(maxelem: u64, pfunc: PF, val: set, numelem: u64) -> Set
-        where PF: Fn(u64) -> set
+    where
+        PF: Fn(u64) -> set,
     {
         unsafe {
             if maxelem > 0 {
@@ -439,9 +441,15 @@ impl Set {
     }
 
     fn combine<C>(first: &mut Set, other: &Set, comb: C)
-        where C: Fn(&set, &set) -> set
+    where
+        C: Fn(&set, &set) -> set,
     {
-        for (i, a) in first.data.iter_mut().enumerate().take_while(|(i, _)| other.data.len() > *i) {
+        for (i, a) in first
+            .data
+            .iter_mut()
+            .enumerate()
+            .take_while(|(i, _)| other.data.len() > *i)
+        {
             *a = comb(a, &other.data[i]);
         }
     }
@@ -621,6 +629,7 @@ impl Iterator for SetIter {
 }
 
 pub trait Graph: Sized {
+    fn new(n: u64) -> Self;
     fn order(&self) -> u64;
     fn size(&self) -> u64;
     fn add_vertex(&mut self);
@@ -630,7 +639,17 @@ pub trait Graph: Sized {
     fn add_edge(&mut self, u: u64, w: u64);
     fn remove_edge(&mut self, u: u64, w: u64);
 
-    fn complement(&self) -> Self;
+    fn complement(&self) -> Self {
+        let mut res = Self::new(self.order());
+        for i in 1..self.order() {
+            for j in 0..i {
+                if !self.is_edge(i, j) {
+                    res.add_edge(i, j);
+                }
+            }
+        }
+        res
+    }
 
     fn add_cycle(&mut self, lst: &[u64]) {
         for (&i, &j) in lst.iter().zip(lst.iter().cycle().skip(1)) {
@@ -639,24 +658,63 @@ pub trait Graph: Sized {
     }
 
     fn is_cycle(&self, lst: &[u64]) -> bool {
-        lst.iter().zip(lst.iter().cycle().skip(1)).all(|(&x, &y)| self.is_edge(x, y))
+        lst.iter()
+            .zip(lst.iter().cycle().skip(1))
+            .all(|(&x, &y)| self.is_edge(x, y))
     }
 
     fn are_twins(&self, u: u64, v: u64) -> bool {
         for i in 0..self.order() {
-            if i != u && i != v && self.is_edge(u,i) && !self.is_edge(v,i) {
+            if i != u && i != v && self.is_edge(u, i) && !self.is_edge(v, i) {
                 return false;
             }
         }
         true
     }
+
+    /// Contracts two vertices in a single one.
+    /// # Examples:
+    /// ```
+    /// use graph::format::from_g6;
+    /// use graph::GraphFormat;
+    /// use graph::Graph;
+    /// use graph::GraphNauty;
+    /// let g: GraphNauty = from_g6("FWCWw").unwrap();
+    /// let g = g.contract(0, 2);
+    /// let expected: GraphNauty = from_g6("E`Kw").unwrap();
+    /// assert_eq!(g.order(), expected.order(), "order");
+    /// assert_eq!(g.size(), expected.size(), "size");
+    /// for i in 1..g.order() {
+    ///     for j in 0..i {
+    ///         assert_eq!(g.is_edge(i,j), expected.is_edge(i,j), "edge {} {}", i, j);
+    ///     }
+    /// }
+    /// ```
+    fn contract(&self, u: u64, v: u64) -> Self {
+        //TODO check u and v ok and maybe panic ?
+        let mut res = Self::new(self.order() - 1);
+        let u = std::cmp::min(u, v);
+        let v = std::cmp::max(u, v);
+        for i in 1..self.order() {
+            for j in 0..i {
+                if j != u || i != v {
+                    if self.is_edge(i, j) {
+                        let i = if i > v { i - 1 } else if i == v { u } else {i};
+                        let j = if j > v { j - 1 } else if j == v { u } else {j};
+                        res.add_edge(i, j);
+                    }
+                }
+            }
+        }
+        res
+    }
 }
 
 //pub trait GraphIter: Graph {
 pub trait GraphIter: Graph {
-    type VertIter: Iterator<Item=u64> + Clone;
+    type VertIter: Iterator<Item = u64> + Clone;
     //type EdgeIter: Iterator<Item=(u64,u64)>;
-    type NeighIter: Iterator<Item=u64> + Clone;
+    type NeighIter: Iterator<Item = u64> + Clone;
     fn vertices(&self) -> Self::VertIter;
     //fn edges(&'a self) -> Self::EdgeIter;
     fn neighbors(&self, u: u64) -> Self::NeighIter;
@@ -685,25 +743,7 @@ pub struct GraphNauty {
     w: u64,
 }
 
-impl GraphNauty {
-    /// Constructs a new graph with 0 edges and n vertices.
-    pub fn new(ord: u64) -> GraphNauty {
-        unsafe {
-            let words = detail::setwordsneeded(ord as int) as u64;
-            let v = vec![0; (ord*words) as usize];
-            GraphNauty {
-                data: v,
-                n: ord,
-                m: 0,
-                w: words,
-            }
-        }
-    }
-
-}
-
 impl GraphFormat for GraphNauty {
-
     /// Returns a minimal binary form of the graph
     ///
     /// # Examples
@@ -746,12 +786,10 @@ impl GraphFormat for GraphNauty {
         let mut dec = if self.n >= 258_048 {
             cur |= 4095 << 52;
             16
-        }
-            else if self.n >= 63 {
+        } else if self.n >= 63 {
             cur |= 63 << 58;
             40
-        }
-        else {
+        } else {
             58
         };
         cur |= self.n << dec;
@@ -877,7 +915,6 @@ impl GraphFormat for GraphNauty {
                     }
                     rem -= 1;
                     cur &= (1 << rem) - 1;
-
                 }
             }
             Ok(g)
@@ -888,6 +925,19 @@ impl GraphFormat for GraphNauty {
 }
 
 impl Graph for GraphNauty {
+    /// Constructs a new graph with 0 edges and n vertices.
+    fn new(ord: u64) -> GraphNauty {
+        unsafe {
+            let words = detail::setwordsneeded(ord as int) as u64;
+            let v = vec![0; (ord * words) as usize];
+            GraphNauty {
+                data: v,
+                n: ord,
+                m: 0,
+                w: words,
+            }
+        }
+    }
 
     /// Returns the order of the graph
     ///
@@ -954,7 +1004,7 @@ impl Graph for GraphNauty {
                     p -= 1;
                     if p == 0 {
                         newdata.push(0); //The increase can only be one since we only add one
-                            // vertex
+                                         // vertex
                         p = self.w;
                     }
                 }
@@ -996,14 +1046,16 @@ impl Graph for GraphNauty {
                         self.remove_edge(u, i);
                     }
                 }
-                let mut workg = vec![0; (self.n*self.w) as usize];
+                let mut workg = vec![0; (self.n * self.w) as usize];
                 let perm: Vec<int> = (0..(self.n as int)).filter(|&x| x != i as int).collect();
-                detail::sublabel(self.data.as_mut_ptr(),
-                                 perm.as_ptr(),
-                                 perm.len() as int,
-                                 workg.as_mut_ptr(),
-                                 self.w as int,
-                                 self.n as int);
+                detail::sublabel(
+                    self.data.as_mut_ptr(),
+                    perm.as_ptr(),
+                    perm.len() as int,
+                    workg.as_mut_ptr(),
+                    self.w as int,
+                    self.n as int,
+                );
                 self.n -= 1;
                 self.w = detail::setwordsneeded(self.n as int) as u64;
             }
@@ -1036,7 +1088,6 @@ impl Graph for GraphNauty {
             detail::iselement(row, w as int)
         }
     }
-
 
     /// Adds an edge between the vertices i and j.
     ///
@@ -1086,7 +1137,10 @@ impl Graph for GraphNauty {
                 detail::delelement(row, w as int);
                 row = detail::graphrowmut(self.data.as_mut_ptr(), w as int, self.w as int);
                 detail::delelement(row, u as int);
-                self.m -= 1;
+                if u != w {
+                    // loop
+                    self.m -= 1;
+                }
             }
         }
     }
@@ -1124,23 +1178,29 @@ impl Graph for GraphNauty {
     /// ```
     fn are_twins(&self, u: u64, v: u64) -> bool {
         unsafe {
-            let (mut u, mut v) = (u,v); //We need to change them later
+            let (mut u, mut v) = (u, v); //We need to change them later
             let (mut udone, mut vdone) = (false, false);
-            let urow = std::slice::from_raw_parts(detail::graphrow(self.data.as_ptr(), u as int,self.w as int),self.w as usize);
-            let vrow = std::slice::from_raw_parts(detail::graphrow(self.data.as_ptr(), v as int,self.w as int),self.w as usize);
+            let urow = std::slice::from_raw_parts(
+                detail::graphrow(self.data.as_ptr(), u as int, self.w as int),
+                self.w as usize,
+            );
+            let vrow = std::slice::from_raw_parts(
+                detail::graphrow(self.data.as_ptr(), v as int, self.w as int),
+                self.w as usize,
+            );
             for i in 0..self.w {
                 let mut up = urow[i as usize];
                 let mut vp = vrow[i as usize];
                 // We could just compare the two rows if they had loops. So we add loops and
                 // connect them for the comparison.
                 if !udone && u < 64 {
-                    up |= 1 << (63-u);
-                    vp |= 1 << (63-u);
-                    udone = ! udone;
+                    up |= 1 << (63 - u);
+                    vp |= 1 << (63 - u);
+                    udone = !udone;
                 }
                 if !vdone && v < 64 {
-                    up |= 1 << (63-v);
-                    vp |= 1 << (63-v);
+                    up |= 1 << (63 - v);
+                    vp |= 1 << (63 - v);
                     vdone = !vdone;
                 }
                 if up != vp {
@@ -1179,25 +1239,25 @@ impl Graph for GraphNauty {
     fn complement(&self) -> GraphNauty {
         let mut ng = self.clone();
         let n = ng.order();
-        ng.m = n * (n-1) / 2 + n - ng.m; //There will be loops once we negate the data
+        ng.m = n * (n - 1) / 2 + n - ng.m; //There will be loops once we negate the data
         for v in ng.vertices() {
             unsafe {
                 let row = detail::graphrowmut(ng.data.as_mut_ptr(), v as int, ng.w as int);
-                detail::complement_set(row,ng.w,ng.n);
-                ng.remove_edge(v,v);
+                detail::complement_set(row, ng.w, ng.n);
+                ng.remove_edge(v, v);
             }
         }
         ng
     }
 }
 
-pub struct EdgeIterator<'a,G: Graph> {
+pub struct EdgeIterator<'a, G: Graph> {
     g: &'a G,
     u: u64,
     v: u64,
 }
 
-impl<'a,G:Graph> EdgeIterator<'a,G> {
+impl<'a, G: Graph> EdgeIterator<'a, G> {
     fn increment(&mut self) {
         self.u += 1;
         if self.u == self.g.order() {
@@ -1207,24 +1267,22 @@ impl<'a,G:Graph> EdgeIterator<'a,G> {
     }
 }
 
-impl<'a,G:Graph> std::iter::Iterator for EdgeIterator<'a,G> {
-    type Item = (u64,u64);
+impl<'a, G: Graph> std::iter::Iterator for EdgeIterator<'a, G> {
+    type Item = (u64, u64);
 
     fn next(&mut self) -> Option<Self::Item> {
-            let n = self.g.order();
+        let n = self.g.order();
         if n > 1 {
             self.increment();
-            while self.v < n-1 && !self.g.is_edge(self.u,self.v) {
+            while self.v < n - 1 && !self.g.is_edge(self.u, self.v) {
                 self.increment();
             }
-            if self.v < n-1 {
-                Some((self.v,self.u))
-            }
-            else {
+            if self.v < n - 1 {
+                Some((self.v, self.u))
+            } else {
                 None
             }
-        }
-        else {
+        } else {
             None
         }
     }
@@ -1250,7 +1308,7 @@ impl GraphIter for GraphNauty {
     /// assert!(i == g.order());
     /// ```
     fn vertices(&self) -> Self::VertIter {
-        (0..self.n)
+        0..self.n
     }
 
     //type EdgeIter = EdgeIterator<'a,Self>;
@@ -1274,11 +1332,11 @@ impl GraphIter for GraphNauty {
     ///// assert!(i == g.size());
     ///// ```
     //fn edges(&'a self) -> EdgeIterator<'a,Self> {
-        //EdgeIterator {
-            //g: self,
-            //u: 0,
-            //v: 0,
-        //}
+    //EdgeIterator {
+    //g: self,
+    //u: 0,
+    //v: 0,
+    //}
     //}
 
     type NeighIter = SetIter;

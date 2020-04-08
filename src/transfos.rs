@@ -3,10 +3,8 @@
 use std::collections::HashMap;
 use GraphNauty;
 use GraphIso;
-use GraphIter;
 use Graph;
 use algorithm::{has_neighborhood_included,isolate_transfo};
-use nauty::{orbits};
 use transfo_result::GraphTransformation;
 
 transformation! (
@@ -198,7 +196,6 @@ mod tests {
         for rg in r.iter_mut() {
             rg.canon();
         }
-        eprintln!("{:?}", r);
         assert_eq!(r.len(), expected.len());
         for rg in r.iter_mut() {
             let s = to_g6(&rg.final_graph());

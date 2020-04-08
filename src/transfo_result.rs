@@ -4,6 +4,7 @@ use Set;
 
 /// Structure storing the transformation applied to a graph in a compact way.
 #[repr(C)]
+#[derive(Clone)]
 pub struct GraphTransformation {
     prev_n: u64,
     n: u64,
@@ -151,7 +152,7 @@ impl GraphTransformation {
     /// assert!(!gt.is_edge_modified(1,0));
     /// ```
     pub fn add_edge(&mut self, i: u64, j: u64) {
-        if i != j && !self.is_edge(i, j) {
+        if i != j && self.is_vertex(i) && self.is_vertex(j) && !self.is_edge(i, j) {
             self.data[i as usize].add(2 * j + 1);
             self.data[i as usize].flip(2 * j);
             self.data[j as usize].add(2 * i + 1);
@@ -202,7 +203,10 @@ impl GraphTransformation {
         }
     }
 
-    /// Adds a vertex to the current graph.
+    /// Adds a vertex to the current graph. The GraphTransformation keeps the same labels for
+    /// vertices as in the initial graph (except for added vertices whose labels starts at n, the
+    /// number of vertices in the initial graph). Thus, this new order can be applied to vertices
+    /// of the initial graph by simply ignoring the vertices added by the transformation.
     ///
     /// # Examples :
     ///
@@ -318,7 +322,7 @@ impl GraphTransformation {
     /// while let Some(v) = vi.next() {
     ///     let mut wi = vi.clone();
     ///     for w in wi.filter(|x| g.is_edge(v,*x)) {
-    ///         m += 1; 
+    ///         m += 1;
     ///     }
     /// }
     /// assert_eq!(m,0);
@@ -377,6 +381,9 @@ impl GraphTransformation {
         // then create a graph and return the result
         graph.data = res;
         graph.m = self.prev_m;
+        for i in 0..self.prev_n {
+            graph.remove_edge(i, i);
+        }
         graph
     }
 
@@ -486,11 +493,81 @@ impl GraphTransformation {
                 .join(";")
         )
     }
+
+    /// Reorder the vertices of a GraphTransformation by using the new order given as parameter.
+    /// Note that the initial graph is no longer the same since its vertices are reordered.
+    // TODO: Error
+    pub fn reorder(&self, order: &[u64]) -> Result<GraphTransformation, ()> {
+        if order.len() as u64 == self.max_vertex() + 1 {
+            let mut res = self.clone();
+            let n = self.max_vertex() + 1;
+            for i in 0..n {
+                if i < order.len() as u64 && order[i as usize] < n {
+                    for j in 0..n {
+                        if j < order.len() as u64 && order[j as usize] < n {
+                            for k in 0..=1 {
+                                if self.data[i as usize].contains(2*j+k) {
+                                    res.data[order[i as usize] as usize].add(2*order[j as usize]+k);
+                                } else {
+                                    res.data[order[i as usize] as usize].remove(2*order[j as usize]+k);
+                                }
+                            }
+                        } else {
+                            return Err(());
+                        }
+                    }
+                } else {
+                    return Err(());
+                }
+            }
+            res.order = None;
+            res.result = None;
+            Ok(res)
+        } else {
+            Err(())
+        }
+    }
 }
 
 use format::Converter;
 use std::fmt;
 impl fmt::Display for GraphTransformation {
+    /// This function converts a GraphTransformation into a string using a format defined to be as
+    /// compact as possible.
+    /// It uses a binary representation before converting it using base64.
+    /// First, the order of the GraphTransformation is encoded. It is split into at most 9 groups
+    /// of 7 bits from less significant to most. We transform each group to groups of 8 bits by
+    /// adding 127 to each group but the last. If the remaining bit is 1 (n > 2^63), we add 127 to
+    /// the last group as well. Otherwise, it retain the same value but is now encoded on 8 bits.
+    /// These groups form the encoding of the order.
+    ///
+    /// Example:
+    /// Let n be the order.
+    /// If n = 5 = 101, the order will be encoded as 00000101
+    /// If n = 354 = 101100010, we split this in groups of 7 bits from right to left:
+    /// 1100010 0000010
+    /// We add 127 (or 10000000) to each group but the last:
+    /// 11100010 00000010
+    ///
+    /// Once the order of the transformation has been encoded, the rest is encoded using the lower
+    /// triangle part of the adjacency matrix plus the diagonal. There are 2 bits per vertex/edge.
+    /// The first bit (left) indicates whether the element is present and the second one tells if
+    /// it was changed by the transformation (added or removed).
+    ///
+    /// Example:
+    /// Let g be a graph with 3 vertices such that 0 and 1 are adjacent.
+    /// Let t be the transformation adding edge 1 2 and removing vertex 0.
+    /// t would be represented as follows :
+    /// 10 10 00  0 and its edges are removed but vertex 0 and edge 01 changed
+    /// 10 01 11  1 is now adjacent to 2 and no longer to 0
+    /// 00 11 01  2 is now adjacent to 1
+    ///
+    /// The lower triangle + diagonal is as follows :
+    /// 10 10 01 00 11 01
+    ///
+    /// Putting everything together (order and matrix), we get the following (as bytes):
+    /// 00000011 10100100 11010000
+    /// In base64 : A6TQ
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let n = self.max_vertex() as usize + 1;
         if n == 0 {
@@ -698,8 +775,8 @@ fn num_bits(v: u32) -> u64 {
 }
 
 use std::convert::From;
-use GraphNauty;
 use Graph;
+use GraphNauty;
 impl From<&GraphNauty> for GraphTransformation {
     fn from(graph: &GraphNauty) -> Self {
         // Get number of words per vertex
@@ -723,9 +800,11 @@ impl From<&GraphNauty> for GraphTransformation {
                 tmp = (repr[p] >> 32) as u32;
                 size += num_bits(tmp);
                 cur.push(interleave(tmp));
-                tmp = (repr[p] & ((1 << 32) - 1)) as u32;
-                size += num_bits(tmp);
-                cur.push(interleave(tmp));
+                if n > 32 {
+                    tmp = (repr[p] & ((1 << 32) - 1)) as u32;
+                    size += num_bits(tmp);
+                    cur.push(interleave(tmp));
+                }
             }
             // create a set from the obtained words
             // add it to the vector
@@ -770,7 +849,6 @@ mod tests {
         let gt = GraphTransformation::from(&g);
         for i in 0u64..5 {
             for j in 0u64..5 {
-                dbg!((i, j));
                 if (i as i64 - j as i64).abs() == 1 || (i as i64 - j as i64).abs() == 4 || i == j {
                     assert!(gt.is_edge(i, j));
                 } else {

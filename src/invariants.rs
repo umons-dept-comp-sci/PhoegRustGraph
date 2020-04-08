@@ -183,8 +183,6 @@ impl ::std::cmp::Ord for Distance {
 /// {
 ///     for v in g.vertices().map(|x| x as usize)
 ///     {
-///         println!("{}, {}",u,v);
-///         println!("{}, {}",distances[u][v],expected_distances[u][v]);
 ///         assert!(distances[u][v] == expected_distances[u][v]);
 ///     }
 /// }
@@ -399,7 +397,6 @@ pub fn diametral_paths<'a, G>(g: &'a G) -> Vec<Vec<u64>>
         .filter(|&x| eccs[x as usize] == *diam)
         .collect();
     let mut res = vec![];
-    // println!("{:?}", extms);
     for e in extms {
         let (dsts, pths) = shortest_paths_from(g, e);
         for (i, _dst) in dsts.iter().enumerate().filter(|&(_x, y)| y == diam) {
@@ -830,7 +827,6 @@ pub fn dnm<G>(g: &G) -> u64
 /// {
 ///     g.add_edge(0,i);
 /// }
-/// println!("{}",deg_max(&g));
 /// assert!(deg_max(&g) == 4);
 /// ```
 pub fn deg_max<'a, G>(g: &G) -> u64

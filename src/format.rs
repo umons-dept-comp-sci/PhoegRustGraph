@@ -76,7 +76,6 @@ pub fn to_g6<G>(graph: &G) -> String
 /// {
 ///     for v in 0..u
 ///     {
-///         println!("{} {}",u,v);
 ///         if u-v == 1
 ///         {
 ///             assert!(g.is_edge(u,v));
@@ -123,7 +122,6 @@ pub fn from_g6<G>(s: &str) -> Result<G, InvalidGraph6>
 // {
 //     for v in 0..u
 //     {
-//         println!("{} {}",u,v);
 //         if u-v == 1
 //         {
 //             assert!(g.is_edge(u,v));
