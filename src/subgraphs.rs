@@ -1,8 +1,10 @@
 //! Module containing algorithms to compute the occurences of an induced subgraph in a bigger graph.
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use ::Graph;
-use ::nauty;
+use GraphNauty;
+use Graph;
+use GraphIter;
+use nauty;
 
 trait VF2Data {
     fn is_full_match(&self) -> bool;
@@ -15,8 +17,8 @@ trait VF2Data {
 
 #[repr(C)]
 struct VF2DataImpl<'a> {
-    g1: &'a Graph,
-    g2: &'a Graph,
+    g1: &'a GraphNauty,
+    g2: &'a GraphNauty,
     depth: u64,
     null: u64,
     num_out: u64,
@@ -49,7 +51,7 @@ impl<'a> fmt::Display for VF2DataImpl<'a> {
 /// of `g2`.
 ///
 /// The graph `g2` must have at most the same order as `g1`.
-pub fn subgraphs<'a>(g1: &'a Graph, g2: &'a Graph) -> impl Iterator<Item = Vec<u64>> + 'a {
+pub fn subgraphs<'a>(g1: &'a GraphNauty, g2: &'a GraphNauty) -> impl Iterator<Item = Vec<u64>> + 'a {
     SubgraphIter::without_orbits(g1, g2)
 }
 
@@ -144,7 +146,7 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
 }
 
 impl<'a> VF2DataImpl<'a> {
-    fn new(graph1: &'a Graph, graph2: &'a Graph) -> VF2DataImpl<'a> {
+    fn new(graph1: &'a GraphNauty, graph2: &'a GraphNauty) -> VF2DataImpl<'a> {
         assert!(graph1.order() >= graph2.order());
         let nullv = graph1.order() + 1;
         VF2DataImpl {
@@ -187,12 +189,12 @@ struct VF2DataOrb<'a> {
 }
 
 /// Returns every non-isomorphic occurence of the graph `g2` in the graph `g1`.
-pub fn subgraphs_orbits<'a>(g1: &'a Graph, g2: &'a Graph) -> impl Iterator<Item = Vec<u64>> + 'a {
+pub fn subgraphs_orbits<'a>(g1: &'a GraphNauty, g2: &'a GraphNauty) -> impl Iterator<Item = Vec<u64>> + 'a {
     SubgraphIter::new(g1, g2)
 }
 
 impl<'a> VF2DataOrb<'a> {
-    fn new(g1: &'a Graph, g2: &'a Graph) -> VF2DataOrb<'a> {
+    fn new(g1: &'a GraphNauty, g2: &'a GraphNauty) -> VF2DataOrb<'a> {
         let dataobj: VF2DataImpl<'a> = VF2DataImpl::new(g1, g2);
         let fixedempt = Vec::new();
         VF2DataOrb {
@@ -246,14 +248,14 @@ struct SubgraphIter<D>
 }
 
 impl<'a> SubgraphIter<VF2DataImpl<'a>> {
-    fn without_orbits(g1: &'a Graph, g2: &'a Graph) -> SubgraphIter<VF2DataImpl<'a>> {
+    fn without_orbits(g1: &'a GraphNauty, g2: &'a GraphNauty) -> SubgraphIter<VF2DataImpl<'a>> {
         let data: VF2DataImpl<'a> = VF2DataImpl::new(g1, g2);
         SubgraphIter::init(data)
     }
 }
 
 impl<'a> SubgraphIter<VF2DataOrb<'a>> {
-    fn new(g1: &'a Graph, g2: &'a Graph) -> SubgraphIter<VF2DataOrb<'a>> {
+    fn new(g1: &'a GraphNauty, g2: &'a GraphNauty) -> SubgraphIter<VF2DataOrb<'a>> {
         let data: VF2DataOrb<'a> = VF2DataOrb::new(g1, g2);
         SubgraphIter::init(data)
     }
@@ -331,7 +333,7 @@ mod testing {
     }
 
     #[allow(dead_code)]
-    fn test_vf2_graph(g1: &Graph, g2: &Graph) {
+    fn test_vf2_graph(g1: &GraphNauty, g2: &GraphNauty) {
         println!("-----------------");
         let matches = subgraphs(&g1, &g2);
         for t in matches {
@@ -347,27 +349,27 @@ mod testing {
 
     #[test]
     fn test_vf2() {
-        let mut g1 = Graph::new(5);
+        let mut g1 = GraphNauty::new(5);
         g1.add_edge(0, 1);
         g1.add_edge(1, 2);
         g1.add_edge(1, 3);
         g1.add_edge(1, 4);
         g1.add_edge(4, 2);
         g1.add_edge(4, 3);
-        let mut g2 = Graph::new(3);
+        let mut g2 = GraphNauty::new(3);
         g2.add_edge(0, 1);
         g2.add_edge(1, 2);
         g2.add_edge(2, 0);
         apply_test_vf2(&mut vec![vec![1, 2, 4], vec![1, 3, 4]], subgraphs(&g1, &g2));
         apply_test_vf2(&mut vec![vec![1, 2, 4]], subgraphs_orbits(&g1, &g2));
-        g2 = Graph::new(2);
+        g2 = GraphNauty::new(2);
         g2.add_edge(0, 1);
         apply_test_vf2(&mut vec![vec![0, 1], vec![1, 2], vec![1, 3], vec![1, 4], vec![2, 4],
                                  vec![3, 4]],
                        subgraphs(&g1, &g2));
         apply_test_vf2(&mut vec![vec![0, 1], vec![1, 2], vec![1, 4], vec![2, 4]],
                        subgraphs_orbits(&g1, &g2));
-        g1 = Graph::new(9);
+        g1 = GraphNauty::new(9);
         for i in g1.vertices().skip(1).take(6) {
             for j in g1.vertices().take(i as usize) {
                 g1.add_edge(i, j);
@@ -375,7 +377,7 @@ mod testing {
         }
         g1.add_edge(4, 7);
         g1.add_edge(6, 8);
-        g2 = Graph::new(4);
+        g2 = GraphNauty::new(4);
         for i in g2.vertices().skip(1) {
             for j in g2.vertices().take(i as usize) {
                 g2.add_edge(j, i);

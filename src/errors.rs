@@ -32,13 +32,13 @@ impl Error for InvalidGraph6 {
 
 impl From<io::Error> for InvalidGraph6 {
     fn from(err: io::Error) -> Self {
-        InvalidGraph6::new(err.description())
+        InvalidGraph6::new(&err.to_string())
     }
 }
 
 impl From<InvalidBinary> for InvalidGraph6 {
     fn from(err: InvalidBinary) -> Self {
-        InvalidGraph6::new(err.description())
+        InvalidGraph6::new(&err.to_string())
     }
 }
 

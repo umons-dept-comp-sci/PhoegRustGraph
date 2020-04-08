@@ -1,10 +1,11 @@
 use std::collections::VecDeque;
 use transfo_result::GraphTransformation;
 use Graph;
+use GraphIter;
 
-pub trait Visitor {
-    fn visit_vertex(&mut self, g: &Graph, u: u64);
-    fn visit_edge(&mut self, g: &Graph, u: u64, v: u64);
+pub trait Visitor<G:Graph> {
+    fn visit_vertex(&mut self, g: &G, u: u64);
+    fn visit_edge(&mut self, g: &G, u: u64, v: u64);
 }
 
 trait Queue {
@@ -45,9 +46,10 @@ impl Queue for Fifo {
     }
 }
 
-fn visit<V, Q>(g: &Graph, visitor: &mut V, queue: &mut Q, start: Option<u64>)
+fn visit<'a, G, V, Q>(g: &'a G, visitor: &mut V, queue: &mut Q, start: Option<u64>)
 where
-    V: Visitor,
+    G: GraphIter,
+    V: Visitor<G>,
     Q: Queue,
 {
     if g.order() > 0 {
@@ -58,9 +60,9 @@ where
         while !queue.is_empty() {
             let current = queue.dequeue();
             if g.is_vertex(current) {
-                visitor.visit_vertex(&g, current);
+                visitor.visit_vertex(g, current);
                 for x in g.neighbors(current) {
-                    visitor.visit_edge(&g, current, x);
+                    visitor.visit_edge(g, current, x);
                     if !visited[x as usize] {
                         visited[x as usize] = true;
                         queue.enqueue(x);
@@ -71,17 +73,19 @@ where
     }
 }
 
-pub fn bfs<V>(g: &Graph, visitor: &mut V, start: Option<u64>)
+pub fn bfs<'a,G,V>(g: &'a G, visitor: &mut V, start: Option<u64>)
 where
-    V: Visitor,
+    V: Visitor<G>,
+    G: Graph+GraphIter,
 {
     let mut queue = VecDeque::new();
     visit(g, visitor, &mut queue, start);
 }
 
-pub fn dfs<V>(g: &Graph, visitor: &mut V, start: Option<u64>)
+pub fn dfs<'a,G,V>(g: &'a G, visitor: &mut V, start: Option<u64>)
 where
-    V: Visitor,
+    G:Graph+GraphIter,
+    V: Visitor<G>,
 {
     let mut queue = Fifo { v: VecDeque::new() };
     visit(g, visitor, &mut queue, start);
@@ -90,9 +94,9 @@ where
 /// Remove all edges containing u.
 /// # Examples:
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphNauty};
 /// use graph::algorithm::isolate;
-/// let mut g = Graph::new(5);
+/// let mut g = GraphNauty::new(5);
 /// for i in 0..4 {
 ///     for j in i..5 {
 ///         g.add_edge(i,j);
@@ -108,7 +112,9 @@ where
 ///     assert!(!g.is_edge(3,i));
 /// }
 /// ```
-pub fn isolate(g: &mut Graph, u: u64) {
+pub fn isolate<'a,G>(g: &mut G, u: u64)
+    where G:GraphIter
+{
     for x in g.neighbors(u) {
         g.remove_edge(u, x);
     }
@@ -128,8 +134,8 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
 ///
 /// # Examples:
 /// ```
-/// use graph::{Graph, algorithm::has_neighborhood_included};
-/// let mut g = Graph::new(5);
+/// use graph::{Graph,GraphNauty, algorithm::has_neighborhood_included};
+/// let mut g = GraphNauty::new(5);
 /// for i in 0..4 {
 ///     for j in i..5 {
 ///         g.add_edge(i,j);
@@ -141,7 +147,9 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
 /// g.remove_edge(1,3);
 /// assert!(!has_neighborhood_included(&g,0,1));
 /// ```
-pub fn has_neighborhood_included(g: &Graph, u: u64, v: u64) -> bool {
+pub fn has_neighborhood_included<'a, G>(g: &'a G, u: u64, v: u64) -> bool
+    where G:GraphIter
+{
     let mut i = 0;
     for x in g.neighbors(u).filter(|x| *x != v) {
         if !g.is_edge(x, v) {

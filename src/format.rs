@@ -1,6 +1,6 @@
 //! Module containing functions to handle different graph formats such as graph6
 
-use Graph;
+use GraphFormat;
 use errors::*;
 
 #[allow(dead_code)]
@@ -18,9 +18,9 @@ fn length_g6(n: u64) -> u64 {
 /// # Examples
 ///
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphNauty,GraphIter};
 /// use graph::format;
-/// let mut g = Graph::new(0);
+/// let mut g = GraphNauty::new(0);
 /// assert!("?" == format::to_g6(&g));
 /// g.add_vertex();
 /// assert!("@" == format::to_g6(&g));
@@ -38,7 +38,9 @@ fn length_g6(n: u64) -> u64 {
 /// }
 /// assert!("JhCGGC@?G?_" == format::to_g6(&g));
 /// ```
-pub fn to_g6(graph: &Graph) -> String {
+pub fn to_g6<G>(graph: &G) -> String
+    where G:GraphFormat
+{
     let n = graph.order();
     let m = if n > 0 {
         ((n * (n - 1) / 2) as f64 / 6.).ceil() as u64
@@ -53,9 +55,11 @@ pub fn to_g6(graph: &Graph) -> String {
 /// # Examples
 ///
 /// ```
+/// use graph::Graph;
+/// use graph::GraphNauty;
 /// use graph::format;
 /// use graph::errors::*;
-/// let mut g;
+/// let mut g: GraphNauty;
 /// g = format::from_g6(&"?".to_string()).unwrap();
 /// assert!(g.order() == 0);
 /// g = format::from_g6(&"@".to_string()).unwrap();
@@ -72,7 +76,6 @@ pub fn to_g6(graph: &Graph) -> String {
 /// {
 ///     for v in 0..u
 ///     {
-///         println!("{} {}",u,v);
 ///         if u-v == 1
 ///         {
 ///             assert!(g.is_edge(u,v));
@@ -83,14 +86,16 @@ pub fn to_g6(graph: &Graph) -> String {
 ///         }
 ///     }
 /// }
-/// match format::from_g6(&"Z".to_string()) {
+/// match format::from_g6::<GraphNauty>(&"Z".to_string()) {
 ///     Err(InvalidGraph6) => (),
 ///     _ => assert!(false),
 /// }
 /// ```
-pub fn from_g6(s: &str) -> Result<Graph, InvalidGraph6> {
+pub fn from_g6<G>(s: &str) -> Result<G, InvalidGraph6>
+    where G:GraphFormat
+{
     let bin = decode(s);
-    Graph::from_bin(&bin).map_err(|x| x.into())
+    G::from_bin(&bin).map_err(|x| x.into())
 }
 
 // Returns a graph corresponding to the graph6 representation
@@ -117,7 +122,6 @@ pub fn from_g6(s: &str) -> Result<Graph, InvalidGraph6> {
 // {
 //     for v in 0..u
 //     {
-//         println!("{} {}",u,v);
 //         if u-v == 1
 //         {
 //             assert!(g.is_edge(u,v));

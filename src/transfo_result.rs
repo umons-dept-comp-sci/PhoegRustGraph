@@ -4,6 +4,7 @@ use Set;
 
 /// Structure storing the transformation applied to a graph in a compact way.
 #[repr(C)]
+#[derive(Clone)]
 pub struct GraphTransformation {
     prev_n: u64,
     n: u64,
@@ -11,7 +12,7 @@ pub struct GraphTransformation {
     m: u64,
     data: Vec<Set>,
     name: String,
-    result: Option<Graph>,
+    result: Option<GraphNauty>,
     order: Option<Vec<u64>>,
 }
 
@@ -128,9 +129,9 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::Graph;
+    /// use graph::{Graph,GraphNauty};
     ///
-    /// let mut g = Graph::new(3);
+    /// let mut g = GraphNauty::new(3);
     /// g.add_edge(1,0);
     /// let mut gt: GraphTransformation = (&g).into();
     /// gt.add_edge(1,0);
@@ -151,7 +152,7 @@ impl GraphTransformation {
     /// assert!(!gt.is_edge_modified(1,0));
     /// ```
     pub fn add_edge(&mut self, i: u64, j: u64) {
-        if i != j && !self.is_edge(i, j) {
+        if i != j && self.is_vertex(i) && self.is_vertex(j) && !self.is_edge(i, j) {
             self.data[i as usize].add(2 * j + 1);
             self.data[i as usize].flip(2 * j);
             self.data[j as usize].add(2 * i + 1);
@@ -168,9 +169,9 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::Graph;
+    /// use graph::{Graph,GraphNauty};
     ///
-    /// let mut g = Graph::new(3);
+    /// let mut g = GraphNauty::new(3);
     /// g.add_edge(1,2);
     /// let mut gt: GraphTransformation = (&g).into();
     /// gt.remove_edge(1,0);
@@ -202,19 +203,22 @@ impl GraphTransformation {
         }
     }
 
-    /// Adds a vertex to the current graph.
+    /// Adds a vertex to the current graph. The GraphTransformation keeps the same labels for
+    /// vertices as in the initial graph (except for added vertices whose labels starts at n, the
+    /// number of vertices in the initial graph). Thus, this new order can be applied to vertices
+    /// of the initial graph by simply ignoring the vertices added by the transformation.
     ///
     /// # Examples :
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::Graph;
+    /// use graph::{Graph,GraphNauty};
     ///
-    /// let mut g = Graph::new(0);
+    /// let mut g = GraphNauty::new(0);
     /// let mut gt: GraphTransformation = (&g).into();
     /// gt.add_vertex(0);
     /// assert_eq!(gt.order(), 1);
-    /// g = Graph::new(3);
+    /// g = GraphNauty::new(3);
     /// gt = (&g).into();
     /// gt.add_vertex(2);
     /// assert!(gt.is_vertex(2));
@@ -260,9 +264,9 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::Graph;
+    /// use graph::{Graph,GraphNauty};
     ///
-    /// let mut g = Graph::new(4);
+    /// let mut g = GraphNauty::new(4);
     /// g.add_edge(2,1);
     /// g.add_edge(2,3);
     /// let mut gt: GraphTransformation = (&g).into();
@@ -305,16 +309,24 @@ impl GraphTransformation {
     /// # Examples :
     ///
     /// ```
-    /// use graph::Graph;
+    /// use graph::{Graph,GraphNauty,GraphIter};
     /// use graph::transfo_result::GraphTransformation;
     ///
-    /// let g = Graph::new(0);
+    /// let g = GraphNauty::new(0);
     /// let gt: GraphTransformation = (&g).into();
     /// let g = gt.initial_graph();
     /// assert_eq!(g.order(),0);
     /// assert_eq!(g.size(),0);
-    /// assert_eq!(g.edges().count(),0);
-    /// let mut g = Graph::new(5);
+    /// let mut m = 0;
+    /// let mut vi = g.vertices();
+    /// while let Some(v) = vi.next() {
+    ///     let mut wi = vi.clone();
+    ///     for w in wi.filter(|x| g.is_edge(v,*x)) {
+    ///         m += 1;
+    ///     }
+    /// }
+    /// assert_eq!(m,0);
+    /// let mut g = GraphNauty::new(5);
     /// let edges = [(0,1), (0,2), (3,4)];
     /// for (i,j) in edges.iter() {
     ///     g.add_edge(*i,*j);
@@ -327,13 +339,20 @@ impl GraphTransformation {
     /// let res_g = gt.initial_graph();
     /// assert_eq!(res_g.order(),5);
     /// assert_eq!(res_g.size(),3);
-    /// for ((i,j),(ri,rj)) in res_g.edges().zip(edges.iter()) {
-    ///     assert_eq!(i,*ri);
-    ///     assert_eq!(j,*rj);
+    /// let mut vi = res_g.vertices();
+    /// let mut i = 0;
+    /// while let Some(v) = vi.next() {
+    ///     let mut wi = vi.clone();
+    ///     for w in wi.filter(|x| res_g.is_edge(v,*x)) {
+    ///         let (ri,rj) = edges[i];
+    ///         assert_eq!(v,ri);
+    ///         assert_eq!(w,rj);
+    ///         i += 1;
+    ///     }
     /// }
     /// ```
-    pub fn initial_graph(&self) -> Graph {
-        let mut graph = Graph::new(self.initial_order());
+    pub fn initial_graph(&self) -> GraphNauty {
+        let mut graph = GraphNauty::new(self.initial_order());
         let w = graph.w;
         let mut res = graph.data;
         let mut gp = 0;
@@ -362,6 +381,28 @@ impl GraphTransformation {
         // then create a graph and return the result
         graph.data = res;
         graph.m = self.prev_m;
+        for i in 0..self.prev_n {
+            graph.remove_edge(i, i);
+        }
+        graph
+    }
+
+    fn compute_final_graph(&self) -> GraphNauty {
+        let mut graph = GraphNauty::new(self.order());
+        if self.n > 0 {
+            let vertices = (0..=self.max_vertex())
+                .filter(|&x| self.is_vertex(x as u64))
+                .collect::<Vec<_>>();
+            // For each vertex that was not removed or was added
+            for i in (0..vertices.len()).take(self.n as usize - 1) {
+                // We have to iterate over each vertex as we do not know which ones remains.
+                for j in (i + 1)..vertices.len() {
+                    if self.is_edge(vertices[i], vertices[j]) {
+                        graph.add_edge(i as u64, j as u64);
+                    }
+                }
+            }
+        }
         graph
     }
 
@@ -369,16 +410,17 @@ impl GraphTransformation {
     ///
     /// # Examples :
     /// ```
-    /// use graph::Graph;
+    /// use graph::{Graph,GraphNauty,GraphIter};
     /// use graph::transfo_result::GraphTransformation;
     ///
-    /// let g = Graph::new(0);
+    /// let g = GraphNauty::new(0);
     /// let mut gt: GraphTransformation = (&g).into();
     /// let g = gt.final_graph();
     /// assert_eq!(g.order(),0);
     /// assert_eq!(g.size(),0);
-    /// assert_eq!(g.edges().count(),0);
-    /// let mut g = Graph::new(5);
+    /// let m = g.vertices().flat_map(|x| g.neighbors(x).zip(std::iter::repeat(x))).count();
+    /// assert_eq!(m,0);
+    /// let mut g = GraphNauty::new(5);
     /// let mut edges = vec![(0,1), (0,2), (3,4)];
     /// for (i,j) in edges.iter() {
     ///     g.add_edge(*i,*j);
@@ -394,28 +436,24 @@ impl GraphTransformation {
     /// let res_g = gt.final_graph();
     /// assert_eq!(res_g.order(),6,"graph must have right order");
     /// assert_eq!(res_g.size(),3, "graph must have right size");
-    /// for ((i,j),(ri,rj)) in res_g.edges().zip(edges.iter()) {
-    ///     assert_eq!(i,*ri, "edge must have fist vertex {}",i);
-    ///     assert_eq!(j,*rj, "edge must have last vertex {}",j);
+    /// let mut edges_iter = edges.iter();
+    /// let mut verts = res_g.vertices();
+    /// while let Some(i) = verts.next() {
+    ///     let mut verts2 = verts.clone();
+    ///     while let Some(j) = verts2.next() {
+    ///         if res_g.is_edge(i,j) {
+    ///             let e = edges_iter.next();
+    ///             assert!(e.is_some());
+    ///             let (ri,rj) = e.unwrap();
+    ///             assert_eq!(i,*ri, "edge must have fist vertex {}",i);
+    ///             assert_eq!(j,*rj, "edge must have last vertex {}",j);
+    ///         }
+    ///     }
     /// }
     /// ```
-    pub fn final_graph(&mut self) -> Graph {
+    pub fn final_graph(&mut self) -> GraphNauty {
         if self.result.is_none() {
-            let mut graph = Graph::new(self.order());
-            if self.n > 0 {
-                let vertices = (0..=self.max_vertex())
-                    .filter(|&x| self.is_vertex(x as u64))
-                    .collect::<Vec<_>>();
-                // For each vertex that was not removed or was added
-                for i in (0..vertices.len()).take(self.n as usize - 1) {
-                    // We have to iterate over each vertex as we do not know which ones remains.
-                    for j in (i + 1)..vertices.len() {
-                        if self.is_edge(vertices[i], vertices[j]) {
-                            graph.add_edge(i as u64, j as u64);
-                        }
-                    }
-                }
-            }
+            let graph = self.compute_final_graph();
             self.result = Some(graph);
             self.order = None;
         }
@@ -455,11 +493,81 @@ impl GraphTransformation {
                 .join(";")
         )
     }
+
+    /// Reorder the vertices of a GraphTransformation by using the new order given as parameter.
+    /// Note that the initial graph is no longer the same since its vertices are reordered.
+    // TODO: Error
+    pub fn reorder(&self, order: &[u64]) -> Result<GraphTransformation, ()> {
+        if order.len() as u64 == self.max_vertex() + 1 {
+            let mut res = self.clone();
+            let n = self.max_vertex() + 1;
+            for i in 0..n {
+                if i < order.len() as u64 && order[i as usize] < n {
+                    for j in 0..n {
+                        if j < order.len() as u64 && order[j as usize] < n {
+                            for k in 0..=1 {
+                                if self.data[i as usize].contains(2*j+k) {
+                                    res.data[order[i as usize] as usize].add(2*order[j as usize]+k);
+                                } else {
+                                    res.data[order[i as usize] as usize].remove(2*order[j as usize]+k);
+                                }
+                            }
+                        } else {
+                            return Err(());
+                        }
+                    }
+                } else {
+                    return Err(());
+                }
+            }
+            res.order = None;
+            res.result = None;
+            Ok(res)
+        } else {
+            Err(())
+        }
+    }
 }
 
 use format::Converter;
 use std::fmt;
 impl fmt::Display for GraphTransformation {
+    /// This function converts a GraphTransformation into a string using a format defined to be as
+    /// compact as possible.
+    /// It uses a binary representation before converting it using base64.
+    /// First, the order of the GraphTransformation is encoded. It is split into at most 9 groups
+    /// of 7 bits from less significant to most. We transform each group to groups of 8 bits by
+    /// adding 127 to each group but the last. If the remaining bit is 1 (n > 2^63), we add 127 to
+    /// the last group as well. Otherwise, it retain the same value but is now encoded on 8 bits.
+    /// These groups form the encoding of the order.
+    ///
+    /// Example:
+    /// Let n be the order.
+    /// If n = 5 = 101, the order will be encoded as 00000101
+    /// If n = 354 = 101100010, we split this in groups of 7 bits from right to left:
+    /// 1100010 0000010
+    /// We add 127 (or 10000000) to each group but the last:
+    /// 11100010 00000010
+    ///
+    /// Once the order of the transformation has been encoded, the rest is encoded using the lower
+    /// triangle part of the adjacency matrix plus the diagonal. There are 2 bits per vertex/edge.
+    /// The first bit (left) indicates whether the element is present and the second one tells if
+    /// it was changed by the transformation (added or removed).
+    ///
+    /// Example:
+    /// Let g be a graph with 3 vertices such that 0 and 1 are adjacent.
+    /// Let t be the transformation adding edge 1 2 and removing vertex 0.
+    /// t would be represented as follows :
+    /// 10 10 00  0 and its edges are removed but vertex 0 and edge 01 changed
+    /// 10 01 11  1 is now adjacent to 2 and no longer to 0
+    /// 00 11 01  2 is now adjacent to 1
+    ///
+    /// The lower triangle + diagonal is as follows :
+    /// 10 10 01 00 11 01
+    ///
+    /// Putting everything together (order and matrix), we get the following (as bytes):
+    /// 00000011 10100100 11010000
+    /// In base64 : A6TQ
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let n = self.max_vertex() as usize + 1;
         if n == 0 {
@@ -668,8 +776,9 @@ fn num_bits(v: u32) -> u64 {
 
 use std::convert::From;
 use Graph;
-impl From<&Graph> for GraphTransformation {
-    fn from(graph: &Graph) -> Self {
+use GraphNauty;
+impl From<&GraphNauty> for GraphTransformation {
+    fn from(graph: &GraphNauty) -> Self {
         // Get number of words per vertex
         let w = graph.w;
         // Get binary representation
@@ -691,9 +800,11 @@ impl From<&Graph> for GraphTransformation {
                 tmp = (repr[p] >> 32) as u32;
                 size += num_bits(tmp);
                 cur.push(interleave(tmp));
-                tmp = (repr[p] & ((1 << 32) - 1)) as u32;
-                size += num_bits(tmp);
-                cur.push(interleave(tmp));
+                if n > 32 {
+                    tmp = (repr[p] & ((1 << 32) - 1)) as u32;
+                    size += num_bits(tmp);
+                    cur.push(interleave(tmp));
+                }
             }
             // create a set from the obtained words
             // add it to the vector
@@ -718,6 +829,13 @@ impl From<&Graph> for GraphTransformation {
     }
 }
 
+use std::convert::Into;
+impl Into<GraphNauty> for GraphTransformation {
+    fn into(self) -> GraphNauty {
+        self.compute_final_graph()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -726,12 +844,11 @@ mod tests {
 
     #[test]
     fn test_from() {
-        let mut g = Graph::new(5);
+        let mut g = GraphNauty::new(5);
         g.add_cycle(&(0..5).collect::<Vec<_>>());
         let gt = GraphTransformation::from(&g);
         for i in 0u64..5 {
             for j in 0u64..5 {
-                dbg!((i, j));
                 if (i as i64 - j as i64).abs() == 1 || (i as i64 - j as i64).abs() == 4 || i == j {
                     assert!(gt.is_edge(i, j));
                 } else {
@@ -782,8 +899,8 @@ mod tests {
 
     #[test]
     fn test_fmt_graphtransformation() {
-        let g: Graph = from_g6("DB{").unwrap();
-        let exp_res = from_g6("EAf?").unwrap();
+        let g: GraphNauty = from_g6("DB{").unwrap();
+        let exp_res: GraphNauty = from_g6("EAf?").unwrap();
         let mut gt: GraphTransformation = (&g).into();
         gt.remove_vertex(2);
         gt.add_vertex(5);
