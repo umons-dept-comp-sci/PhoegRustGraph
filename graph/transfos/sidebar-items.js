@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["add_edge",""],["detour",""],["disco_twins",""],["isolate_incl",""],["isolate_twin",""],["move_distinct",""],["remove_edge",""],["remove_vertex",""],["rotation",""],["shortcut",""],["slide",""],["two_opt",""]]});

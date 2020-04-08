@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["GraphTransformation","Structure storing the transformation applied to a graph in a compact way."]]});

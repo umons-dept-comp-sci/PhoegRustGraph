@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["decode","Convert string using graph6 chars into a set of big endians 64 bits numbers."],["encode","Convert a set of big endians 64 bits numbers into a string using graph6 chars"],["from_g6","Returns a graph corresponding to the graph6 representation"],["to_g6","Returns the graph6 representation of a graph"]],"struct":[["Converter",""]]});
