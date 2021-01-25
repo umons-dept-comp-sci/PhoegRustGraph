@@ -162,6 +162,15 @@ transformation! (
 );
 
 transformation! (
+    "Given a vertex, isolate it (i.e., removes all its edges).",
+    isolate,
+    for g,
+    let a,
+    apply
+    isolate(a);
+);
+
+transformation! (
     "Given two twin vertices, isolate one of them (i.e., removes all its edges).",
     isolate_twin,
     for g,
@@ -269,6 +278,12 @@ mod tests {
     fn test_disco_twins() {
         let mut expected = vec!["E?~w","E@~o"];
         test_transfo("E@~w", super::disco_twins, &mut expected);
+    }
+
+    #[test]
+    fn test_isolate() {
+        let mut expected = vec!["EILw", "E@LW", "EALw", "EGSw"];
+        test_transfo("EMlw", super::isolate, &mut expected);
     }
 
     #[test]
