@@ -191,6 +191,15 @@ removes all its edges).",
     isolate(a);
 );
 
+/// Adds an isolated vertex to the graph.
+pub fn add_isolated_vertex(g: &GraphNauty) -> Vec<GraphTransformation>
+{
+    let mut ng: GraphTransformation = g.into();
+    ng.add_vertex(g.order());
+    ng.set_name("add_vertex".to_string());
+    vec![ng]
+}
+
 #[cfg(test)]
 mod tests {
     use super::GraphTransformation;
@@ -298,5 +307,13 @@ mod tests {
         test_transfo("G@IIi{", super::isolate_incl, &mut expected);
         expected = vec![];
         test_transfo("E???", super::isolate_incl, &mut expected);
+    }
+
+    #[test]
+    fn test_add_vertex() {
+        let mut expected = vec!["DJ["];
+        test_transfo("C~", super::add_isolated_vertex, &mut expected);
+        expected = vec!["E@Kw"];
+        test_transfo("DJ[", super::add_isolated_vertex, &mut expected);
     }
 }
