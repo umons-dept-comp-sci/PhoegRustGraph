@@ -1,10 +1,10 @@
 //! Module containing algorithms to compute the occurences of an induced subgraph in a bigger graph.
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use GraphNauty;
-use Graph;
-use GraphIter;
-use nauty;
+use crate::GraphNauty;
+use crate::Graph;
+use crate::GraphIter;
+use crate::nauty;
 
 trait VF2Data {
     fn is_full_match(&self) -> bool;

@@ -1,7 +1,7 @@
 //! Module containing functions to handle different graph formats such as graph6
 
-use GraphFormat;
-use errors::*;
+use crate::GraphFormat;
+use crate::errors::*;
 
 #[allow(dead_code)]
 /// Returns the length of the graph6 format for a graph of order n

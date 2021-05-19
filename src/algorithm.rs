@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
-use transfo_result::GraphTransformation;
-use Graph;
-use GraphIter;
+use crate::transfo_result::GraphTransformation;
+use crate::Graph;
+use crate::GraphIter;
 
 pub trait Visitor<G:Graph> {
     fn visit_vertex(&mut self, g: &G, u: u64);

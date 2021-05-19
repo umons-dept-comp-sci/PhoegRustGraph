@@ -2,9 +2,9 @@
 //! orbits of the vertices of a graph.
 extern crate libc;
 use super::{graph, int};
-use transfo_result::GraphTransformation;
-use Graph;
-use GraphNauty;
+use crate::transfo_result::GraphTransformation;
+use crate::Graph;
+use crate::GraphNauty;
 
 #[allow(non_camel_case_types)]
 type long = libc::c_ulonglong;
@@ -266,7 +266,7 @@ fn test_orbits_sample() {
 
 #[test]
 fn test_transfo_canon() {
-    use format::from_g6;
+    use crate::format::from_g6;
     use std::convert::TryInto;
     let expected: GraphTransformation = "BI4TUA==".try_into().unwrap();
     let g: GraphNauty = from_g6("BW").unwrap();

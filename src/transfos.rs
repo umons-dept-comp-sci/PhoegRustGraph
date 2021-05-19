@@ -1,11 +1,12 @@
 //! Module containing graph transformations.
 //! Each transformation uses the orbits of the homomorphism group to filter out symmetries.
 use std::collections::HashMap;
-use GraphNauty;
-use GraphIso;
-use Graph;
-use algorithm::{has_neighborhood_included,isolate_transfo};
-use transfo_result::GraphTransformation;
+use crate::GraphNauty;
+use crate::GraphIso;
+use crate::Graph;
+use crate::algorithm::{has_neighborhood_included,isolate_transfo};
+use crate::transfo_result::GraphTransformation;
+use crate::nauty::orbits;
 
 transformation! (
     "Adds an edge.",
@@ -200,11 +201,158 @@ pub fn add_isolated_vertex(g: &GraphNauty) -> Vec<GraphTransformation>
     vec![ng]
 }
 
+fn fix_vertex(fixed: &mut Vec<Vec<u64>>, num_depends: &mut[u64], vertex: u64) {
+    if num_depends[vertex as usize] == 0 {
+        fixed[0].push(vertex);
+    }
+    num_depends[vertex as usize] += 1;
+}
+
+fn unfix_vertex(fixed: &mut Vec<Vec<u64>>, num_depends: &mut[u64], vertex: u64) {
+    if num_depends[vertex as usize] == 1 {
+        let index = fixed[0].iter().position(|v| v==&vertex).unwrap();
+        fixed[0].remove(index);
+    }
+    num_depends[vertex as usize] -= 1;
+}
+
+fn unfix_edge(fixed: &mut Vec<Vec<u64>>, num_depends: &mut[u64], edge: (u64, u64)) {
+    let (x, y) = edge;
+    unfix_vertex(fixed, num_depends, x);
+    unfix_vertex(fixed, num_depends, y);
+}
+
+fn fix_edge(fixed: &mut Vec<Vec<u64>>, num_depends: &mut[u64], edge: (u64, u64)) {
+    let (x, y) = edge;
+    fix_vertex(fixed, num_depends, x);
+    fix_vertex(fixed, num_depends, y);
+}
+
+fn find_first(g: &GraphNauty, fixed: &mut Vec<Vec<u64>>, first: u64) -> Option<u64> {
+    let orbits = orbits(&g, &fixed);
+    //println!("{:?}", fixed);
+    //println!("{:?}", orbits);
+    let mut id = 0;
+    while id < orbits.len() && orbits[id] < first {
+        id += 1;
+    }
+    if id < orbits.len() {
+        Some(orbits[id])
+    } else {
+        None
+    }
+}
+
+fn find_second(g: &GraphNauty, fixed: &mut Vec<Vec<u64>>, first: u64, second: u64) -> Option<u64> {
+    fixed.push(vec![first]);
+    let index = fixed[0].iter().position(|v| v==&first).unwrap();
+    fixed[0].remove(index);
+    let orbits = orbits(&g, &fixed);
+    fixed.pop();
+    fixed[0].push(first);
+    //println!("{} {:?} {:?}", first, fixed, orbits);
+    let mut id = 0;
+    while id < orbits.len() && (orbits[id] <= first || orbits[id] < second || !g.is_edge(first, orbits[id])) {
+        id += 1;
+    }
+    if id < orbits.len() {
+        Some(orbits[id])
+    } else {
+        None
+    }
+}
+
+/// Searches for an edge after start (start.0 < start.1) with the given orbits and updates orbits
+/// and fixed accordingly. Start must contain the indices in orbits, not the vertices numbers.
+/// num_depends contains the number of chosen edges containing the vertex at index i for each i in
+/// num_depend.
+fn find_edge(g: &GraphNauty, fixed: &mut Vec<Vec<u64>>, num_depends: &mut[u64], start: (u64, u64)) -> Option<(u64, u64)> {
+    //TODO need an efficient way to remove vertex from fixed.
+    let mut first = Some(start.0);
+    fix_vertex(fixed, num_depends, start.0);
+    let mut second = find_second(g, fixed, start.0, start.1 + 1);
+    // if second is None, that means theres no edge left starting with first. So we search for
+    // another one.
+    while second.is_none() {
+        // If first is Some, we can search the next one.
+        if let Some(x) = first {
+            unfix_vertex(fixed, num_depends, x);
+            first = find_first(g, fixed, x+1);
+            // We find the second.
+            if let Some(x) = first {
+                fix_vertex(fixed, num_depends, x);
+                second = find_second(g, fixed, x, 0);
+            }
+        } else {
+            // If first is None, we could not find another one so we stop.
+            return None;
+        }
+    }
+    let res = first.zip(second);
+    if res.is_some() {
+        fix_vertex(fixed, num_depends, second.unwrap());
+    }
+    res
+}
+
+/// Removes e edges from the graph.
+pub fn remove_num_edges(g: &GraphNauty, e: u64) -> Vec<GraphTransformation>
+{
+    let mut res = vec![];
+    let n = g.order();
+    if e > g.size() {
+        res
+    } else {
+        let mut stack = Vec::new();
+        let mut edge = (0,0);
+        let mut fixed = vec![vec![]];
+        let mut num_depends = vec![0; n as usize];
+        // Fill a stack with e edges if possible.
+        for _ in 0..e {
+            if let Some(found_edge) = find_edge(g, &mut fixed, &mut num_depends, edge) {
+                edge = found_edge;
+                stack.push(edge);
+            } else {
+                return res;
+            }
+        }
+        let mut ng: GraphTransformation = g.into();
+        for (x,y) in stack.iter() {
+            ng.remove_edge(*x, *y);
+        }
+        ng.set_name("remove_num_edges".to_string());
+        res.push(ng);
+        //println!("{:?}", stack);
+        while !stack.is_empty() {
+            //println!("stack1 {:?} {:?}", stack, num_depends);
+            edge = stack.pop().unwrap();
+            //TODO Only if it was not added as a candidate to find one more edge.
+            unfix_edge(&mut fixed, &mut num_depends, edge);
+            if let Some(found_edge) = find_edge(g, &mut fixed, &mut num_depends, edge) {
+                stack.push(found_edge);
+                if stack.len() == e as usize {
+                    ng = g.into();
+                    for (x,y) in stack.iter() {
+                        ng.remove_edge(*x, *y);
+                    }
+                    ng.set_name("remove_num_edges".to_string());
+                    res.push(ng);
+                } else {
+                    stack.push(found_edge);
+                    fix_edge(&mut fixed, &mut num_depends, found_edge);
+                }
+            }
+            //println!("stack2 {:?}", stack);
+        }
+        res
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::GraphTransformation;
-    use GraphNauty;
-    use format::{from_g6, to_g6};
+    use crate::GraphNauty;
+    use crate::format::{from_g6, to_g6};
 
     fn test_transfo<F>(sig: &str, trsf: F, expected: &mut Vec<&str>)
         where F: Fn(&GraphNauty) -> Vec<GraphTransformation>
@@ -315,5 +463,11 @@ mod tests {
         test_transfo("C~", super::add_isolated_vertex, &mut expected);
         expected = vec!["E@Kw"];
         test_transfo("DJ[", super::add_isolated_vertex, &mut expected);
+    }
+
+    #[test]
+    fn test_remove_n_edges() {
+        let mut expected = vec!["D@K", "D?[", "DAK", "DAK", "DAK", "D@o", "D@o", "D@o", "DAK", "DAK", "D@o", "DAK"];
+        test_transfo("Dd[", |g| super::remove_num_edges(g, 3), &mut expected);
     }
 }

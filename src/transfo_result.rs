@@ -1,6 +1,6 @@
 use base64;
-use nauty::canon_graph;
-use Set;
+use crate::nauty::canon_graph;
+use crate::Set;
 
 /// Structure storing the transformation applied to a graph in a compact way.
 #[repr(C)]
@@ -529,7 +529,7 @@ impl GraphTransformation {
     }
 }
 
-use format::Converter;
+use crate::format::Converter;
 use std::fmt;
 impl fmt::Display for GraphTransformation {
     /// This function converts a GraphTransformation into a string using a format defined to be as
@@ -775,8 +775,8 @@ fn num_bits(v: u32) -> u64 {
 }
 
 use std::convert::From;
-use Graph;
-use GraphNauty;
+use crate::Graph;
+use crate::GraphNauty;
 impl From<&GraphNauty> for GraphTransformation {
     fn from(graph: &GraphNauty) -> Self {
         // Get number of words per vertex
@@ -839,7 +839,7 @@ impl Into<GraphNauty> for GraphTransformation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use format::from_g6;
+    use crate::format::from_g6;
     use std::convert::TryInto;
 
     #[test]

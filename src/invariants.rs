@@ -1,9 +1,9 @@
 //! Module containing implementations of different graph invariants
 
-use Graph;
-use GraphIter;
-use algorithm::{bfs, dfs, Visitor};
-use errors::*;
+use crate::Graph;
+use crate::GraphIter;
+use crate::algorithm::{bfs, dfs, Visitor};
+use crate::errors::*;
 use std::f64;
 use std::u64::MAX;
 
@@ -79,8 +79,8 @@ impl Distance {
     }
 }
 
-impl ::std::fmt::Display for Distance {
-    fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+impl std::fmt::Display for Distance {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
             Distance::Val(x) => write!(f, "{}", x),
             Distance::Inf => write!(f, "Inf"),
