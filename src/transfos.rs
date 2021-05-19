@@ -335,7 +335,7 @@ pub fn remove_num_edges(g: &GraphNauty, e: u64) -> Vec<GraphTransformation>
                     for (x,y) in stack.iter() {
                         ng.remove_edge(*x, *y);
                     }
-                    ng.set_name("remove_num_edges".to_string());
+                    ng.set_name(format!("remove_{}_edges", e));
                     res.push(ng);
                 } else {
                     stack.push(found_edge);
