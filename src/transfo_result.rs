@@ -1,6 +1,13 @@
-use base64;
 use crate::nauty::canon_graph;
 use crate::Set;
+use base64;
+
+fn format_arr_csv<T: std::fmt::Debug>(arr: &[T]) -> String {
+    arr.iter()
+        .map(|x| format!("{:?}", x))
+        .collect::<Vec<String>>()
+        .join(";")
+}
 
 /// Structure storing the transformation applied to a graph in a compact way.
 #[repr(C)]
@@ -484,14 +491,57 @@ impl GraphTransformation {
             self.initial_graph(),
             self.result.clone().unwrap(),
             self,
-            self.order
-                .clone()
-                .unwrap()
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<String>>()
-                .join(";")
+            format_arr_csv(&self.order.clone().unwrap())
         )
+    }
+
+    pub fn to_incorrect(&self) -> String {
+        let mut added_v = Vec::new();
+        let mut added_e = Vec::new();
+        let mut removed_v = Vec::new();
+        let mut removed_e = Vec::new();
+        for u in 0..=self.max_vertex() {
+            if self.is_vertex_modified(u) {
+                if self.is_vertex(u) {
+                    added_v.push(u);
+                } else {
+                    removed_v.push(u);
+                }
+            }
+            if self.is_vertex(u) && u < self.max_vertex() {
+                for v in u+1..=self.max_vertex() {
+                    if v != u && self.is_vertex(v) {
+                        if self.is_edge_modified(u, v) {
+                            if self.is_edge(u, v) {
+                                added_e.push(format!("({}, {})", u, v));
+                            } else {
+                                removed_e.push(format!("({}, {})", u, v));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let mut res = format!(
+            "{}, {}, {:?}, {}",
+            self.name,
+            self.initial_graph(),
+            self.result.clone().unwrap(),
+            self,
+        );
+        for (txt, arr) in &[(",added vertices:", added_v), (",removed_vertices:", removed_v)] {
+            if !arr.is_empty() {
+                res.push_str(txt);
+                res.push_str(&format_arr_csv(&arr));
+            }
+        }
+        for (txt, arr) in &[(",added_edges:", added_e), (",removed_edges:", removed_e)] {
+            if !arr.is_empty() {
+                res.push_str(txt);
+                res.push_str(&format_arr_csv(&arr));
+            }
+        }
+        res
     }
 
     /// Reorder the vertices of a GraphTransformation by using the new order given as parameter.
@@ -506,10 +556,12 @@ impl GraphTransformation {
                     for j in 0..n {
                         if j < order.len() as u64 && order[j as usize] < n {
                             for k in 0..=1 {
-                                if self.data[i as usize].contains(2*j+k) {
-                                    res.data[order[i as usize] as usize].add(2*order[j as usize]+k);
+                                if self.data[i as usize].contains(2 * j + k) {
+                                    res.data[order[i as usize] as usize]
+                                        .add(2 * order[j as usize] + k);
                                 } else {
-                                    res.data[order[i as usize] as usize].remove(2*order[j as usize]+k);
+                                    res.data[order[i as usize] as usize]
+                                        .remove(2 * order[j as usize] + k);
                                 }
                             }
                         } else {
@@ -774,9 +826,9 @@ fn num_bits(v: u32) -> u64 {
         + u64::from(COUNTERS[v >> 24 & 0xff])
 }
 
-use std::convert::From;
 use crate::Graph;
 use crate::GraphNauty;
+use std::convert::From;
 impl From<&GraphNauty> for GraphTransformation {
     fn from(graph: &GraphNauty) -> Self {
         // Get number of words per vertex
