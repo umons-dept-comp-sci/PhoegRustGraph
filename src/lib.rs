@@ -667,6 +667,16 @@ pub trait Graph: Sized {
 
     fn are_twins(&self, u: u64, v: u64) -> bool {
         for i in 0..self.order() {
+            if i != u && i != v && self.is_edge(u, i) != self.is_edge(v, i) {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Returns true if all the neighbors of u (v not included) are also neighbors of v.
+    fn is_neighborhood_included(&self, u: u64, v: u64) -> bool {
+        for i in 0..self.order() {
             if i != u && i != v && self.is_edge(u, i) && !self.is_edge(v, i) {
                 return false;
             }
@@ -743,6 +753,81 @@ pub struct GraphNauty {
     n: u64,
     m: u64,
     w: u64,
+}
+
+impl GraphNauty {
+
+    /// Compares two lines of the adjacency matrix using a given closure. The closure will be
+    /// called on each pair of blocks of the lines and the function returns false if the closure
+    /// returns false once.
+    ///
+    /// # Examples
+    /// ```
+    /// use graph::{Graph,GraphNauty};
+    /// let mut g = GraphNauty::new(6);
+    /// for x in (1..5) {
+    ///     g.add_edge(0,x);
+    ///     g.add_edge(5,x);
+    /// }
+    /// g.add_edge(0,5);
+    /// assert!(g.are_twins(0,5),"basic test");
+    /// g.remove_edge(0,5);
+    /// assert!(g.are_twins(0,5),"not connected");
+    /// g.add_edge(0,5);
+    /// g.remove_edge(1,5);
+    /// assert!(!g.are_twins(0,5),"neighbor removed from one");
+    /// g.remove_edge(1,0);
+    /// assert!(g.are_twins(0,5),"neighbor removed from both");
+    /// g = GraphNauty::new(30);
+    /// for i in 0..29 {
+    ///     for j in i+1..30 {
+    ///        g.add_edge(i,j);
+    ///     }
+    /// }
+    /// assert!(g.are_twins(5,29),"big graph");
+    /// g.remove_edge(5,29);
+    /// assert!(g.are_twins(5,29),"big graph, not connected");
+    /// g.remove_edge(5,28);
+    /// assert!(!g.are_twins(5,29),"big graph, not twins");
+    /// ```
+    fn compare_matrix_lines<F>(&self, u: u64, v: u64, comp: F) -> bool
+        where F: Fn(set, set) -> bool
+    {
+        unsafe {
+            let (mut u, mut v) = (u, v); //We need to change them later
+            let (mut udone, mut vdone) = (false, false);
+            let urow = std::slice::from_raw_parts(
+                detail::graphrow(self.data.as_ptr(), u as int, self.w as int),
+                self.w as usize,
+            );
+            let vrow = std::slice::from_raw_parts(
+                detail::graphrow(self.data.as_ptr(), v as int, self.w as int),
+                self.w as usize,
+            );
+            for i in 0..self.w {
+                let mut up = urow[i as usize];
+                let mut vp = vrow[i as usize];
+                // We could just compare the two rows if they had loops. So we add loops and
+                // connect them for the comparison.
+                if !udone && u < 64 {
+                    up |= 1 << (63 - u);
+                    vp |= 1 << (63 - u);
+                    udone = !udone;
+                }
+                if !vdone && v < 64 {
+                    up |= 1 << (63 - v);
+                    vp |= 1 << (63 - v);
+                    vdone = !vdone;
+                }
+                if !comp(up, vp) {
+                    return false;
+                }
+                u = u.saturating_sub(64);
+                v = v.saturating_sub(64);
+            }
+            return true;
+        }
+    }
 }
 
 impl GraphFormat for GraphNauty {
@@ -1148,7 +1233,7 @@ impl Graph for GraphNauty {
     }
 
     /// Tests whether two vertices are twins.
-    /// i.e., if they are adjacent and have the same neighbors.
+    /// i.e., if they have the same neighbors (they can be adjacent or not).
     /// # Examples
     /// ```
     /// use graph::{Graph,GraphNauty};
@@ -1179,40 +1264,44 @@ impl Graph for GraphNauty {
     /// assert!(!g.are_twins(5,29),"big graph, not twins");
     /// ```
     fn are_twins(&self, u: u64, v: u64) -> bool {
-        unsafe {
-            let (mut u, mut v) = (u, v); //We need to change them later
-            let (mut udone, mut vdone) = (false, false);
-            let urow = std::slice::from_raw_parts(
-                detail::graphrow(self.data.as_ptr(), u as int, self.w as int),
-                self.w as usize,
-            );
-            let vrow = std::slice::from_raw_parts(
-                detail::graphrow(self.data.as_ptr(), v as int, self.w as int),
-                self.w as usize,
-            );
-            for i in 0..self.w {
-                let mut up = urow[i as usize];
-                let mut vp = vrow[i as usize];
-                // We could just compare the two rows if they had loops. So we add loops and
-                // connect them for the comparison.
-                if !udone && u < 64 {
-                    up |= 1 << (63 - u);
-                    vp |= 1 << (63 - u);
-                    udone = !udone;
-                }
-                if !vdone && v < 64 {
-                    up |= 1 << (63 - v);
-                    vp |= 1 << (63 - v);
-                    vdone = !vdone;
-                }
-                if up != vp {
-                    return false;
-                }
-                u = u.saturating_sub(64);
-                v = v.saturating_sub(64);
-            }
-            return true;
-        }
+        self.compare_matrix_lines(u, v, |x, y| x == y)
+    }
+
+    /// Returns true if all the neighbors of u (v not included) are also neighbors of v.
+    /// # Examples
+    /// ```
+    /// use graph::{Graph,GraphNauty};
+    /// let mut g = GraphNauty::new(6);
+    /// for x in (1..5) {
+    ///     g.add_edge(0,x);
+    ///     g.add_edge(5,x);
+    /// }
+    /// g.add_edge(0,5);
+    /// assert!(g.is_neighborhood_included(0,5),"basic test");
+    /// g.remove_edge(0,5);
+    /// assert!(g.is_neighborhood_included(0,5),"not connected");
+    /// g.add_edge(0,5);
+    /// g.remove_edge(1,5);
+    /// assert!(!g.is_neighborhood_included(0,5),"neighbor removed from one");
+    /// g.remove_edge(1,0);
+    /// assert!(g.is_neighborhood_included(0,5),"neighbor removed from both");
+    /// g.add_edge(1, 5);
+    /// assert!(g.is_neighborhood_included(0,5),"one less neighbor for 0");
+    /// g = GraphNauty::new(30);
+    /// for i in 0..29 {
+    ///     for j in i+1..30 {
+    ///        g.add_edge(i,j);
+    ///     }
+    /// }
+    /// assert!(g.is_neighborhood_included(5,29),"big graph");
+    /// g.remove_edge(5,29);
+    /// assert!(g.is_neighborhood_included(5,29),"big graph, not connected");
+    /// g.remove_edge(5,28);
+    /// assert!(g.is_neighborhood_included(5,29),"big graph, not twins");
+    /// assert!(!g.is_neighborhood_included(29,5),"big graph, not twins");
+    /// ```
+    fn is_neighborhood_included(&self, u: u64, v: u64) -> bool {
+        self.compare_matrix_lines(u, v, |x,y| (x & !y) == 0)
     }
 
     /// Returns the complement of the graph. i.e., the graph G' with same vertex set but where uv
