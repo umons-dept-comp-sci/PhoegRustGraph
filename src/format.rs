@@ -1,7 +1,7 @@
 //! Module containing functions to handle different graph formats such as graph6
 
-use crate::GraphFormat;
 use crate::errors::*;
+use crate::GraphFormat;
 
 #[allow(dead_code)]
 /// Returns the length of the graph6 format for a graph of order n
@@ -39,7 +39,8 @@ fn length_g6(n: u64) -> u64 {
 /// assert!("JhCGGC@?G?_" == format::to_g6(&g));
 /// ```
 pub fn to_g6<G>(graph: &G) -> String
-    where G:GraphFormat
+where
+    G: GraphFormat,
 {
     let n = graph.order();
     let m = if n > 0 {
@@ -92,9 +93,10 @@ pub fn to_g6<G>(graph: &G) -> String
 /// }
 /// ```
 pub fn from_g6<G>(s: &str) -> Result<G, InvalidGraph6>
-    where G:GraphFormat
+where
+    G: GraphFormat,
 {
-    let bin = decode(s);
+    let bin = decode(s)?;
     G::from_bin(&bin).map_err(|x| x.into())
 }
 
@@ -224,30 +226,30 @@ pub fn encode(data: &[u64], l: u64) -> String {
 /// # Examples:
 /// ```
 /// use graph::format::decode;
-/// let mut res = decode("Fdlzw");
+/// let mut res = decode("Fdlzw").unwrap();
 /// let mut expected = vec![0x1e5b7be000000000];
 /// assert_eq!(res.len(),expected.len());
 /// for (r,e) in res.iter().zip(expected.iter()) {
 ///     assert_eq!(r,e);
 /// }
-/// res = decode("Fdl");
+/// res = decode("Fdl").unwrap();
 /// expected = vec![0x1e5b400000000000];
 /// assert_eq!(res.len(),expected.len());
 /// for (r,e) in res.iter().zip(expected.iter()) {
 ///     assert_eq!(r,e);
 /// }
-/// res = decode("M???B?@?O|b~~n~n?");
+/// res = decode("M???B?@?O|b~~n~n?").unwrap();
 /// expected = vec![0x3800000c004043d8,0xfffeffef00000000];
 /// assert_eq!(res.len(),expected.len());
 /// for (r,e) in res.iter().zip(expected.iter()) {
 ///     assert_eq!(r,e);
 /// }
 /// ```
-pub fn decode(data: &str) -> Vec<u64> {
-    let capa = (((data.len() * 6) as f64) / 64.).ceil() as usize;
+pub fn decode(g6: &str) -> Result<Vec<u64>, InvalidBinary> {
+    let capa = (((g6.len() * 6) as f64) / 64.).ceil() as usize;
     let mut res = Vec::with_capacity(capa);
-    if !data.is_empty() {
-        let data = data.as_bytes();
+    if !g6.is_empty() {
+        let data = g6.as_bytes();
         let mut cur = [0u8; 8];
         let mut pdata = 0;
         let mut p = 0;
@@ -257,7 +259,12 @@ pub fn decode(data: &str) -> Vec<u64> {
             for _ in 0..4 {
                 v <<= 6;
                 if pdata < data.len() {
-                    v += u64::from(data[pdata]) - 63;
+                    v += u64::from(data[pdata])
+                        .checked_sub(63)
+                        .ok_or(InvalidBinary::new(&format!(
+                            "Incorrect value when decoding {}.",
+                            g6
+                        )))?;
                     pdata += 1;
                 }
             }
@@ -278,7 +285,7 @@ pub fn decode(data: &str) -> Vec<u64> {
             res.push(u64::from_be_bytes(cur));
         }
     }
-    res
+    Ok(res)
 }
 
 #[repr(C)]

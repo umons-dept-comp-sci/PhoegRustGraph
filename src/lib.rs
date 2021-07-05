@@ -665,23 +665,34 @@ pub trait Graph: Sized {
             .all(|(&x, &y)| self.is_edge(x, y))
     }
 
+    /// Returns true if each neighbor of u (ignoring v) is also adjacent to v and u has at least
+    /// one neighbor that is not v.
     fn are_twins(&self, u: u64, v: u64) -> bool {
+        let mut n = 0;
         for i in 0..self.order() {
-            if i != u && i != v && self.is_edge(u, i) != self.is_edge(v, i) {
-                return false;
+            if i != u && i != v && self.is_edge(u, i) {
+                n += 1;
+                if !self.is_edge(v, i) {
+                    return false;
+               }
             }
         }
-        true
+        n > 0
     }
 
-    /// Returns true if all the neighbors of u (v not included) are also neighbors of v.
+    /// Returns true if all the neighbors of u (v not included) are also neighbors of v. Note that
+    /// we consider that u must have at least a neighbor that is not v.
     fn is_neighborhood_included(&self, u: u64, v: u64) -> bool {
+        let mut n = 0;
         for i in 0..self.order() {
-            if i != u && i != v && self.is_edge(u, i) && !self.is_edge(v, i) {
-                return false;
+            if i != u && i != v && self.is_edge(u, i) {
+                n += 1;
+                if !self.is_edge(v, i) {
+                    return false;
+                }
             }
         }
-        true
+        n > 0
     }
 
     /// Contracts two vertices in a single one.
@@ -790,11 +801,13 @@ impl GraphNauty {
     /// g.remove_edge(5,28);
     /// assert!(!g.are_twins(5,29),"big graph, not twins");
     /// ```
+    //TODO check if u has at least one other neighbor than v.
     fn compare_matrix_lines<F>(&self, u: u64, v: u64, comp: F) -> bool
         where F: Fn(set, set) -> bool
     {
         unsafe {
             let (mut u, mut v) = (u, v); //We need to change them later
+            let mut other_neighbor = false; //
             let (mut udone, mut vdone) = (false, false);
             let urow = std::slice::from_raw_parts(
                 detail::graphrow(self.data.as_ptr(), u as int, self.w as int),
