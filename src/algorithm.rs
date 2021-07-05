@@ -129,33 +129,3 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
         }
     }
 }
-
-/// Tests whether every neighbor of u is a neighbor of v.
-///
-/// # Examples:
-/// ```
-/// use graph::{Graph,GraphNauty, algorithm::has_neighborhood_included};
-/// let mut g = GraphNauty::new(5);
-/// for i in 0..4 {
-///     for j in i..5 {
-///         g.add_edge(i,j);
-///     }
-/// }
-/// assert!(has_neighborhood_included(&g,0,1));
-/// g.remove_edge(0,2);
-/// assert!(has_neighborhood_included(&g,0,1));
-/// g.remove_edge(1,3);
-/// assert!(!has_neighborhood_included(&g,0,1));
-/// ```
-pub fn has_neighborhood_included<'a, G>(g: &'a G, u: u64, v: u64) -> bool
-    where G:GraphIter
-{
-    let mut i = 0;
-    for x in g.neighbors(u).filter(|x| *x != v) {
-        if !g.is_edge(x, v) {
-            return false;
-        }
-        i += 1;
-    }
-    i > 0
-}

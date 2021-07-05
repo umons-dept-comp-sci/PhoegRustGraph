@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::GraphNauty;
 use crate::GraphIso;
 use crate::Graph;
-use crate::algorithm::{has_neighborhood_included,isolate_transfo};
+use crate::algorithm::isolate_transfo;
 use crate::transfo_result::GraphTransformation;
 use crate::nauty::orbits;
 

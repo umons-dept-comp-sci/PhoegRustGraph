@@ -68,10 +68,10 @@ macro_rules! cond{
         !$g.are_twins($x,$b)
     };
     (@translate $g:ident $x:ident (incl $b:ident)) => {
-        has_neighborhood_included($g,$b,$x)
+        $g.is_neighborhood_included($b,$x)
     };
     (@translate $g:ident $x:ident (not incl $b:ident)) => {
-        !has_neighborhood_included($g,$b,$x)
+        !$g.is_neighborhood_included($b,$x)
     };
     ($g:ident $x:ident () -> ()) => {};
     ($g:ident $x:ident () -> ($($p:tt)+)) => {
