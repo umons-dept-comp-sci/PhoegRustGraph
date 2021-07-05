@@ -21,6 +21,7 @@ pub struct GraphTransformation {
     name: String,
     result: Option<GraphNauty>,
     order: Option<Vec<u64>>,
+    changed: i64,
 }
 
 impl GraphTransformation {
@@ -64,6 +65,7 @@ impl GraphTransformation {
             name: "".to_owned(),
             result: None,
             order: None,
+            changed: 0,
         }
     }
 
@@ -130,6 +132,35 @@ impl GraphTransformation {
         self.data.len().saturating_sub(1) as u64
     }
 
+    /// Returns true if the graph was changed and false otherwise. i.e., if an edge was removed,
+    /// the graph is changed. If the edge that should have been removed does not exist or if it was
+    /// added later, the graph is unchanged.
+    ///
+    /// # Examples :
+    ///
+    /// ```
+    /// use graph::transfo_result::GraphTransformation;
+    /// use graph::{Graph,GraphNauty};
+    ///
+    /// let mut g = GraphNauty::new(3);
+    /// g.add_edge(1, 0);
+    /// let mut gt: GraphTransformation = (&g).into();
+    /// assert!(!gt.is_changed());
+    /// gt.remove_edge(1, 0);
+    /// assert!(gt.is_changed());
+    /// gt.add_edge(1, 0);
+    /// assert!(!gt.is_changed());
+    /// gt.remove_vertex(0);
+    /// assert!(gt.is_changed());
+    /// gt.add_vertex(0);
+    /// assert!(gt.is_changed());
+    /// gt.add_edge(1, 0);
+    /// assert!(!gt.is_changed());
+    /// ```
+    pub fn is_changed(&self) -> bool {
+        self.changed != 0
+    }
+
     /// Adds an edge to the current graph.
     ///
     /// # Examples :
@@ -167,6 +198,8 @@ impl GraphTransformation {
             self.m += 1;
             self.result = None;
             self.order = None;
+            self.changed += self.data[i as usize].contains(2 * j) as i64 * 2 - 1;
+            self.changed += self.data[j as usize].contains(2 * i) as i64 * 2 - 1;
         }
     }
 
@@ -207,6 +240,8 @@ impl GraphTransformation {
             self.m -= 1;
             self.result = None;
             self.order = None;
+            self.changed += self.data[i as usize].contains(2 * j) as i64 * 2 - 1;
+            self.changed += self.data[j as usize].contains(2 * i) as i64 * 2 - 1;
         }
     }
 
@@ -256,10 +291,12 @@ impl GraphTransformation {
             new_set.add(2 * i + 1);
             self.data.push(new_set);
             self.n += 1;
+            self.changed += self.data[i as usize].contains(2 * i) as i64 * 2 - 1;
         } else if !self.is_vertex(i) {
             self.data[i as usize].add(2 * i + 1);
             self.data[i as usize].flip(2 * i);
             self.n += 1;
+            self.changed += self.data[i as usize].contains(2 * i) as i64 * 2 - 1;
         }
         self.result = None;
         self.order = None;
@@ -308,6 +345,7 @@ impl GraphTransformation {
             self.n -= 1;
             self.result = None;
             self.order = None;
+            self.changed += self.data[i as usize].contains(2 * i) as i64 * 2 - 1;
         }
     }
 
@@ -877,6 +915,7 @@ impl From<&GraphNauty> for GraphTransformation {
             result: None,
             order: None,
             name: "".to_owned(),
+            changed: 0,
         }
     }
 }

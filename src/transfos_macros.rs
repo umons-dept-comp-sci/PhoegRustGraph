@@ -191,8 +191,10 @@ macro_rules! build_iter {
     (@iter ($m:ident $f:ident $res:ident $g:ident $n:ident) (apply $($r:tt)+) -> ()) => {
         let mut ng : GraphTransformation = $g.into();
         parse_transfo!((ng) ($($r)*) -> ());
-        ng.set_name(stringify!($n).to_string());
-        $res.push(ng);
+        if ng.is_changed() {
+            ng.set_name(stringify!($n).to_string());
+            $res.push(ng);
+        }
     };
     (@iter ($($v:tt)*) (apply $($r:tt)+) -> ($($a:tt)+)) => {
         build_iter!(@loop ($($v)*) ($($a)*) (apply $($r)*));
