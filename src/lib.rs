@@ -770,7 +770,7 @@ impl GraphNauty {
 
     /// Compares two lines of the adjacency matrix using a given closure. The closure will be
     /// called on each pair of blocks of the lines and the function returns false if the closure
-    /// returns false once.
+    /// returns false once or if u has no neighbor that is not v.
     ///
     /// # Examples
     /// ```
@@ -801,7 +801,6 @@ impl GraphNauty {
     /// g.remove_edge(5,28);
     /// assert!(!g.are_twins(5,29),"big graph, not twins");
     /// ```
-    //TODO check if u has at least one other neighbor than v.
     fn compare_matrix_lines<F>(&self, u: u64, v: u64, comp: F) -> bool
         where F: Fn(set, set) -> bool
     {
@@ -823,22 +822,23 @@ impl GraphNauty {
                 // We could just compare the two rows if they had loops. So we add loops and
                 // connect them for the comparison.
                 if !udone && u < 64 {
-                    up |= 1 << (63 - u);
-                    vp |= 1 << (63 - u);
+                    up &= !(1 << (63 - u));
+                    vp &= !(1 << (63 - u));
                     udone = !udone;
                 }
                 if !vdone && v < 64 {
-                    up |= 1 << (63 - v);
-                    vp |= 1 << (63 - v);
+                    up &= !(1 << (63 - v));
+                    vp &= !(1 << (63 - v));
                     vdone = !vdone;
                 }
+                other_neighbor |= up > 0;
                 if !comp(up, vp) {
                     return false;
                 }
                 u = u.saturating_sub(64);
                 v = v.saturating_sub(64);
             }
-            return true;
+            return other_neighbor;
         }
     }
 }
@@ -1275,6 +1275,10 @@ impl Graph for GraphNauty {
     /// assert!(g.are_twins(5,29),"big graph, not connected");
     /// g.remove_edge(5,28);
     /// assert!(!g.are_twins(5,29),"big graph, not twins");
+    /// g = GraphNauty::new(2);
+    /// assert!(!g.are_twins(1, 0), "isolated vertices");
+    /// g.add_edge(0, 1);
+    /// assert!(!g.are_twins(1, 0), "adjacent but no other neighbor");
     /// ```
     fn are_twins(&self, u: u64, v: u64) -> bool {
         self.compare_matrix_lines(u, v, |x, y| x == y)
@@ -1312,6 +1316,13 @@ impl Graph for GraphNauty {
     /// g.remove_edge(5,28);
     /// assert!(g.is_neighborhood_included(5,29),"big graph, not twins");
     /// assert!(!g.is_neighborhood_included(29,5),"big graph, not twins");
+    /// g = GraphNauty::new(3);
+    /// g.add_edge(1,2);
+    /// assert!(!g.is_neighborhood_included(0, 1), "isolated vertices");
+    /// g.add_edge(0, 1);
+    /// assert!(!g.is_neighborhood_included(1, 0), "adjacent but no other neighbor");
+    /// g.add_edge(0, 2);
+    /// assert!(g.is_neighborhood_included(1, 0), "one other neighbor");
     /// ```
     fn is_neighborhood_included(&self, u: u64, v: u64) -> bool {
         self.compare_matrix_lines(u, v, |x,y| (x & !y) == 0)
