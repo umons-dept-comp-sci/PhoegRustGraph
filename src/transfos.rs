@@ -203,6 +203,16 @@ removes all its edges).",
     isolate(a);
 );
 
+transformation! (
+    "Given two vertices u and v such that every neighbor of u is a neighbor of v, removes u.",
+    remove_incl_adj,
+    for g,
+    let a,
+    some b (diff a and incl a and adj a)
+    apply
+    remove(a);
+);
+
 /// Adds an isolated vertex to the graph.
 pub fn add_isolated_vertex(g: &GraphNauty) -> Vec<GraphTransformation>
 {
@@ -476,6 +486,16 @@ mod tests {
         test_transfo("C~", super::isolate_incl_adj, &mut vec!["CJ"]);
         test_transfo("DBw", super::isolate_incl_adj, &mut vec![]);
         test_transfo("DB{", super::isolate_incl_adj, &mut vec!["D?[", "D@["]);
+    }
+
+    #[test]
+    fn test_remove_incl_adj() {
+        test_transfo("A_", super::remove_incl_adj, &mut vec![]);
+        test_transfo("Bw", super::remove_incl_adj, &mut vec!["A_"]);
+        test_transfo("BG", super::remove_incl_adj, &mut vec![]);
+        test_transfo("C~", super::remove_incl_adj, &mut vec!["Bw"]);
+        test_transfo("DBw", super::remove_incl_adj, &mut vec![]);
+        test_transfo("DB{", super::remove_incl_adj, &mut vec!["CF", "CN"]);
     }
 
     #[test]

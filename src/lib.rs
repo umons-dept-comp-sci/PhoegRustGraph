@@ -841,6 +841,70 @@ impl GraphNauty {
             return other_neighbor;
         }
     }
+
+    /// # Examples
+    ///
+    /// ```
+    /// use graph::Graph;
+    /// use graph::GraphNauty;
+    /// use graph::format;
+    /// use graph::errors::*;
+    /// let mut g: GraphNauty;
+    /// g = GraphNauty::parse_graph6(&"?".to_string());
+    /// assert!(g.order() == 0);
+    /// g = GraphNauty::parse_graph6(&"@".to_string());
+    /// assert!(g.order() == 1);
+    /// g = GraphNauty::parse_graph6(&"A?".to_string());
+    /// assert!(g.order() == 2);
+    /// assert!(!g.is_edge(0,1));
+    /// g = GraphNauty::parse_graph6(&"A_".to_string());
+    /// assert!(g.order() == 2);
+    /// assert!(g.is_edge(0,1));
+    /// g = GraphNauty::parse_graph6(&"JhCGGC@?G?_".to_string());
+    /// assert!(g.order() == 11);
+    /// for u in 0..11
+    /// {
+    ///     for v in 0..u
+    ///     {
+    ///         if u-v == 1
+    ///         {
+    ///             assert!(g.is_edge(u,v));
+    ///         }
+    ///         else
+    ///         {
+    ///             assert!(!g.is_edge(u,v));
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    pub fn parse_graph6(s: &str) -> Self {
+        let mut chars = s.chars();
+        let mut n = (chars.next().unwrap() as u64).checked_sub(63).unwrap();
+        if n > 62 { // The first byte read was 126 which means we use 126 R(x)
+            n = chars.by_ref().take(3).fold(0, |n, b| (n << 6) | ((b as u64).checked_sub(63).unwrap()));
+        }
+        if n > 258047 { // The second byte read was 126 which means we use 126 126 R(x) and not 126 R(x)
+            n &= 4095; // Remove the second 126 (the first was ignored in the previous if)
+            n = chars.by_ref().take(4).fold(n, |n, b| (n << 6) | ((b as u64).checked_sub(63).unwrap()));
+        }
+        let mut g = GraphNauty::new(n);
+        let mut k = 1;
+        let mut x = 0;
+        for j in 1..n {
+            for i in 0..j {
+                k -= 1;
+                if k == 0 {
+                    k = 6;
+                    x = (chars.next().unwrap() as u8).checked_sub(63).unwrap();
+                }
+                if (x & 32u8) > 0 {
+                    g.add_edge(i, j);
+                }
+                x = x.wrapping_shl(1);
+            }
+        }
+        g
+    }
 }
 
 impl GraphFormat for GraphNauty {
