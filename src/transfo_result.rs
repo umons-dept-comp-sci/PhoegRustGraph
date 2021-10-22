@@ -2,11 +2,15 @@ use crate::nauty::canon_graph;
 use crate::Set;
 use base64;
 
-fn format_arr_csv<T: std::fmt::Debug>(arr: &[T]) -> String {
+fn format_arr_csv_with_sep<T: std::fmt::Debug>(arr: &[T], sep: &str) -> String {
     arr.iter()
         .map(|x| format!("{:?}", x))
         .collect::<Vec<String>>()
-        .join(";")
+        .join(sep)
+}
+
+fn format_arr_csv<T: std::fmt::Debug>(arr: &[T]) -> String {
+    format_arr_csv_with_sep(arr, ";")
 }
 
 /// Structure storing the transformation applied to a graph in a compact way.
@@ -530,6 +534,20 @@ impl GraphTransformation {
             self.result.clone().unwrap(),
             self,
             format_arr_csv(&self.order.clone().unwrap())
+        )
+    }
+
+    /// Outputs a csv format ready to import in a postgresql database :
+    /// initial signature,final signature,signature of the transformation,reordering between the
+    /// two signatures
+    /// The reordering is formatted to be imported as an array of integers.
+    pub fn to_postgres(&self) -> String {
+        format!(
+            "{},{:?},{},\"{{{}}}\"",
+            self.initial_graph(),
+            self.result.clone().unwrap(),
+            self,
+            format_arr_csv_with_sep(&self.order.clone().unwrap(), ",")
         )
     }
 
