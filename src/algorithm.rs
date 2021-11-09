@@ -48,7 +48,7 @@ impl Queue for Fifo {
 
 fn visit<'a, G, V, Q>(g: &'a G, visitor: &mut V, queue: &mut Q, start: Option<u64>)
 where
-    G: GraphIter,
+    G: GraphIter<'a>,
     V: Visitor<G>,
     Q: Queue,
 {
@@ -76,7 +76,7 @@ where
 pub fn bfs<'a,G,V>(g: &'a G, visitor: &mut V, start: Option<u64>)
 where
     V: Visitor<G>,
-    G: Graph+GraphIter,
+    G: Graph+GraphIter<'a>,
 {
     let mut queue = VecDeque::new();
     visit(g, visitor, &mut queue, start);
@@ -84,7 +84,7 @@ where
 
 pub fn dfs<'a,G,V>(g: &'a G, visitor: &mut V, start: Option<u64>)
 where
-    G:Graph+GraphIter,
+    G:Graph+GraphIter<'a>,
     V: Visitor<G>,
 {
     let mut queue = Fifo { v: VecDeque::new() };
@@ -113,7 +113,7 @@ where
 /// }
 /// ```
 pub fn isolate<'a,G>(g: &mut G, u: u64)
-    where G:GraphIter
+    where G:GraphIter<'a>
 {
     for x in g.neighbors(u) {
         g.remove_edge(u, x);

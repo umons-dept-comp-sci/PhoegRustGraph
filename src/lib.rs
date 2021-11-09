@@ -674,7 +674,7 @@ pub trait Graph: Sized {
                 n += 1;
                 if !self.is_edge(v, i) {
                     return false;
-               }
+                }
             }
         }
         n > 0
@@ -722,8 +722,20 @@ pub trait Graph: Sized {
             for j in 0..i {
                 if j != u || i != v {
                     if self.is_edge(i, j) {
-                        let i = if i > v { i - 1 } else if i == v { u } else {i};
-                        let j = if j > v { j - 1 } else if j == v { u } else {j};
+                        let i = if i > v {
+                            i - 1
+                        } else if i == v {
+                            u
+                        } else {
+                            i
+                        };
+                        let j = if j > v {
+                            j - 1
+                        } else if j == v {
+                            u
+                        } else {
+                            j
+                        };
                         res.add_edge(i, j);
                     }
                 }
@@ -734,12 +746,12 @@ pub trait Graph: Sized {
 }
 
 //pub trait GraphIter: Graph {
-pub trait GraphIter: Graph {
+pub trait GraphIter<'a>: Graph {
     type VertIter: Iterator<Item = u64> + Clone;
-    //type EdgeIter: Iterator<Item=(u64,u64)>;
+    type EdgeIter: Iterator<Item=(u64,u64)>;
     type NeighIter: Iterator<Item = u64> + Clone;
     fn vertices(&self) -> Self::VertIter;
-    //fn edges(&'a self) -> Self::EdgeIter;
+    fn edges(&'a self) -> Self::EdgeIter;
     fn neighbors(&self, u: u64) -> Self::NeighIter;
 }
 
@@ -767,7 +779,6 @@ pub struct GraphNauty {
 }
 
 impl GraphNauty {
-
     /// Compares two lines of the adjacency matrix using a given closure. The closure will be
     /// called on each pair of blocks of the lines and the function returns false if the closure
     /// returns false once or if u has no neighbor that is not v.
@@ -802,7 +813,8 @@ impl GraphNauty {
     /// assert!(!g.are_twins(5,29),"big graph, not twins");
     /// ```
     fn compare_matrix_lines<F>(&self, u: u64, v: u64, comp: F) -> bool
-        where F: Fn(set, set) -> bool
+    where
+        F: Fn(set, set) -> bool,
     {
         unsafe {
             let (mut u, mut v) = (u, v); //We need to change them later
@@ -880,12 +892,20 @@ impl GraphNauty {
     pub fn parse_graph6(s: &str) -> Self {
         let mut chars = s.chars();
         let mut n = (chars.next().unwrap() as u64).checked_sub(63).unwrap();
-        if n > 62 { // The first byte read was 126 which means we use 126 R(x)
-            n = chars.by_ref().take(3).fold(0, |n, b| (n << 6) | ((b as u64).checked_sub(63).unwrap()));
+        if n > 62 {
+            // The first byte read was 126 which means we use 126 R(x)
+            n = chars
+                .by_ref()
+                .take(3)
+                .fold(0, |n, b| (n << 6) | ((b as u64).checked_sub(63).unwrap()));
         }
-        if n > 258047 { // The second byte read was 126 which means we use 126 126 R(x) and not 126 R(x)
+        if n > 258047 {
+            // The second byte read was 126 which means we use 126 126 R(x) and not 126 R(x)
             n &= 4095; // Remove the second 126 (the first was ignored in the previous if)
-            n = chars.by_ref().take(4).fold(n, |n, b| (n << 6) | ((b as u64).checked_sub(63).unwrap()));
+            n = chars
+                .by_ref()
+                .take(4)
+                .fold(n, |n, b| (n << 6) | ((b as u64).checked_sub(63).unwrap()));
         }
         let mut g = GraphNauty::new(n);
         let mut k = 1;
@@ -1389,7 +1409,7 @@ impl Graph for GraphNauty {
     /// assert!(g.is_neighborhood_included(1, 0), "one other neighbor");
     /// ```
     fn is_neighborhood_included(&self, u: u64, v: u64) -> bool {
-        self.compare_matrix_lines(u, v, |x,y| (x & !y) == 0)
+        self.compare_matrix_lines(u, v, |x, y| (x & !y) == 0)
     }
 
     /// Returns the complement of the graph. i.e., the graph G' with same vertex set but where uv
@@ -1468,7 +1488,7 @@ impl<'a, G: Graph> std::iter::Iterator for EdgeIterator<'a, G> {
 }
 
 //impl<'a> GraphIter for GraphNauty {
-impl GraphIter for GraphNauty {
+impl<'a> GraphIter<'a> for GraphNauty {
     type VertIter = std::ops::Range<u64>;
 
     /// Returns an iterator over the vertices of the graph.
@@ -1490,33 +1510,33 @@ impl GraphIter for GraphNauty {
         0..self.n
     }
 
-    //type EdgeIter = EdgeIterator<'a,Self>;
-    ///// Returns an iterator over the edges of the graph.
-    /////
-    ///// # Examples
-    /////
-    ///// ```
-    ///// use graph::{Graph,GraphNauty,GraphIter};
-    ///// let mut g = GraphNauty::new(11);
-    ///// for i in 0..10
-    ///// {
-    /////     g.add_edge(i,i+1);
-    ///// }
-    ///// let mut i = 0;
-    ///// for e in g.edges()
-    ///// {
-    /////     assert!(e.1 == i+1 && e.0 == i);
-    /////     i += 1;
-    ///// }
-    ///// assert!(i == g.size());
-    ///// ```
-    //fn edges(&'a self) -> EdgeIterator<'a,Self> {
-    //EdgeIterator {
-    //g: self,
-    //u: 0,
-    //v: 0,
-    //}
-    //}
+    type EdgeIter = EdgeIterator<'a, Self>;
+    /// Returns an iterator over the edges of the graph.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use graph::{Graph,GraphNauty,GraphIter};
+    /// let mut g = GraphNauty::new(11);
+    /// for i in 0..10
+    /// {
+    ///     g.add_edge(i,i+1);
+    /// }
+    /// let mut i = 0;
+    /// for e in g.edges()
+    /// {
+    ///     assert!(e.1 == i+1 && e.0 == i);
+    ///     i += 1;
+    /// }
+    /// assert!(i == g.size());
+    /// ```
+    fn edges(&'a self) -> EdgeIterator<'a, Self> {
+        EdgeIterator {
+            g: self,
+            u: 0,
+            v: 0,
+        }
+    }
 
     type NeighIter = SetIter;
     /// Returns an iterator over the neighbors of the vertx v in the graph.
