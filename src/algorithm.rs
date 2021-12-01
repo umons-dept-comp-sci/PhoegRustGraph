@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use crate::transfo_result::GraphTransformation;
 use crate::Graph;
 use crate::GraphIter;
+use crate::GraphNauty;
 
 pub trait Visitor<G:Graph> {
     fn visit_vertex(&mut self, g: &G, u: u64);
@@ -128,4 +129,105 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
             g.remove_edge(u, x);
         }
     }
+}
+
+pub fn karger_mincut(g: &mut GraphNauty) -> (u64,u64)
+{
+    use rand::Rng;
+
+    //println!{"graph : {:?}",g};
+
+    //println!("Graphe avant karger {:?}",g);
+
+    let mut best_minimum_cut_edges = Vec::new();
+    let mut best_minimum_cut = g.order();
+
+    for i in 0..10{
+        let graph_copy = g.clone();
+
+        let mut vertices_correspondance = Vec::new();
+        
+        for v in g.vertices(){
+            let mut vertices = Vec::new();
+            vertices.push(v);
+            vertices_correspondance.push(vertices);
+        }
+
+        while(g.order() > 2){
+            let degrees: Vec<u64> = g.vertices()    
+            .map(|x| g.neighbors(x).count() as u64)
+            .collect();
+
+            let num = rand::thread_rng().gen_range(0..g.size()*2);
+
+            let mut deg = 0;
+            let mut vertex = 0;
+            for degree in &degrees{
+                if(num < deg + degree){
+                    break;
+                }
+                deg += *degree;
+                vertex += 1;
+            }
+
+            //println!("{:?} {:?} {:?} {:?}",num,deg,degrees,g.size()*2);
+
+            let u = vertex;
+            let v = g.neighbors(vertex).nth((num - deg) as usize).unwrap();
+
+            if(u > v){
+                let (u,v) = (v,u);
+            }
+
+            for n in g.neighbors(v){
+                if(u != n){
+                    g.add_edge(u,n);
+                }
+            }
+            
+            let mut to_add = Vec::new();
+            let v_correspondance = &vertices_correspondance[v as usize];
+            for c in v_correspondance{
+                to_add.push(*c);
+            }
+            vertices_correspondance[u as usize].append(&mut to_add);
+            vertices_correspondance.remove(v as usize);
+
+            g.remove_vertex(v);
+        }
+
+        //println!("Graphe après karger {:?}",g);
+
+        *g = graph_copy;
+
+        let mut minimum_cut = 0;
+        let mut minimum_cut_edges = Vec::new();
+
+        for u in &vertices_correspondance[0]{
+            for v in &vertices_correspondance[1]{
+                if g.is_edge(*u,*v){
+                    //println!("Chosen edge : {} {}",*u,*v);
+                    minimum_cut +=1;
+                    if(u > v){
+                        minimum_cut_edges.push((*v,*u));
+                    }
+                    else{
+                        minimum_cut_edges.push((*u,*v));
+                    }
+                }
+            }
+        }
+
+        //println!("minimum cut : {} {:?} {:?} {:?}",minimum_cut,minimum_cut_edges,g,vertices_correspondance);
+
+        if minimum_cut < best_minimum_cut{
+            best_minimum_cut = minimum_cut;
+            best_minimum_cut_edges = minimum_cut_edges;
+        }
+    }
+
+    //println!("vertices correspondance : {:?}",vertices_correspondance);
+
+    //println!("{:?}",best_minimum_cut_edges);
+    best_minimum_cut_edges[0]
 }

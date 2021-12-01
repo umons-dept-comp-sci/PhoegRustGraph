@@ -2,10 +2,13 @@
 
 use crate::Graph;
 use crate::GraphIter;
-use crate::algorithm::{bfs, dfs, Visitor};
+use crate::GraphNauty;
+use crate::algorithm::{bfs, dfs, Visitor, karger_mincut};
 use crate::errors::*;
 use std::f64;
 use std::u64::MAX;
+use crate::format;
+use std::collections::HashMap;
 
 ///
 /// Represents distances that can be infinite.
@@ -896,4 +899,274 @@ pub fn irregularity<'a, G>(g: &'a G) -> u64
         }
     }
     sum
+}
+
+fn print_type_of<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
+}
+
+/*
+pub fn is_still_independent<G>(g: &G, i: &[u64], v: &u64) -> bool
+    where G: GraphIter
+{
+    let neighbors = g.neighbors(*v);
+
+    for u in i{
+        if(g.is_edge(*u,*v)){
+            return false;
+        }
+    }
+
+    true
+}*/
+
+fn avtotmatRec<'a, G>(g: &'a G, curMa: &mut Vec<(u64,u64)>, edges: &Vec<(u64,u64)>, listMa: &mut Vec<Vec<(u64,u64)>>) -> (u64,u64)
+{
+    let mut sum = 0;
+    let mut amount = 0;
+    if(edges.len() == 0){
+        sum = curMa.len() as u64;
+        amount = 1;
+        listMa.push(curMa.to_vec());
+    }
+    else{
+        let mut lastu = 0;
+        if(curMa.len() > 0){
+            lastu = curMa[curMa.len() - 1].0;
+        }
+        for e in edges{
+            if(e.0 >= lastu){
+                curMa.push(*e);
+                let mut recEdges = edges.clone();
+                recEdges.retain(|x| x.0 != e.0 && x.1 != e.0 && x.0 != e.1 && x.1 != e.1);
+                let (subSum, subAmount) = avtotmatRec(g, curMa, &recEdges, listMa);
+                sum += subSum;
+                amount += subAmount;
+                curMa.remove(curMa.len() - 1);
+            }
+        }
+    }
+    (sum, amount)
+}
+
+pub fn avtotmat<'a, G>(g: &'a G) -> (u64, f64, Vec<Vec<(u64,u64)>>)
+    where G: GraphIter<'a>
+{
+    let mut vecEdges = Vec::new();
+
+    let edges = g.edges();
+
+    for e in edges{
+        vecEdges.push(e);
+    }
+
+    let mut matlist = Vec::new();
+    let (sum, amount) = avtotmatRec(g, &mut Vec::new(), &vecEdges, &mut matlist);
+    if matlist.len() == 0{
+        matlist.push(Vec::new());
+    }
+    (sum, sum as f64/amount as f64, matlist)
+}
+
+/// If a first edge (u,v) exists, calculates totmat based on G - (u,v) and G - u - v. Otherwise, graph is empty and thus the only maximal matching is the empty set.
+pub fn listmat_alain(mut g: &mut GraphNauty, listmat_dict: &mut HashMap::<String,Vec<Vec<(u64,u64)>>>) -> Vec<Vec<(u64,u64)>>
+{
+    //println!("{:?}",g);
+
+    let mut matchings = Vec::new();
+
+    let first_edge = g.edges().next();
+    if(first_edge == None){
+        matchings.push(Vec::new());
+    }
+    else{
+        let conn_comp = connected_components(g);
+        let mut nb_comp = 0;
+
+        for comp in &conn_comp{
+            if comp.len() >= 1{
+                nb_comp += 1;
+            }
+        }
+
+        if(nb_comp > 1){
+            let mut comp_matchings_list = Vec::new();
+            for comp in &conn_comp{
+                if(comp.len() > 1){
+                    let mut comp_matchings = Vec::new();
+                    let mut newg = g.clone();
+                    let mut removed_v = Vec::new();
+                    let mut count = 0;
+                    for v in g.vertices(){
+                        if !(comp.contains(&v)){
+                            newg.remove_vertex(v-count);
+                            removed_v.push(v);
+                            count += 1;
+                        }
+                    }
+                    let mat_list;
+                    //println!{"{:?}",&newg};
+                    let gformat = format::to_g6(&newg);
+                    if(listmat_dict.contains_key(&gformat)){
+                        mat_list = listmat_dict[&gformat].clone();
+                    }
+                    else{
+                        let (sum, amount, list) = avtotmat_alain(&mut newg, listmat_dict);
+                        mat_list = list;
+                        //println!("for graph {:?}, matching of component {:?}, {:?}",g,newg,mat_list);
+                        listmat_dict.insert(gformat,mat_list.clone());
+                    }
+                    for mat in &mat_list{
+                        let mut new_matching = Vec::new();
+                        for e in mat{
+                            let mut new_u = e.0;
+                            let mut new_v = e.1;
+                            for v in &removed_v{
+                                if(new_u >= *v){
+                                    new_u += 1;
+                                    new_v += 1;
+                                }
+                                else if(new_v >= *v){
+                                    new_v += 1;
+                                }
+                            }
+                            new_matching.push((new_u, new_v));
+                        }
+                        comp_matchings.push(new_matching);
+                    }
+                    //println!("for graph {:?}, matching of component {:?} corrected, {:?}",g,newg,comp_matchings);
+                    comp_matchings_list.push(comp_matchings);
+                }
+            }
+            let mut all_matchings = Vec::new();
+            for mut comp_matchings in comp_matchings_list{
+                if(all_matchings.len() == 0){
+                    all_matchings = comp_matchings.clone();;
+                }
+                else{
+                    let mut new_all_matchings = Vec::new();
+                    for mut ma in all_matchings{
+                        for ma2 in &comp_matchings{
+                            let mut new_matching = ma.clone();
+                            new_matching.extend(ma2);
+                            new_all_matchings.push(new_matching);
+                        }
+                    }
+                    all_matchings = new_all_matchings;
+                }
+            }
+            matchings = all_matchings;
+        }
+        else{
+            let (mut u, mut v) = first_edge.unwrap();
+            let gcopy = g.clone();
+
+            //println!("Before modifying {:?} : {:?}, {:?}",gcopy,(u,v),g);
+
+            g.remove_edge(u,v);
+            let mat_list;
+            let gformat = format::to_g6(g);
+            if(listmat_dict.contains_key(&gformat)){
+                mat_list = listmat_dict[&gformat].clone();
+            }
+            else{
+                /*g.add_edge(u,v);
+                let (new_u,new_v) = karger_mincut(g);
+                //u = new_u;
+                //v = new_v;
+                //println!("While modifying {:?} : {:?}, {:?}",gcopy,(u,v),g);
+                g.remove_edge(u,v);*/
+                let (sum, amount, list) = avtotmat_alain(g, listmat_dict);
+                mat_list = list;
+                let gformat = format::to_g6(g);
+                listmat_dict.insert(gformat,mat_list.clone());
+            }
+
+            for ma in mat_list{
+                let mut saturated = false;
+                for e in &ma{
+                    if(e.0 == u || e.0 == v || e.1 == u || e.1 == v){
+                        saturated = true;
+                    }
+                }
+                if(saturated){
+                    matchings.push(ma);
+                }
+            }
+
+            //println!("After removing edge {:?} : {:?},{:?},{:?}",gcopy,(u,v),g,matchings);
+
+            g.remove_vertex(u);
+            g.remove_vertex(v-1);
+            let mat_list2;
+            let gformat = format::to_g6(g);
+            if(listmat_dict.contains_key(&gformat)){
+                mat_list2 = listmat_dict[&gformat].clone();
+            }
+            else{
+                let (sum, amount, list) = avtotmat_alain(g, listmat_dict);
+                mat_list2 = list;
+                listmat_dict.insert(gformat,mat_list2.clone());
+            }
+
+            //println!("After removing vertices {:?} : {:?},{:?},{:?}",gcopy,(u,v),g,mat_list2);
+
+            *g = gcopy;
+
+            for ma in mat_list2{
+                let mut new_ma = Vec::new();
+                new_ma.push((u,v));
+                for e in &ma{
+                    let mut new_u = e.0;
+                    let mut new_v = e.1;
+                    if(new_u >= u){
+                        new_u += 1;
+                    }
+                    if(new_u >= v){
+                        new_u += 1;
+                    }
+                    if(new_v >= u){
+                        new_v += 1;
+                    }
+                    if(new_v >= v){
+                        new_v += 1;
+                    }
+                    new_ma.push((new_u,new_v));
+                }
+                matchings.push(new_ma);
+            }
+
+            //println!("Matchings : {:?}",matchings);
+        }
+    }
+    matchings
+}
+
+pub fn avtotmat_alain(mut g: &mut GraphNauty, mut listmat_dict: &mut HashMap::<String,Vec<Vec<(u64,u64)>>>) -> (u64, f64, Vec<Vec<(u64,u64)>>)
+{
+    let matchings = listmat_alain(g, listmat_dict);
+    let mut sum = 0;
+    let mut amount = 0;
+    for ma in &matchings{
+        sum += ma.len() as u64;
+        amount += 1;
+    }
+    (sum, sum as f64/amount as f64,matchings)
+}
+
+
+//Returns none for empty graphs, since max = 0 ...
+pub fn rapavmaxmat<'a, G>(g: &'a G) -> f64
+    where G: GraphIter<'a>
+{
+    let (totmat, avmat, list) = avtotmat(g);
+
+    let mut max = 0;
+    for matching in list{
+        if(max < matching.len()){
+            max = matching.len();
+        }
+    }
+    
+    (avmat / max as f64)
 }
