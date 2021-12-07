@@ -7,27 +7,48 @@ use crate::GraphIter;
 use crate::nauty;
 
 trait VF2Data {
+    /// Checks if the partial mapping is a full matching of a subgraph.
     fn is_full_match(&self) -> bool;
+    /// Returns the list of vertices of the bigger graph that are part of the mapping. e.g., the
+    /// vertices forming a cycle if the subgraph we were looking for is a cycle.
     fn get_match(&self) -> Vec<u64>;
+    /// Adds a pair to the partial mapping.
     fn add_pair(&mut self, n: u64, m: u64);
+    /// Removes a pair from the partial mapping.
     fn remove_pair(&mut self, n: u64, m: u64);
+    /// Checks whether adding the pair to the partial mapping could lead to a full match.
     fn filter(&self, n: u64, m: u64) -> bool;
+    /// Computes the candidate pairs to consider.
     fn compute_pairs(&self) -> Vec<(u64, u64)>;
 }
 
 #[repr(C)]
 struct VF2DataImpl<'a> {
+    // The graph where we are looking for matchings.
     g1: &'a GraphNauty,
+    // The graph we are trying to map onto g1.
     g2: &'a GraphNauty,
+    // Current depth of the recursion. This is also the number of mapped vertices.
     depth: u64,
+    // The value to use as a null value.
     null: u64,
-    num_out: u64,
-    // Set of vertices already mapped.
+    // Set of vertices already mapped. The nth value is the number of the vertex of g2 mapped to
+    // the vertex n of g1 or the null value if it is not mapped.
     core_1: Vec<u64>,
+    // Set of vertices already mapped. The nth value is the number of the vertex of g1 mapped to
+    // the vertex n of g2 or the null value if it is not mapped.
     core_2: Vec<u64>,
+    // The depth at which the nth vertex was added to the adjacency of the mapping in G1 or to the
+    // mapping itself.
     adj_1: Vec<u64>,
+    // The depth at which the nth vertex was added to the adjacency of the mapping in G2 or to the
+    // mapping itself.
     adj_2: Vec<u64>,
+    // The orbits of the automorphism group of G2. The nth entry is the number of the lowest node
+    // in the same orbit as the node n.
     orbits: Vec<u64>,
+    // For each vertex, we ban exploring vertices in the same orbit as mapping to the same node of
+    // G1 as it would be symmetrical.
     taboo: HashMap<u64, HashSet<u64>>,
 }
 
@@ -37,7 +58,6 @@ impl<'a> fmt::Display for VF2DataImpl<'a> {
         writeln!(f, "g2 : {}", self.g2)?;
         writeln!(f, "depth : {}", self.depth)?;
         writeln!(f, "null : {}", self.null)?;
-        writeln!(f, "num_out : {:?}", self.num_out)?;
         writeln!(f, "core_1 : {:?}", self.core_1)?;
         writeln!(f, "core_2 : {:?}", self.core_2)?;
         writeln!(f, "adj_1 : {:?}", self.adj_1)?;
@@ -57,7 +77,7 @@ pub fn subgraphs<'a>(g1: &'a GraphNauty, g2: &'a GraphNauty) -> impl Iterator<It
 
 impl<'a> VF2Data for VF2DataImpl<'a> {
     fn is_full_match(&self) -> bool {
-        self.num_out == 0
+        self.depth == self.g2.order()+1
     }
 
     fn get_match(&self) -> Vec<u64> {
@@ -70,8 +90,12 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
 
     fn add_pair(&mut self, n: u64, m: u64) {
         self.depth += 1;
+        // Adding the mapping to the partial mapping
         self.core_1[n as usize] = m;
         self.core_2[m as usize] = n;
+        // Updating values for vertices in G1. If it was not already adjacent to a vertex in the
+        // mapping, we set the value depth and we also set the value for n to the depth. This
+        // makes restoring the state when removing n from the mapping easier.
         for i in self.g1.neighbors(n).chain(Some(n).iter().cloned()) {
             if self.adj_1[i as usize] == 0 {
                 self.adj_1[i as usize] = self.depth;
@@ -79,37 +103,47 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
         }
         let m_orbit = self.orbits[m as usize];
         for i in self.g2.vertices() {
+            // Update adj_2 the same way as before.
             if (self.g2.is_edge(m, i) || i == m) && self.adj_2[i as usize] == 0 {
                 self.adj_2[i as usize] = self.depth;
             }
+            // If a vertex has higher number than m and is in the same orbit, we forbid mapping n
+            // and i since it would be symmetrical to mapping m and n.
             if i > m && self.orbits[i as usize] == m_orbit {
                 self.taboo.entry(n).or_default().insert(i);
             }
         }
-        self.num_out -= 1;
     }
 
     fn remove_pair(&mut self, n: u64, m: u64) {
+        //  We remove the mapping.
         self.core_1[n as usize] = self.null;
         self.core_2[m as usize] = self.null;
+        // Every vertex of G1 added as neighbor of a mapped vertex at this depth is no longer
+        // adjacent to a mapped vertex as it was adjacent to n.
         for i in self.g1.vertices() {
             if self.adj_1[i as usize] == self.depth {
                 self.adj_1[i as usize] = 0;
             }
         }
+        // Same as before but for G2.
         for i in self.g2.vertices() {
             if self.adj_2[i as usize] == self.depth {
                 self.adj_2[i as usize] = 0;
             }
         }
+        // The depth decreases.
         self.depth -= 1;
-        self.num_out += 1;
     }
 
     fn filter(&self, n: u64, m: u64) -> bool {
+        // We do not allow mapping n with a vertex in the same orbit as an already tried vertex of
+        // G2.
         if self.taboo.contains_key(&n) && self.taboo[&n].contains(&m) {
             return false;
         }
+        // The edges between mapped vertices should correspond. i.e., if x and y are adjacent in
+        // G2, their mapped vertices in G1 should also be adjacent.
         for (n1, n2) in self.g1
             .vertices()
             .filter(|&x| self.core_1[x as usize] != self.null)
@@ -154,7 +188,6 @@ impl<'a> VF2DataImpl<'a> {
             g2: graph2,
             depth: 1,
             null: nullv,
-            num_out: graph2.order(),
             core_1: vec![nullv; graph1.order() as usize],
             core_2: vec![nullv; graph2.order() as usize],
             adj_1: vec![0; graph1.order() as usize],
@@ -269,8 +302,10 @@ impl<'a, D> SubgraphIter<D>
             data: dataobj,
             queue: Vec::new(),
         };
+        // Computes the possible matching that can be added.
         let p = iter.data.compute_pairs();
         for (n, m) in p {
+            // Check if this matching could work.
             if iter.data.filter(n, m) {
                 iter.queue.push((n, m, true));
             }
@@ -284,22 +319,41 @@ impl<'a, D> Iterator for SubgraphIter<D>
 {
     type Item = Vec<u64>;
 
+    // The VF2 algorithm works by exploring mappings between the vertices of the subgraph and
+    // vertices of the graph. It is normally a recursive algorithm that we implemented as iterative
+    // using a queue. This way, we do not need to allocate as much graphs. Each step in the queue
+    // corresponds to a mapping between a vertex of G1 and a vertex of G2 that we either need to
+    // add to the partial mapping we have and check if it is a subgraph matching or to remove this
+    // pair because we already explored all mappings with this pair.
     fn next(&mut self) -> Option<Vec<u64>> {
         let mut found = false;
         let mut res = None;
+        // While we haven't found a matching of the subgraph and we still have mappings to
+        // explore.
         while !found && !self.queue.is_empty() {
+            // We take the next pair to try.
             let (n, m, add) = self.queue.pop().unwrap();
+            // If this pair is to be removed to the partial mapping, we remove it.
+            // This is to restore the state after exploring all mappings with this pair.
             if !add {
                 self.data.remove_pair(n, m);
             } else {
+                // We add a step to remove this pair from the partial mapping once we're done
+                // exploring.
                 self.queue.push((n, m, false));
+                // We add the pair to our partial mapping.
                 self.data.add_pair(n, m);
+                // If we found a full match, we output it as a subgraph matching.
                 if self.data.is_full_match() {
                     found = true;
                     res = Some(self.data.get_match());
                 } else {
+                    // If we did not find a full match, we compute the possible pairs that can be
+                    // added to our partial mapping.
                     let p = self.data.compute_pairs();
                     for (n, m) in p {
+                        // For each pair, if adding it might lead to a partial mapping, we queue
+                        // it.
                         if self.data.filter(n, m) {
                             self.queue.push((n, m, true));
                         }
