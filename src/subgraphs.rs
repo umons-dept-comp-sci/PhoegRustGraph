@@ -221,7 +221,7 @@ struct VF2DataOrb<'a> {
     fixed: Vec<Vec<u64>>,
 }
 
-/// Returns every non-isomorphic occurence of the graph `g2` in the graph `g1`.
+/// Returns every non-isomorphic occurrence of the graph `g2` in the graph `g1`.
 pub fn subgraphs_orbits<'a>(g1: &'a GraphNauty, g2: &'a GraphNauty) -> impl Iterator<Item = Vec<u64>> + 'a {
     SubgraphIter::new(g1, g2)
 }
@@ -389,12 +389,16 @@ mod testing {
     #[allow(dead_code)]
     fn test_vf2_graph(g1: &GraphNauty, g2: &GraphNauty) {
         println!("-----------------");
-        let matches = subgraphs(&g1, &g2);
+        let mut matches: Vec<Vec<u64>> = subgraphs(&g1, &g2).collect();
+        matches.iter_mut().for_each(|x| x.sort());
+        matches.sort();
         for t in matches {
             println!("{:?}", t);
         }
         println!("-----------------");
-        let matches = subgraphs_orbits(&g1, &g2);
+        matches = subgraphs_orbits(&g1, &g2).collect();
+        matches.iter_mut().for_each(|x| x.sort());
+        matches.sort();
         for t in matches {
             println!("{:?}", t);
         }
@@ -402,6 +406,21 @@ mod testing {
     }
 
     #[test]
+    fn visual_test() {
+        let mut g1 = GraphNauty::new(5);
+        g1.add_edge(0, 1);
+        g1.add_edge(1, 2);
+        g1.add_edge(2, 3);
+        g1.add_edge(3, 4);
+        g1.add_edge(4, 0);
+        let mut g2 = GraphNauty::new(3);
+        g2.add_edge(0, 1);
+        g2.add_edge(1, 2);
+        test_vf2_graph(&g1, &g2);
+    }
+
+    #[allow(dead_code)]
+    //#[test]
     fn test_vf2() {
         let mut g1 = GraphNauty::new(5);
         g1.add_edge(0, 1);
