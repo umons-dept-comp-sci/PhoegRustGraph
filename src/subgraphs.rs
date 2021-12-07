@@ -277,7 +277,8 @@ pub fn subgraphs_orbits<'a>(
 impl<'a> VF2DataOrb<'a> {
     fn new(g1: &'a GraphNauty, g2: &'a GraphNauty) -> VF2DataOrb<'a> {
         let dataobj: VF2DataImpl<'a> = VF2DataImpl::new(g1, g2);
-        let fixedempt = Vec::new();
+        let mut fixedempt = Vec::new();
+        fixedempt.push(Vec::new());
         VF2DataOrb {
             data: dataobj,
             fixed: fixedempt,
@@ -315,12 +316,12 @@ impl<'a> VF2Data for VF2DataOrb<'a> {
                 self.taboo.entry(m).or_default().insert(i);
             }
         }
-        self.fixed.push(vec![n]);
+        self.fixed[0].push(n);
     }
 
     fn remove_pair(&mut self, n: u64, m: u64, np: u64, mp: u64) {
         self.data.remove_pair(n, m, np, mp);
-        self.fixed.pop();
+        self.fixed[0].pop();
     }
 
     fn filter(&self, n: u64, m: u64) -> bool {
@@ -423,7 +424,7 @@ where
         // While we haven't found a matching of the subgraph and we still have mappings to
         // explore.
         while !found && !self.queue.is_empty() {
-            println!("{:?}", self.queue);
+            //println!("{:?}", self.queue);
             // We take the next pair to try.
             let step = self.queue.pop().unwrap();
             // If this pair is to be removed to the partial mapping, we remove it.
@@ -451,7 +452,7 @@ where
                 if self.data.is_full_match() {
                     found = true;
                     res = Some(self.data.get_match());
-                    println!("FOUND {:?}", res);
+                    //println!("FOUND {:?}", res);
                 } else {
                     // If we did not find a full match, we compute the possible pairs that can be
                     // added to our partial mapping.
@@ -526,8 +527,8 @@ mod testing {
         test_vf2_graph(&g1, &g2);
     }
 
-    #[allow(dead_code)]
-    //#[test]
+    //#[allow(dead_code)]
+    #[test]
     fn test_vf2() {
         let mut g1 = GraphNauty::new(5);
         g1.add_edge(0, 1);
