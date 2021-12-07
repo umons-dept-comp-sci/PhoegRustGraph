@@ -794,8 +794,11 @@ pub fn num_pending<'a, G>(g: &G) -> u64
         .count() as u64
 }
 
-/// Size of the biggest possible clique among all graphs with same order and size as the graph
-/// given in parameter.
+/// Diameter of Hnm with same order and size as the graph
+/// given in parameter. Hnm is the graph on n vertices and m edges obtained by taking the biggest
+/// clique that does not disconnect the graph and adding a path with the remaining vertices linked
+/// to a vertex of the clique. If there are remaining edges, they are added between the closest
+/// vertex of the path to the clique and vertices of the clique.
 ///
 /// # Examples
 /// ```
