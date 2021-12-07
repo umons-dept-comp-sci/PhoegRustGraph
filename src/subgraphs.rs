@@ -258,6 +258,12 @@ impl<'a> VF2DataImpl<'a> {
 struct VF2DataOrb<'a> {
     data: VF2DataImpl<'a>,
     fixed: Vec<Vec<u64>>,
+    // The orbits of the automorphism group of G1. The nth entry is the number of the lowest node
+    // in the same orbit as the node n.
+    orbits: Vec<u64>,
+    // For each vertex, we ban exploring vertices in the same orbit as mapping to the same node of
+    // G2 as it would be symmetrical.
+    taboo: HashMap<u64, HashSet<u64>>,
 }
 
 /// Returns every non-isomorphic occurrence of the graph `g2` in the graph `g1`.
@@ -275,6 +281,8 @@ impl<'a> VF2DataOrb<'a> {
         VF2DataOrb {
             data: dataobj,
             fixed: fixedempt,
+            orbits: nauty::canon_graph_fixed(&g1, &[]).2,
+            taboo: HashMap::new(),
         }
     }
 }
@@ -282,7 +290,9 @@ impl<'a> VF2DataOrb<'a> {
 impl<'a> fmt::Display for VF2DataOrb<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.data)?;
-        writeln!(f, "fixed : {:?}", self.fixed)
+        writeln!(f, "fixed : {:?}", self.fixed)?;
+        writeln!(f, "orbits : {:?}", self.orbits)?;
+        writeln!(f, "taboo : {:?}", self.taboo)
     }
 }
 
@@ -297,6 +307,14 @@ impl<'a> VF2Data for VF2DataOrb<'a> {
 
     fn add_pair(&mut self, n: u64, m: u64) {
         self.data.add_pair(n, m);
+        let n_orbit = self.orbits[n as usize];
+        for i in self.data.g1.vertices() {
+            // If a vertex has higher number than m and is in the same orbit, we forbid mapping n
+            // and i since it would be symmetrical to mapping m and n.
+            if i > n && self.orbits[i as usize] == n_orbit {
+                self.taboo.entry(m).or_default().insert(i);
+            }
+        }
         self.fixed.push(vec![n]);
     }
 
@@ -306,12 +324,18 @@ impl<'a> VF2Data for VF2DataOrb<'a> {
     }
 
     fn filter(&self, n: u64, m: u64) -> bool {
+        // We do not allow mapping n with a vertex in the same orbit as an already tried vertex of
+        // G1.
+        if self.taboo.contains_key(&m) && self.taboo[&m].contains(&n) {
+            return false;
+        }
         self.data.filter(n, m)
     }
 
     fn compute_pairs(&self) -> Vec<(u64, u64)> {
         self.data
             .compute_pairs_internal(&nauty::orbits(self.data.g1, self.fixed.as_slice()))
+        //self.data.compute_pairs()
     }
 
     fn get_vertex_depth_G1(&self, n: u64) -> u64 {
