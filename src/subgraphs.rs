@@ -6,7 +6,7 @@ use crate::GraphNauty;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-trait VF2Data {
+trait VF2Data: fmt::Display {
     /// Checks if the partial mapping is a full matching of a subgraph.
     fn is_full_match(&self) -> bool;
     /// Returns the list of vertices of the bigger graph that are part of the mapping. e.g., the
@@ -119,9 +119,9 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
             }
             // If a vertex has higher number than m and is in the same orbit, we forbid mapping n
             // and i since it would be symmetrical to mapping m and n.
-            if i > m && self.orbits[i as usize] == m_orbit {
-                self.taboo.entry(n).or_default().insert(i);
-            }
+            //if i > m && self.orbits[i as usize] == m_orbit {
+                //self.taboo.entry(n).or_default().insert(i);
+            //}
         }
     }
 
@@ -141,6 +141,14 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
         for i in self.g2.vertices() {
             if self.adj_2[i as usize] == self.depth {
                 self.adj_2[i as usize] = 0;
+            }
+        }
+        let m_orbit = self.orbits[m as usize];
+        for i in self.g2.vertices() {
+            // If a vertex has higher number than m and is in the same orbit, we forbid mapping n
+            // and i since it would be symmetrical to mapping m and n.
+            if i > m && self.orbits[i as usize] == m_orbit {
+                self.taboo.entry(n).or_default().insert(i);
             }
         }
         self.adj_1[m as usize] = mp;
@@ -258,12 +266,6 @@ impl<'a> VF2DataImpl<'a> {
 struct VF2DataOrb<'a> {
     data: VF2DataImpl<'a>,
     fixed: Vec<Vec<u64>>,
-    // The orbits of the automorphism group of G1. The nth entry is the number of the lowest node
-    // in the same orbit as the node n.
-    orbits: Vec<u64>,
-    // For each vertex, we ban exploring vertices in the same orbit as mapping to the same node of
-    // G2 as it would be symmetrical.
-    taboo: HashMap<u64, HashSet<u64>>,
 }
 
 /// Returns every non-isomorphic occurrence of the graph `g2` in the graph `g1`.
@@ -282,8 +284,6 @@ impl<'a> VF2DataOrb<'a> {
         VF2DataOrb {
             data: dataobj,
             fixed: fixedempt,
-            orbits: nauty::canon_graph_fixed(&g1, &[]).2,
-            taboo: HashMap::new(),
         }
     }
 }
@@ -291,9 +291,7 @@ impl<'a> VF2DataOrb<'a> {
 impl<'a> fmt::Display for VF2DataOrb<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.data)?;
-        writeln!(f, "fixed : {:?}", self.fixed)?;
-        writeln!(f, "orbits : {:?}", self.orbits)?;
-        writeln!(f, "taboo : {:?}", self.taboo)
+        writeln!(f, "fixed : {:?}", self.fixed)
     }
 }
 
@@ -308,14 +306,6 @@ impl<'a> VF2Data for VF2DataOrb<'a> {
 
     fn add_pair(&mut self, n: u64, m: u64) {
         self.data.add_pair(n, m);
-        let n_orbit = self.orbits[n as usize];
-        for i in self.data.g1.vertices() {
-            // If a vertex has higher number than m and is in the same orbit, we forbid mapping n
-            // and i since it would be symmetrical to mapping m and n.
-            if i > n && self.orbits[i as usize] == n_orbit {
-                self.taboo.entry(m).or_default().insert(i);
-            }
-        }
         self.fixed[0].push(n);
     }
 
@@ -325,18 +315,12 @@ impl<'a> VF2Data for VF2DataOrb<'a> {
     }
 
     fn filter(&self, n: u64, m: u64) -> bool {
-        // We do not allow mapping n with a vertex in the same orbit as an already tried vertex of
-        // G1.
-        if self.taboo.contains_key(&m) && self.taboo[&m].contains(&n) {
-            return false;
-        }
         self.data.filter(n, m)
     }
 
     fn compute_pairs(&self) -> Vec<(u64, u64)> {
         self.data
             .compute_pairs_internal(&nauty::orbits(self.data.g1, self.fixed.as_slice()))
-        //self.data.compute_pairs()
     }
 
     fn get_vertex_depth_G1(&self, n: u64) -> u64 {
@@ -396,10 +380,10 @@ where
         };
         // Computes the possible matching that can be added.
         let p = iter.data.compute_pairs();
-        for (n, m) in p {
+        for (n, m) in p.iter().rev() {
             // Check if this matching could work.
-            if iter.data.filter(n, m) {
-                iter.queue.push(VF2Step::ADDING { n: n, m: m });
+            if iter.data.filter(*n, *m) {
+                iter.queue.push(VF2Step::ADDING { n: *n, m: *m });
             }
         }
         iter
@@ -424,7 +408,6 @@ where
         // While we haven't found a matching of the subgraph and we still have mappings to
         // explore.
         while !found && !self.queue.is_empty() {
-            //println!("{:?}", self.queue);
             // We take the next pair to try.
             let step = self.queue.pop().unwrap();
             // If this pair is to be removed to the partial mapping, we remove it.
@@ -452,16 +435,15 @@ where
                 if self.data.is_full_match() {
                     found = true;
                     res = Some(self.data.get_match());
-                    //println!("FOUND {:?}", res);
                 } else {
                     // If we did not find a full match, we compute the possible pairs that can be
                     // added to our partial mapping.
                     let p = self.data.compute_pairs();
-                    for (n, m) in p {
+                    for (n, m) in p.iter().rev() {
                         // For each pair, if adding it might lead to a partial mapping, we queue
                         // it.
-                        if self.data.filter(n, m) {
-                            self.queue.push(VF2Step::ADDING { n: n, m: m });
+                        if self.data.filter(*n, *m) {
+                            self.queue.push(VF2Step::ADDING { n: *n, m: *m });
                         }
                     }
                 }
