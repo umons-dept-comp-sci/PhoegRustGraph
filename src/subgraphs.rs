@@ -250,11 +250,13 @@ impl<'a> VF2Data for VF2DataSymm<'a> {
     }
 
     fn get_match(&self) -> Vec<u64> {
+        eprintln!("MATCH");
         self.data.get_match()
     }
 
     fn add_pair(&mut self, n: u64, m: u64) {
         self.data.add_pair(n, m);
+        eprintln!("add {:?}", self.data.get_match());
     }
 
     fn remove_pair(&mut self, n: u64, m: u64, np: u64, mp: u64) {
@@ -267,6 +269,8 @@ impl<'a> VF2Data for VF2DataSymm<'a> {
                 self.taboo.entry(n).or_default().insert(i);
             }
         }
+        eprintln!("remove {:?}", self.data.get_match());
+        eprintln!("{:?}", self.taboo);
     }
 
     fn filter(&self, n: u64, m: u64) -> bool {
@@ -348,7 +352,8 @@ impl<'a> VF2Data for VF2DataOrb<'a> {
     }
 
     fn compute_pairs(&self) -> Vec<(u64, u64)> {
-        self.data.data
+        self.data
+            .data
             .compute_pairs_internal(&nauty::orbits(self.data.data.g1, self.fixed.as_slice()))
     }
 
@@ -455,7 +460,8 @@ where
                 m_previous_depth,
             } = step
             {
-                self.data.remove_pair(n, m, n_previous_depth, m_previous_depth);
+                self.data
+                    .remove_pair(n, m, n_previous_depth, m_previous_depth);
             } else if let VF2Step::ADDING { n, m } = step {
                 // We add a step to remove this pair from the partial mapping once we're done
                 // exploring.
@@ -527,6 +533,7 @@ mod testing {
         VF2: Iterator<Item = Vec<u64>>,
     {
         let mut res: Vec<Vec<u64>> = vf2.collect();
+        eprintln!("{:?}", res);
         assert_eq!(res.len(), matches.len());
         matches.iter_mut().for_each(|x| x.sort());
         matches.sort();
@@ -589,7 +596,27 @@ mod testing {
         g2.add_edge(0, 1);
         g2.add_edge(1, 2);
         g2.add_edge(2, 0);
-        apply_test_vf2(&mut vec![vec![1, 2, 4], vec![1, 3, 4]], subgraphs(&g1, &g2));
+        apply_test_vf2(
+            &mut vec![
+                vec![1, 2, 4],
+                vec![1, 4, 2],
+                vec![2, 1, 4],
+                vec![2, 4, 1],
+                vec![4, 1, 2],
+                vec![4, 2, 1],
+                vec![1, 3, 4],
+                vec![1, 4, 3],
+                vec![3, 1, 4],
+                vec![3, 4, 1],
+                vec![4, 1, 3],
+                vec![4, 3, 1],
+            ],
+            subgraphs(&g1, &g2),
+        );
+        apply_test_vf2(
+            &mut vec![vec![1, 2, 4], vec![1, 3, 4]],
+            subgraphs_symm(&g1, &g2),
+        );
         apply_test_vf2(&mut vec![vec![1, 2, 4]], subgraphs_orbits(&g1, &g2));
         g2 = GraphNauty::new(2);
         g2.add_edge(0, 1);
@@ -601,8 +628,25 @@ mod testing {
                 vec![1, 4],
                 vec![2, 4],
                 vec![3, 4],
+                vec![1, 0],
+                vec![2, 1],
+                vec![3, 1],
+                vec![4, 1],
+                vec![4, 2],
+                vec![4, 3],
             ],
             subgraphs(&g1, &g2),
+        );
+        apply_test_vf2(
+            &mut vec![
+                vec![0, 1],
+                vec![1, 2],
+                vec![1, 3],
+                vec![1, 4],
+                vec![2, 4],
+                vec![3, 4],
+            ],
+            subgraphs_symm(&g1, &g2),
         );
         apply_test_vf2(
             &mut vec![vec![0, 1], vec![1, 2], vec![1, 4], vec![2, 4]],
@@ -622,24 +666,44 @@ mod testing {
                 g2.add_edge(j, i);
             }
         }
-        apply_test_vf2(
-            &mut vec![
-                vec![3, 4, 5, 6],
-                vec![2, 4, 5, 6],
-                vec![1, 4, 5, 6],
-                vec![0, 4, 5, 6],
-                vec![2, 3, 5, 6],
-                vec![1, 3, 5, 6],
-                vec![0, 3, 5, 6],
-                vec![1, 2, 5, 6],
-                vec![0, 2, 5, 6],
-                vec![0, 1, 5, 6],
-            ],
-            subgraphs(&g1, &g2),
-        );
+        let mut expected = Vec::new();
+        for a in 3..=6 {
+            for b in 2..a {
+                for c in 1..b {
+                    for d in 0..c {
+                        for _ in 0..24 {
+                            expected.push(vec![a, b, c, d]);
+                        }
+                    }
+                }
+            }
+        }
+        apply_test_vf2(&mut expected, subgraphs(&g1, &g2));
+        let mut expected = Vec::new();
+        for a in 3..=6 {
+            for b in 2..a {
+                for c in 1..b {
+                    for d in 0..c {
+                        expected.push(vec![a, b, c, d]);
+                    }
+                }
+            }
+        }
+        apply_test_vf2(&mut expected, subgraphs_symm(&g1, &g2));
         apply_test_vf2(
             &mut vec![vec![0, 1, 2, 3], vec![0, 1, 2, 4], vec![0, 1, 4, 6]],
             subgraphs_orbits(&g1, &g2),
         );
+        //g1 = GraphNauty::new(6);
+        //g1.add_edge(0, 1);
+        //g1.add_edge(1, 2);
+        //g1.add_edge(2, 3);
+        //g1.add_edge(3, 4);
+        //g1.add_edge(4, 0);
+        //g1.add_edge(5, 0);
+        //g2 = GraphNauty::new(3);
+        //g2.add_edge(0, 1);
+        //g2.add_edge(1, 2);
+        //// TODO
     }
 }
