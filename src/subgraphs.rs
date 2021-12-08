@@ -51,12 +51,6 @@ struct VF2DataImpl<'a> {
     // The depth at which the nth vertex was added to the adjacency of the mapping in G2 or to the
     // mapping itself.
     adj_2: Vec<u64>,
-    // The orbits of the automorphism group of G2. The nth entry is the number of the lowest node
-    // in the same orbit as the node n.
-    orbits: Vec<u64>,
-    // For each vertex, we ban exploring vertices in the same orbit as mapping to the same node of
-    // G1 as it would be symmetrical.
-    taboo: HashMap<u64, HashSet<u64>>,
 }
 
 impl<'a> fmt::Display for VF2DataImpl<'a> {
@@ -68,21 +62,8 @@ impl<'a> fmt::Display for VF2DataImpl<'a> {
         writeln!(f, "core_1 : {:?}", self.core_1)?;
         writeln!(f, "core_2 : {:?}", self.core_2)?;
         writeln!(f, "adj_1 : {:?}", self.adj_1)?;
-        writeln!(f, "adj_2 : {:?}", self.adj_2)?;
-        writeln!(f, "orbits : {:?}", self.orbits)?;
-        writeln!(f, "taboo : {:?}", self.taboo)
+        writeln!(f, "adj_2 : {:?}", self.adj_2)
     }
-}
-
-/// Returns every occurence of the graph `g2` in the graph `g1` up to permutations among the orbits
-/// of `g2`.
-///
-/// The graph `g2` must have at most the same order as `g1`.
-pub fn subgraphs<'a>(
-    g1: &'a GraphNauty,
-    g2: &'a GraphNauty,
-) -> impl Iterator<Item = Vec<u64>> + 'a {
-    SubgraphIter::without_orbits(g1, g2)
 }
 
 impl<'a> VF2Data for VF2DataImpl<'a> {
@@ -111,17 +92,10 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
                 self.adj_1[i as usize] = self.depth;
             }
         }
-        let m_orbit = self.orbits[m as usize];
-        for i in self.g2.vertices() {
-            // Update adj_2 the same way as before.
-            if (self.g2.is_edge(m, i) || i == m) && self.adj_2[i as usize] == 0 {
+        for i in self.g2.neighbors(m).chain(Some(m).iter().cloned()) {
+            if self.adj_2[i as usize] == 0 {
                 self.adj_2[i as usize] = self.depth;
             }
-            // If a vertex has higher number than m and is in the same orbit, we forbid mapping n
-            // and i since it would be symmetrical to mapping m and n.
-            //if i > m && self.orbits[i as usize] == m_orbit {
-                //self.taboo.entry(n).or_default().insert(i);
-            //}
         }
     }
 
@@ -143,25 +117,12 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
                 self.adj_2[i as usize] = 0;
             }
         }
-        let m_orbit = self.orbits[m as usize];
-        for i in self.g2.vertices() {
-            // If a vertex has higher number than m and is in the same orbit, we forbid mapping n
-            // and i since it would be symmetrical to mapping m and n.
-            if i > m && self.orbits[i as usize] == m_orbit {
-                self.taboo.entry(n).or_default().insert(i);
-            }
-        }
         self.adj_1[m as usize] = mp;
         // The depth decreases.
         self.depth -= 1;
     }
 
     fn filter(&self, n: u64, m: u64) -> bool {
-        // We do not allow mapping n with a vertex in the same orbit as an already tried vertex of
-        // G2.
-        if self.taboo.contains_key(&n) && self.taboo[&n].contains(&m) {
-            return false;
-        }
         // The edges between mapped vertices should correspond. i.e., if x and y are adjacent in
         // G2, their mapped vertices in G1 should also be adjacent.
         for (n1, n2) in self
@@ -230,10 +191,9 @@ impl<'a> VF2DataImpl<'a> {
             core_2: vec![nullv; graph2.order() as usize],
             adj_1: vec![0; graph1.order() as usize],
             adj_2: vec![0; graph2.order() as usize],
-            orbits: nauty::canon_graph_fixed(&graph2, &[]).2,
-            taboo: HashMap::new(),
         }
     }
+
     fn compute_pairs_internal(&self, g1_nodes: &[u64]) -> Vec<(u64, u64)> {
         let adj_out = g1_nodes
             .iter()
@@ -263,22 +223,91 @@ impl<'a> VF2DataImpl<'a> {
 }
 
 #[repr(C)]
-struct VF2DataOrb<'a> {
+struct VF2DataSymm<'a> {
     data: VF2DataImpl<'a>,
-    fixed: Vec<Vec<u64>>,
+    // The orbits of the automorphism group of G2. The nth entry is the number of the lowest node
+    // in the same orbit as the node n.
+    orbits: Vec<u64>,
+    // For each vertex, we ban exploring vertices in the same orbit as mapping to the same node of
+    // G1 as it would be symmetrical.
+    taboo: HashMap<u64, HashSet<u64>>,
 }
 
-/// Returns every non-isomorphic occurrence of the graph `g2` in the graph `g1`.
-pub fn subgraphs_orbits<'a>(
-    g1: &'a GraphNauty,
-    g2: &'a GraphNauty,
-) -> impl Iterator<Item = Vec<u64>> + 'a {
-    SubgraphIter::new(g1, g2)
+impl<'a> VF2DataSymm<'a> {
+    fn new(graph1: &'a GraphNauty, graph2: &'a GraphNauty) -> VF2DataSymm<'a> {
+        let data = VF2DataImpl::new(graph1, graph2);
+        VF2DataSymm {
+            data,
+            orbits: nauty::canon_graph_fixed(&graph2, &[]).2,
+            taboo: HashMap::new(),
+        }
+    }
+}
+
+impl<'a> VF2Data for VF2DataSymm<'a> {
+    fn is_full_match(&self) -> bool {
+        self.data.is_full_match()
+    }
+
+    fn get_match(&self) -> Vec<u64> {
+        self.data.get_match()
+    }
+
+    fn add_pair(&mut self, n: u64, m: u64) {
+        self.data.add_pair(n, m);
+    }
+
+    fn remove_pair(&mut self, n: u64, m: u64, np: u64, mp: u64) {
+        self.data.remove_pair(n, m, np, mp);
+        let m_orbit = self.orbits[m as usize];
+        for i in self.data.g2.vertices() {
+            // If a vertex has higher number than m and is in the same orbit, we forbid mapping n
+            // and i since it would be symmetrical to mapping m and n.
+            if i > m && self.orbits[i as usize] == m_orbit {
+                self.taboo.entry(n).or_default().insert(i);
+            }
+        }
+    }
+
+    fn filter(&self, n: u64, m: u64) -> bool {
+        // We do not allow mapping n with a vertex in the same orbit as an already tried vertex of
+        // G2.
+        if self.taboo.contains_key(&n) && self.taboo[&n].contains(&m) {
+            return false;
+        }
+        self.data.filter(n, m)
+    }
+
+    fn compute_pairs(&self) -> Vec<(u64, u64)> {
+        self.data.compute_pairs()
+    }
+
+    fn get_vertex_depth_G1(&self, n: u64) -> u64 {
+        self.data.get_vertex_depth_G1(n)
+    }
+
+    fn get_vertex_depth_G2(&self, n: u64) -> u64 {
+        self.data.get_vertex_depth_G2(n)
+    }
+}
+
+impl<'a> fmt::Display for VF2DataSymm<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "{}", self.data)?;
+        writeln!(f, "orbits : {:?}", self.orbits)?;
+        writeln!(f, "taboo : {:?}", self.taboo)
+    }
+}
+
+#[repr(C)]
+struct VF2DataOrb<'a> {
+    data: VF2DataSymm<'a>,
+    fixed: Vec<Vec<u64>>,
 }
 
 impl<'a> VF2DataOrb<'a> {
     fn new(g1: &'a GraphNauty, g2: &'a GraphNauty) -> VF2DataOrb<'a> {
-        let dataobj: VF2DataImpl<'a> = VF2DataImpl::new(g1, g2);
+        let dataobj: VF2DataSymm<'a> = VF2DataSymm::new(g1, g2);
         let mut fixedempt = Vec::new();
         fixedempt.push(Vec::new());
         VF2DataOrb {
@@ -319,8 +348,8 @@ impl<'a> VF2Data for VF2DataOrb<'a> {
     }
 
     fn compute_pairs(&self) -> Vec<(u64, u64)> {
-        self.data
-            .compute_pairs_internal(&nauty::orbits(self.data.g1, self.fixed.as_slice()))
+        self.data.data
+            .compute_pairs_internal(&nauty::orbits(self.data.data.g1, self.fixed.as_slice()))
     }
 
     fn get_vertex_depth_G1(&self, n: u64) -> u64 {
@@ -356,14 +385,21 @@ where
 }
 
 impl<'a> SubgraphIter<VF2DataImpl<'a>> {
-    fn without_orbits(g1: &'a GraphNauty, g2: &'a GraphNauty) -> SubgraphIter<VF2DataImpl<'a>> {
+    fn new(g1: &'a GraphNauty, g2: &'a GraphNauty) -> SubgraphIter<VF2DataImpl<'a>> {
         let data: VF2DataImpl<'a> = VF2DataImpl::new(g1, g2);
         SubgraphIter::init(data)
     }
 }
 
+impl<'a> SubgraphIter<VF2DataSymm<'a>> {
+    fn without_symm(g1: &'a GraphNauty, g2: &'a GraphNauty) -> SubgraphIter<VF2DataSymm<'a>> {
+        let data: VF2DataSymm<'a> = VF2DataSymm::new(g1, g2);
+        SubgraphIter::init(data)
+    }
+}
+
 impl<'a> SubgraphIter<VF2DataOrb<'a>> {
-    fn new(g1: &'a GraphNauty, g2: &'a GraphNauty) -> SubgraphIter<VF2DataOrb<'a>> {
+    fn without_autom(g1: &'a GraphNauty, g2: &'a GraphNauty) -> SubgraphIter<VF2DataOrb<'a>> {
         let data: VF2DataOrb<'a> = VF2DataOrb::new(g1, g2);
         SubgraphIter::init(data)
     }
@@ -453,6 +489,35 @@ where
     }
 }
 
+/// Returns every occurence of the graph `g2` in the graph `g1`
+///
+/// The graph `g2` must have at most the same order as `g1`.
+pub fn subgraphs<'a>(
+    g1: &'a GraphNauty,
+    g2: &'a GraphNauty,
+) -> impl Iterator<Item = Vec<u64>> + 'a {
+    SubgraphIter::new(g1, g2)
+}
+
+/// Returns every occurence of the graph `g2` in the graph `g1` up to permutations among the orbits
+/// of `g2`.
+///
+/// The graph `g2` must have at most the same order as `g1`.
+pub fn subgraphs_symm<'a>(
+    g1: &'a GraphNauty,
+    g2: &'a GraphNauty,
+) -> impl Iterator<Item = Vec<u64>> + 'a {
+    SubgraphIter::without_symm(g1, g2)
+}
+
+/// Returns every non-isomorphic occurrence of the graph `g2` in the graph `g1`.
+pub fn subgraphs_orbits<'a>(
+    g1: &'a GraphNauty,
+    g2: &'a GraphNauty,
+) -> impl Iterator<Item = Vec<u64>> + 'a {
+    SubgraphIter::without_autom(g1, g2)
+}
+
 #[cfg(test)]
 mod testing {
     use super::*;
@@ -475,19 +540,20 @@ mod testing {
         }
     }
 
-    #[allow(dead_code)]
+    //#[allow(dead_code)]
     fn test_vf2_graph(g1: &GraphNauty, g2: &GraphNauty) {
         println!("-----------------");
         let mut matches: Vec<Vec<u64>> = subgraphs(&g1, &g2).collect();
-        matches.iter_mut().for_each(|x| x.sort());
-        matches.sort();
+        for t in matches {
+            println!("{:?}", t);
+        }
+        println!("-----------------");
+        matches = subgraphs_symm(&g1, &g2).collect();
         for t in matches {
             println!("{:?}", t);
         }
         println!("-----------------");
         matches = subgraphs_orbits(&g1, &g2).collect();
-        matches.iter_mut().for_each(|x| x.sort());
-        matches.sort();
         for t in matches {
             println!("{:?}", t);
         }
