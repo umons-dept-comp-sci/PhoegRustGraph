@@ -225,12 +225,16 @@ impl<'a> VF2DataImpl<'a> {
 #[repr(C)]
 struct VF2DataSymm<'a> {
     data: VF2DataImpl<'a>,
+    // The order of G1
+    n: u64,
+    // The order of G2
+    m: u64,
     // The orbits of the automorphism group of G2. The nth entry is the number of the lowest node
     // in the same orbit as the node n.
     orbits: Vec<u64>,
     // For each vertex, we ban exploring vertices in the same orbit as mapping to the same node of
     // G1 as it would be symmetrical.
-    taboo: HashMap<u64, HashSet<u64>>,
+    taboo: Vec<u64>,
 }
 
 impl<'a> VF2DataSymm<'a> {
@@ -238,8 +242,10 @@ impl<'a> VF2DataSymm<'a> {
         let data = VF2DataImpl::new(graph1, graph2);
         VF2DataSymm {
             data,
+            n: graph1.order(),
+            m: graph2.order(),
             orbits: nauty::canon_graph_fixed(&graph2, &[]).2,
-            taboo: HashMap::new(),
+            taboo: vec![0; (graph1.order()*graph2.order()) as usize],
         }
     }
 }
@@ -250,18 +256,20 @@ impl<'a> VF2Data for VF2DataSymm<'a> {
     }
 
     fn get_match(&self) -> Vec<u64> {
-        eprintln!("MATCH");
         self.data.get_match()
     }
 
     fn add_pair(&mut self, n: u64, m: u64) {
         self.data.add_pair(n, m);
-        eprintln!("add {:?}", self.data.core_1);
-        eprintln!("add {:?}", self.data.core_2);
     }
 
     fn remove_pair(&mut self, n: u64, m: u64, np: u64, mp: u64) {
         self.data.remove_pair(n, m, np, mp);
+        for x in self.taboo.iter_mut() {
+            if *x > self.data.depth {
+                *x = 0;
+            }
+        }
         let m_orbit = self.orbits[m as usize];
         for i in self.data.g2.vertices() {
             //FIXME Ideally, when we remove a pair, the vertices with bigger number than m should
@@ -271,19 +279,16 @@ impl<'a> VF2Data for VF2DataSymm<'a> {
 
             // If a vertex has higher number than m and is in the same orbit, we forbid mapping n
             // and i since it would be symmetrical to mapping m and n.
-            if i > m && self.orbits[i as usize] == m_orbit {
-                self.taboo.entry(n).or_default().insert(i);
+            if i >= m && self.orbits[i as usize] == m_orbit {
+                self.taboo[(n*self.m+i) as usize] = self.data.depth;
             }
         }
-        eprintln!("remove {:?}", self.data.core_1);
-        eprintln!("remove {:?}", self.data.core_2);
-        eprintln!("{:?}", self.taboo);
     }
 
     fn filter(&self, n: u64, m: u64) -> bool {
         // We do not allow mapping n with a vertex in the same orbit as an already tried vertex of
         // G2.
-        if self.taboo.contains_key(&n) && self.taboo[&n].contains(&m) {
+        if self.taboo[(n*self.m+m) as usize] > 0 {
             return false;
         }
         self.data.filter(n, m)
@@ -540,7 +545,6 @@ mod testing {
         VF2: Iterator<Item = Vec<u64>>,
     {
         let mut res: Vec<Vec<u64>> = vf2.collect();
-        eprintln!("{:?}", res);
         assert_eq!(res.len(), matches.len());
         matches.iter_mut().for_each(|x| x.sort());
         matches.sort();
@@ -554,7 +558,7 @@ mod testing {
         }
     }
 
-    //#[allow(dead_code)]
+    #[allow(dead_code)]
     fn test_vf2_graph(g1: &GraphNauty, g2: &GraphNauty) {
         println!("-----------------");
         let mut matches: Vec<Vec<u64>> = subgraphs(&g1, &g2).collect();
@@ -574,7 +578,7 @@ mod testing {
         println!("-----------------");
     }
 
-    #[test]
+    #[allow(dead_code)]
     fn visual_test() {
         let mut g1 = GraphNauty::new(6);
         g1.add_edge(0, 1);
@@ -589,7 +593,6 @@ mod testing {
         test_vf2_graph(&g1, &g2);
     }
 
-    //#[allow(dead_code)]
     #[test]
     fn test_vf2() {
         let mut g1 = GraphNauty::new(5);
@@ -667,7 +670,6 @@ mod testing {
         for i in 0..3 {
             g2.add_edge(i, i+1);
         }
-        println!("TEST");
         apply_test_vf2(
             &mut vec![
             vec![0, 1, 2, 3],
@@ -709,7 +711,7 @@ mod testing {
             }
         }
         apply_test_vf2(&mut expected, subgraphs(&g1, &g2));
-        let mut expected = Vec::new();
+        expected.clear();
         for a in 3..=6 {
             for b in 2..a {
                 for c in 1..b {
@@ -724,16 +726,39 @@ mod testing {
             &mut vec![vec![0, 1, 2, 3], vec![0, 1, 2, 4], vec![0, 1, 4, 6]],
             subgraphs_orbits(&g1, &g2),
         );
-        //g1 = GraphNauty::new(6);
-        //g1.add_edge(0, 1);
-        //g1.add_edge(1, 2);
-        //g1.add_edge(2, 3);
-        //g1.add_edge(3, 4);
-        //g1.add_edge(4, 0);
-        //g1.add_edge(5, 0);
-        //g2 = GraphNauty::new(3);
-        //g2.add_edge(0, 1);
-        //g2.add_edge(1, 2);
-        //// TODO
+        g1 = GraphNauty::new(6);
+        g1.add_edge(0, 1);
+        g1.add_edge(1, 2);
+        g1.add_edge(2, 3);
+        g1.add_edge(3, 4);
+        g1.add_edge(4, 0);
+        g1.add_edge(5, 0);
+        g2 = GraphNauty::new(3);
+        g2.add_edge(0, 1);
+        g2.add_edge(1, 2);
+        expected.clear();
+        for i in 0..=4 {
+            for _ in 0..2 {
+                expected.push(vec![i, (i+1) % 5, (i+2) % 5]);
+            }
+        }
+        for _ in 0..2 {
+            expected.push(vec![1, 0, 5]);
+            expected.push(vec![4, 0, 5]);
+        }
+        apply_test_vf2(&mut expected, subgraphs(&g1, &g2));
+        expected.clear();
+        for i in 0..=4 {
+            expected.push(vec![i, (i+1) % 5, (i+2) % 5]);
+        }
+        expected.push(vec![1, 0, 5]);
+        expected.push(vec![4, 0, 5]);
+        apply_test_vf2(&mut expected, subgraphs_symm(&g1, &g2));
+        apply_test_vf2(&mut vec![
+            vec![1, 0, 5],
+            vec![1, 0, 4],
+            vec![0, 1, 2],
+            vec![1, 2, 3],
+        ], subgraphs_orbits(&g1, &g2));
     }
 }
