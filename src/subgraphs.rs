@@ -256,20 +256,27 @@ impl<'a> VF2Data for VF2DataSymm<'a> {
 
     fn add_pair(&mut self, n: u64, m: u64) {
         self.data.add_pair(n, m);
-        eprintln!("add {:?}", self.data.get_match());
+        eprintln!("add {:?}", self.data.core_1);
+        eprintln!("add {:?}", self.data.core_2);
     }
 
     fn remove_pair(&mut self, n: u64, m: u64, np: u64, mp: u64) {
         self.data.remove_pair(n, m, np, mp);
         let m_orbit = self.orbits[m as usize];
         for i in self.data.g2.vertices() {
+            //FIXME Ideally, when we remove a pair, the vertices with bigger number than m should
+            //have their taboo removed. i.e., if we remove m=1, remove taboos caused by 2 and 3 but
+            //keep those from 0 and 1 even if they intersect those of 2 and 3. Maybe store a depth
+            //at which the taboo was added ?
+
             // If a vertex has higher number than m and is in the same orbit, we forbid mapping n
             // and i since it would be symmetrical to mapping m and n.
             if i > m && self.orbits[i as usize] == m_orbit {
                 self.taboo.entry(n).or_default().insert(i);
             }
         }
-        eprintln!("remove {:?}", self.data.get_match());
+        eprintln!("remove {:?}", self.data.core_1);
+        eprintln!("remove {:?}", self.data.core_2);
         eprintln!("{:?}", self.taboo);
     }
 
@@ -650,6 +657,29 @@ mod testing {
         );
         apply_test_vf2(
             &mut vec![vec![0, 1], vec![1, 2], vec![1, 4], vec![2, 4]],
+            subgraphs_orbits(&g1, &g2),
+        );
+        g1 = GraphNauty::new(5);
+        for i in 0..5 {
+            g1.add_edge(i, (i+1)%5);
+        }
+        g2 = GraphNauty::new(4);
+        for i in 0..3 {
+            g2.add_edge(i, i+1);
+        }
+        println!("TEST");
+        apply_test_vf2(
+            &mut vec![
+            vec![0, 1, 2, 3],
+            vec![1, 2, 3, 4],
+            vec![2, 3, 4, 0],
+            vec![3, 4, 0, 1],
+            vec![4, 0, 1, 2],
+            ],
+            subgraphs_symm(&g1, &g2),
+        );
+        apply_test_vf2(
+            &mut vec![vec![0, 1, 2, 3]],
             subgraphs_orbits(&g1, &g2),
         );
         g1 = GraphNauty::new(9);
