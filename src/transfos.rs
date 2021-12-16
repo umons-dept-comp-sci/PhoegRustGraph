@@ -103,7 +103,7 @@ and bd, removes ab and cd and adds ac and bd.
     two_opt,
     for g,
     let a,
-    b sym a (after a and adj a),
+    b (after a and adj a),
     c (after a and diff b and not adj a),
     d sym c (after a and diff b and diff c and adj c and not adj b)
     apply
