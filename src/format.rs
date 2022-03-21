@@ -4,10 +4,22 @@ use crate::errors::*;
 use crate::GraphFormat;
 
 #[allow(dead_code)]
+/// Returns the length of the order of a graph in graph6 format
+fn length_order_g6(n: u64) -> u64 {
+    if n <= 62 {
+        1
+    } else if n <= 258047 {
+        4
+    } else {
+        8
+    }
+}
+
+#[allow(dead_code)]
 /// Returns the length of the graph6 format for a graph of order n
 fn length_g6(n: u64) -> u64 {
     if n > 0 {
-        1 + (((n * (n - 1)) / 2) as f64 / 6f64).ceil() as u64
+        length_order_g6(n) + (((n * (n - 1)) / 2) as f64 / 6f64).ceil() as u64
     } else {
         1
     }
@@ -48,7 +60,7 @@ where
     } else {
         0
     };
-    encode(&graph.to_bin(), 1 + m)
+    encode(&graph.to_bin(), length_order_g6(n) + m)
 }
 
 /// Returns a graph corresponding to the graph6 representation
