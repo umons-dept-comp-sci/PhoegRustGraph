@@ -22,6 +22,7 @@ doc-comment = "0.3"
 [dev-dependencies]
 nom = "6.1"
 criterion = "0.3"
+indicatif="0.16"
 
 [[bench]]
 name = "convg6"
