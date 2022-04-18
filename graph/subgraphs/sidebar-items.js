@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["subgraphs","Returns every occurence of the graph `g2` in the graph `g1` up to permutations among the orbits of `g2`."],["subgraphs_orbits","Returns every non-isomorphic occurence of the graph `g2` in the graph `g1`."]]});
+initSidebarItems({"fn":[["subgraphs","Returns every occurence of the graph `g2` in the graph `g1`"],["subgraphs_orbits","Returns every non-isomorphic occurrence of the graph `g2` in the graph `g1`."],["subgraphs_symm","Returns every occurence of the graph `g2` in the graph `g1` up to permutations among the orbits of `g2`."]]});

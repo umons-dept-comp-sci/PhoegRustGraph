@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/transfos.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>transfos.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../graph/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;transfos.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>transfos.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
+    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a class="sidebar-logo" href="../../graph/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.png" alt="logo"></div>
+        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../graph/index.html"><img class="rust-logo" src="../../rust-logo.png" alt="logo"></a><nav class="sub"><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -285,17 +287,244 @@
 <span id="285">285</span>
 <span id="286">286</span>
 <span id="287">287</span>
-</pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! Module containing graph transformations.</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Module containing graph transformations.</span>
 <span class="doccomment">//! Each transformation uses the orbits of the homomorphism group to filter out symmetries.</span>
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
-<span class="kw">use</span> <span class="ident">GraphNauty</span>;
-<span class="kw">use</span> <span class="ident">GraphIso</span>;
-<span class="kw">use</span> <span class="ident">Graph</span>;
-<span class="kw">use</span> <span class="ident">algorithm</span>::{<span class="ident">has_neighborhood_included</span>,<span class="ident">isolate_transfo</span>};
-<span class="kw">use</span> <span class="ident">transfo_result</span>::<span class="ident">GraphTransformation</span>;
+<span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::GraphNauty</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::GraphIso</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::Graph</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::algorithm::isolate_transfo</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transfo_result::GraphTransformation</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::nauty::orbits</span>;
 
-<span class="macro">transformation</span><span class="macro">!</span> (
+<span class="macro">transformation!</span> (
     <span class="string">&quot;Adds an edge.&quot;</span>,
     <span class="ident">add_edge</span>,
     <span class="kw">for</span> <span class="ident">g</span>,
@@ -305,7 +534,7 @@
     <span class="ident">add</span>(<span class="ident">a</span>,<span class="ident">b</span>);
 );
 
-<span class="macro">transformation</span><span class="macro">!</span> (
+<span class="macro">transformation!</span> (
     <span class="string">&quot;Removes a vertex.&quot;</span>,
     <span class="ident">remove_vertex</span>,
     <span class="kw">for</span> <span class="ident">g</span>,
@@ -314,7 +543,7 @@
     <span class="ident">remove</span>(<span class="ident">a</span>);
 );
 
-<span class="macro">transformation</span><span class="macro">!</span>(
+<span class="macro">transformation!</span>(
     <span class="string">&quot;Removes an edge.&quot;</span>,
     <span class="ident">remove_edge</span>,
     <span class="kw">for</span> <span class="ident">g</span>,
@@ -324,7 +553,7 @@
     <span class="ident">remove</span>(<span class="ident">a</span>,<span class="ident">b</span>);
 );
 
-<span class="macro">transformation</span><span class="macro">!</span>(
+<span class="macro">transformation!</span>(
     <span class="string">&quot;Given three distinct vertices a, b and c such that a and b are adjacent and c is not adjacent
 to a, a rotation on a, b and c consists in removing the edge ab and adding the edge ac.
 &lt;pre&gt;
@@ -342,7 +571,7 @@ a -- b    a   b
     <span class="ident">add</span>(<span class="ident">a</span>,<span class="ident">c</span>);
 );
 
-<span class="macro">transformation</span><span class="macro">!</span>(
+<span class="macro">transformation!</span>(
     <span class="string">&quot;A slide is similar to a rotation except that the vertices b and c must be adjacent. This
 transformation does not disconnect the graph.
 &lt;pre&gt;
@@ -360,7 +589,7 @@ a -- b    a   b
     <span class="ident">add</span>(<span class="ident">a</span>,<span class="ident">c</span>);
 );
 
-<span class="macro">transformation</span><span class="macro">!</span> (
+<span class="macro">transformation!</span> (
     <span class="string">&quot;Given four distinct vertices a, b, c and d such that a is adjacent to b and c is not adjacent
 to d, this transofrmation removes the edge ab and adds the edge cd.
 &lt;pre&gt;
@@ -379,7 +608,7 @@ to d, this transofrmation removes the edge ab and adds the edge cd.
     <span class="ident">add</span>(<span class="ident">c</span>,<span class="ident">d</span>);
 );
 
-<span class="macro">transformation</span><span class="macro">!</span> (
+<span class="macro">transformation!</span> (
     <span class="string">&quot;Given two distinct edges ab and cd (with distinct extremities) such that there is no edge ac
 and bd, removes ab and cd and adds ac and bd.
 &lt;pre&gt;
@@ -390,7 +619,7 @@ and bd, removes ab and cd and adds ac and bd.
     <span class="ident">two_opt</span>,
     <span class="kw">for</span> <span class="ident">g</span>,
     <span class="kw">let</span> <span class="ident">a</span>,
-    <span class="ident">b</span> <span class="ident">sym</span> <span class="ident">a</span> (<span class="ident">after</span> <span class="ident">a</span> <span class="ident">and</span> <span class="ident">adj</span> <span class="ident">a</span>),
+    <span class="ident">b</span> (<span class="ident">after</span> <span class="ident">a</span> <span class="ident">and</span> <span class="ident">adj</span> <span class="ident">a</span>),
     <span class="ident">c</span> (<span class="ident">after</span> <span class="ident">a</span> <span class="ident">and</span> <span class="ident">diff</span> <span class="ident">b</span> <span class="ident">and</span> <span class="ident">not</span> <span class="ident">adj</span> <span class="ident">a</span>),
     <span class="ident">d</span> <span class="ident">sym</span> <span class="ident">c</span> (<span class="ident">after</span> <span class="ident">a</span> <span class="ident">and</span> <span class="ident">diff</span> <span class="ident">b</span> <span class="ident">and</span> <span class="ident">diff</span> <span class="ident">c</span> <span class="ident">and</span> <span class="ident">adj</span> <span class="ident">c</span> <span class="ident">and</span> <span class="ident">not</span> <span class="ident">adj</span> <span class="ident">b</span>)
     <span class="ident">apply</span>
@@ -400,7 +629,7 @@ and bd, removes ab and cd and adds ac and bd.
     <span class="ident">add</span>(<span class="ident">b</span>,<span class="ident">d</span>);
 );
 
-<span class="macro">transformation</span><span class="macro">!</span>(
+<span class="macro">transformation!</span>(
     <span class="string">&quot;Given three vertices a, b and c with a adjacent to b and neither a or b adjacent to c, a detour
 removes the edge ab and adds the edges ac and cb.
 &lt;pre&gt;
@@ -419,7 +648,7 @@ a    c    a -- c
     <span class="ident">add</span>(<span class="ident">c</span>,<span class="ident">b</span>);
 );
 
-<span class="macro">transformation</span><span class="macro">!</span> (
+<span class="macro">transformation!</span> (
     <span class="string">&quot;Given three vertices a, b and c with a not adjacent to b and both a and b adjacent to c, a
 shortcut removes the edges ac and cb and adds the edge ab.
 &lt;pre&gt;
@@ -438,7 +667,7 @@ a -- c    a    c
     <span class="ident">add</span>(<span class="ident">a</span>,<span class="ident">b</span>);
 );
 
-<span class="macro">transformation</span><span class="macro">!</span> (
+<span class="macro">transformation!</span> (
     <span class="string">&quot;Given two twin vertices (i.e., with exactly the same neighbors and optionally adjacent),
     removes the edge between them.&quot;</span>,
     <span class="ident">disco_twins</span>,
@@ -449,7 +678,16 @@ a -- c    a    c
     <span class="ident">remove</span>(<span class="ident">a</span>,<span class="ident">b</span>);
 );
 
-<span class="macro">transformation</span><span class="macro">!</span> (
+<span class="macro">transformation!</span> (
+    <span class="string">&quot;Given a vertex, isolate it (i.e., removes all its edges).&quot;</span>,
+    <span class="ident">isolate</span>,
+    <span class="kw">for</span> <span class="ident">g</span>,
+    <span class="kw">let</span> <span class="ident">a</span>,
+    <span class="ident">apply</span>
+    <span class="ident">isolate</span>(<span class="ident">a</span>);
+);
+
+<span class="macro">transformation!</span> (
     <span class="string">&quot;Given two twin vertices, isolate one of them (i.e., removes all its edges).&quot;</span>,
     <span class="ident">isolate_twin</span>,
     <span class="kw">for</span> <span class="ident">g</span>,
@@ -459,7 +697,7 @@ a -- c    a    c
     <span class="ident">isolate</span>(<span class="ident">a</span>);
 );
 
-<span class="macro">transformation</span><span class="macro">!</span> (
+<span class="macro">transformation!</span> (
     <span class="string">&quot;Given two vertices u and v such that every neighbor of u is a neighbor of v, isolates u (i.e.,
 removes all its edges).&quot;</span>,
     <span class="ident">isolate_incl</span>,
@@ -470,24 +708,201 @@ removes all its edges).&quot;</span>,
     <span class="ident">isolate</span>(<span class="ident">a</span>);
 );
 
+<span class="macro">transformation!</span> (
+    <span class="string">&quot;Given two vertices u and v such that every neighbor of u is a neighbor of v, isolates u (i.e.,
+removes all its edges).&quot;</span>,
+    <span class="ident">isolate_incl_adj</span>,
+    <span class="kw">for</span> <span class="ident">g</span>,
+    <span class="kw">let</span> <span class="ident">a</span>,
+    <span class="ident">some</span> <span class="ident">b</span> (<span class="ident">diff</span> <span class="ident">a</span> <span class="ident">and</span> <span class="ident">incl</span> <span class="ident">a</span> <span class="ident">and</span> <span class="ident">adj</span> <span class="ident">a</span>)
+    <span class="ident">apply</span>
+    <span class="ident">isolate</span>(<span class="ident">a</span>);
+);
+
+<span class="macro">transformation!</span> (
+    <span class="string">&quot;Given two vertices u and v such that every neighbor of u is a neighbor of v, removes u.&quot;</span>,
+    <span class="ident">remove_incl_adj</span>,
+    <span class="kw">for</span> <span class="ident">g</span>,
+    <span class="kw">let</span> <span class="ident">a</span>,
+    <span class="ident">some</span> <span class="ident">b</span> (<span class="ident">diff</span> <span class="ident">a</span> <span class="ident">and</span> <span class="ident">incl</span> <span class="ident">a</span> <span class="ident">and</span> <span class="ident">adj</span> <span class="ident">a</span>)
+    <span class="ident">apply</span>
+    <span class="ident">remove</span>(<span class="ident">a</span>);
+);
+
+<span class="doccomment">/// Adds an isolated vertex to the graph.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_isolated_vertex</span>(<span class="ident">g</span>: <span class="kw-2">&amp;</span><span class="ident">GraphNauty</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GraphTransformation</span><span class="op">&gt;</span>
+{
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ng</span>: <span class="ident">GraphTransformation</span> <span class="op">=</span> <span class="ident">g</span>.<span class="ident">into</span>();
+    <span class="ident">ng</span>.<span class="ident">add_vertex</span>(<span class="ident">g</span>.<span class="ident">order</span>());
+    <span class="ident">ng</span>.<span class="ident">set_name</span>(<span class="string">&quot;add_vertex&quot;</span>.<span class="ident">to_string</span>());
+    <span class="macro">vec!</span>[<span class="ident">ng</span>]
+}
+
+<span class="kw">fn</span> <span class="ident">fix_vertex</span>(<span class="ident">fixed</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">num_depends</span>: <span class="kw-2">&amp;mut</span>[<span class="ident">u64</span>], <span class="ident">vertex</span>: <span class="ident">u64</span>) {
+    <span class="kw">if</span> <span class="ident">num_depends</span>[<span class="ident">vertex</span> <span class="kw">as</span> <span class="ident">usize</span>] <span class="op">==</span> <span class="number">0</span> {
+        <span class="ident">fixed</span>[<span class="number">0</span>].<span class="ident">push</span>(<span class="ident">vertex</span>);
+    }
+    <span class="ident">num_depends</span>[<span class="ident">vertex</span> <span class="kw">as</span> <span class="ident">usize</span>] <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+}
+
+<span class="kw">fn</span> <span class="ident">unfix_vertex</span>(<span class="ident">fixed</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">num_depends</span>: <span class="kw-2">&amp;mut</span>[<span class="ident">u64</span>], <span class="ident">vertex</span>: <span class="ident">u64</span>) {
+    <span class="kw">if</span> <span class="ident">num_depends</span>[<span class="ident">vertex</span> <span class="kw">as</span> <span class="ident">usize</span>] <span class="op">==</span> <span class="number">1</span> {
+        <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="ident">fixed</span>[<span class="number">0</span>].<span class="ident">iter</span>().<span class="ident">position</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span><span class="op">==</span><span class="kw-2">&amp;</span><span class="ident">vertex</span>).<span class="ident">unwrap</span>();
+        <span class="ident">fixed</span>[<span class="number">0</span>].<span class="ident">remove</span>(<span class="ident">index</span>);
+    }
+    <span class="ident">num_depends</span>[<span class="ident">vertex</span> <span class="kw">as</span> <span class="ident">usize</span>] <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
+}
+
+<span class="kw">fn</span> <span class="ident">unfix_edge</span>(<span class="ident">fixed</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">num_depends</span>: <span class="kw-2">&amp;mut</span>[<span class="ident">u64</span>], <span class="ident">edge</span>: (<span class="ident">u64</span>, <span class="ident">u64</span>)) {
+    <span class="kw">let</span> (<span class="ident">x</span>, <span class="ident">y</span>) <span class="op">=</span> <span class="ident">edge</span>;
+    <span class="ident">unfix_vertex</span>(<span class="ident">fixed</span>, <span class="ident">num_depends</span>, <span class="ident">x</span>);
+    <span class="ident">unfix_vertex</span>(<span class="ident">fixed</span>, <span class="ident">num_depends</span>, <span class="ident">y</span>);
+}
+
+<span class="kw">fn</span> <span class="ident">fix_edge</span>(<span class="ident">fixed</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">num_depends</span>: <span class="kw-2">&amp;mut</span>[<span class="ident">u64</span>], <span class="ident">edge</span>: (<span class="ident">u64</span>, <span class="ident">u64</span>)) {
+    <span class="kw">let</span> (<span class="ident">x</span>, <span class="ident">y</span>) <span class="op">=</span> <span class="ident">edge</span>;
+    <span class="ident">fix_vertex</span>(<span class="ident">fixed</span>, <span class="ident">num_depends</span>, <span class="ident">x</span>);
+    <span class="ident">fix_vertex</span>(<span class="ident">fixed</span>, <span class="ident">num_depends</span>, <span class="ident">y</span>);
+}
+
+<span class="kw">fn</span> <span class="ident">find_first</span>(<span class="ident">g</span>: <span class="kw-2">&amp;</span><span class="ident">GraphNauty</span>, <span class="ident">fixed</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">first</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">orbits</span> <span class="op">=</span> <span class="ident">orbits</span>(<span class="kw-2">&amp;</span><span class="ident">g</span>, <span class="kw-2">&amp;</span><span class="ident">fixed</span>);
+    <span class="comment">//println!(&quot;{:?}&quot;, fixed);</span>
+    <span class="comment">//println!(&quot;{:?}&quot;, orbits);</span>
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">id</span> <span class="op">=</span> <span class="number">0</span>;
+    <span class="kw">while</span> <span class="ident">id</span> <span class="op">&lt;</span> <span class="ident">orbits</span>.<span class="ident">len</span>() <span class="op">&amp;&amp;</span> <span class="ident">orbits</span>[<span class="ident">id</span>] <span class="op">&lt;</span> <span class="ident">first</span> {
+        <span class="ident">id</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+    }
+    <span class="kw">if</span> <span class="ident">id</span> <span class="op">&lt;</span> <span class="ident">orbits</span>.<span class="ident">len</span>() {
+        <span class="prelude-val">Some</span>(<span class="ident">orbits</span>[<span class="ident">id</span>])
+    } <span class="kw">else</span> {
+        <span class="prelude-val">None</span>
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">find_second</span>(<span class="ident">g</span>: <span class="kw-2">&amp;</span><span class="ident">GraphNauty</span>, <span class="ident">fixed</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">first</span>: <span class="ident">u64</span>, <span class="ident">second</span>: <span class="ident">u64</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
+    <span class="ident">fixed</span>.<span class="ident">push</span>(<span class="macro">vec!</span>[<span class="ident">first</span>]);
+    <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="ident">fixed</span>[<span class="number">0</span>].<span class="ident">iter</span>().<span class="ident">position</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span><span class="op">==</span><span class="kw-2">&amp;</span><span class="ident">first</span>).<span class="ident">unwrap</span>();
+    <span class="ident">fixed</span>[<span class="number">0</span>].<span class="ident">remove</span>(<span class="ident">index</span>);
+    <span class="kw">let</span> <span class="ident">orbits</span> <span class="op">=</span> <span class="ident">orbits</span>(<span class="kw-2">&amp;</span><span class="ident">g</span>, <span class="kw-2">&amp;</span><span class="ident">fixed</span>);
+    <span class="ident">fixed</span>.<span class="ident">pop</span>();
+    <span class="ident">fixed</span>[<span class="number">0</span>].<span class="ident">push</span>(<span class="ident">first</span>);
+    <span class="comment">//println!(&quot;{} {:?} {:?}&quot;, first, fixed, orbits);</span>
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">id</span> <span class="op">=</span> <span class="number">0</span>;
+    <span class="kw">while</span> <span class="ident">id</span> <span class="op">&lt;</span> <span class="ident">orbits</span>.<span class="ident">len</span>() <span class="op">&amp;&amp;</span> (<span class="ident">orbits</span>[<span class="ident">id</span>] <span class="op">&lt;</span><span class="op">=</span> <span class="ident">first</span> <span class="op">|</span><span class="op">|</span> <span class="ident">orbits</span>[<span class="ident">id</span>] <span class="op">&lt;</span> <span class="ident">second</span> <span class="op">|</span><span class="op">|</span> <span class="op">!</span><span class="ident">g</span>.<span class="ident">is_edge</span>(<span class="ident">first</span>, <span class="ident">orbits</span>[<span class="ident">id</span>])) {
+        <span class="ident">id</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+    }
+    <span class="kw">if</span> <span class="ident">id</span> <span class="op">&lt;</span> <span class="ident">orbits</span>.<span class="ident">len</span>() {
+        <span class="prelude-val">Some</span>(<span class="ident">orbits</span>[<span class="ident">id</span>])
+    } <span class="kw">else</span> {
+        <span class="prelude-val">None</span>
+    }
+}
+
+<span class="doccomment">/// Searches for an edge after start (start.0 &lt; start.1) with the given orbits and updates orbits</span>
+<span class="doccomment">/// and fixed accordingly. Start must contain the indices in orbits, not the vertices numbers.</span>
+<span class="doccomment">/// num_depends contains the number of chosen edges containing the vertex at index i for each i in</span>
+<span class="doccomment">/// num_depend.</span>
+<span class="kw">fn</span> <span class="ident">find_edge</span>(<span class="ident">g</span>: <span class="kw-2">&amp;</span><span class="ident">GraphNauty</span>, <span class="ident">fixed</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">num_depends</span>: <span class="kw-2">&amp;mut</span>[<span class="ident">u64</span>], <span class="ident">start</span>: (<span class="ident">u64</span>, <span class="ident">u64</span>)) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">u64</span>, <span class="ident">u64</span>)<span class="op">&gt;</span> {
+    <span class="comment">//TODO need an efficient way to remove vertex from fixed.</span>
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">first</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">start</span>.<span class="number">0</span>);
+    <span class="ident">fix_vertex</span>(<span class="ident">fixed</span>, <span class="ident">num_depends</span>, <span class="ident">start</span>.<span class="number">0</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">second</span> <span class="op">=</span> <span class="ident">find_second</span>(<span class="ident">g</span>, <span class="ident">fixed</span>, <span class="ident">start</span>.<span class="number">0</span>, <span class="ident">start</span>.<span class="number">1</span> <span class="op">+</span> <span class="number">1</span>);
+    <span class="comment">// if second is None, that means theres no edge left starting with first. So we search for</span>
+    <span class="comment">// another one.</span>
+    <span class="kw">while</span> <span class="ident">second</span>.<span class="ident">is_none</span>() {
+        <span class="comment">// If first is Some, we can search the next one.</span>
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">x</span>) <span class="op">=</span> <span class="ident">first</span> {
+            <span class="ident">unfix_vertex</span>(<span class="ident">fixed</span>, <span class="ident">num_depends</span>, <span class="ident">x</span>);
+            <span class="ident">first</span> <span class="op">=</span> <span class="ident">find_first</span>(<span class="ident">g</span>, <span class="ident">fixed</span>, <span class="ident">x</span><span class="op">+</span><span class="number">1</span>);
+            <span class="comment">// We find the second.</span>
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">x</span>) <span class="op">=</span> <span class="ident">first</span> {
+                <span class="ident">fix_vertex</span>(<span class="ident">fixed</span>, <span class="ident">num_depends</span>, <span class="ident">x</span>);
+                <span class="ident">second</span> <span class="op">=</span> <span class="ident">find_second</span>(<span class="ident">g</span>, <span class="ident">fixed</span>, <span class="ident">x</span>, <span class="number">0</span>);
+            }
+        } <span class="kw">else</span> {
+            <span class="comment">// If first is None, we could not find another one so we stop.</span>
+            <span class="kw">return</span> <span class="prelude-val">None</span>;
+        }
+    }
+    <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">first</span>.<span class="ident">zip</span>(<span class="ident">second</span>);
+    <span class="kw">if</span> <span class="ident">res</span>.<span class="ident">is_some</span>() {
+        <span class="ident">fix_vertex</span>(<span class="ident">fixed</span>, <span class="ident">num_depends</span>, <span class="ident">second</span>.<span class="ident">unwrap</span>());
+    }
+    <span class="ident">res</span>
+}
+
+<span class="doccomment">/// Removes e edges from the graph.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">remove_num_edges</span>(<span class="ident">g</span>: <span class="kw-2">&amp;</span><span class="ident">GraphNauty</span>, <span class="ident">e</span>: <span class="ident">u64</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GraphTransformation</span><span class="op">&gt;</span>
+{
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+    <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">g</span>.<span class="ident">order</span>();
+    <span class="kw">if</span> <span class="ident">e</span> <span class="op">&gt;</span> <span class="ident">g</span>.<span class="ident">size</span>() {
+        <span class="ident">res</span>
+    } <span class="kw">else</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stack</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">edge</span> <span class="op">=</span> (<span class="number">0</span>,<span class="number">0</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">fixed</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="macro">vec!</span>[]];
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">num_depends</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>];
+        <span class="comment">// Fill a stack with e edges if possible.</span>
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">e</span> {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">found_edge</span>) <span class="op">=</span> <span class="ident">find_edge</span>(<span class="ident">g</span>, <span class="kw-2">&amp;mut</span> <span class="ident">fixed</span>, <span class="kw-2">&amp;mut</span> <span class="ident">num_depends</span>, <span class="ident">edge</span>) {
+                <span class="ident">edge</span> <span class="op">=</span> <span class="ident">found_edge</span>;
+                <span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">edge</span>);
+            } <span class="kw">else</span> {
+                <span class="kw">return</span> <span class="ident">res</span>;
+            }
+        }
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ng</span>: <span class="ident">GraphTransformation</span> <span class="op">=</span> <span class="ident">g</span>.<span class="ident">into</span>();
+        <span class="kw">for</span> (<span class="ident">x</span>,<span class="ident">y</span>) <span class="kw">in</span> <span class="ident">stack</span>.<span class="ident">iter</span>() {
+            <span class="ident">ng</span>.<span class="ident">remove_edge</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="kw-2">*</span><span class="ident">y</span>);
+        }
+        <span class="ident">ng</span>.<span class="ident">set_name</span>(<span class="macro">format!</span>(<span class="string">&quot;remove_{}_edges&quot;</span>, <span class="ident">e</span>));
+        <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">ng</span>);
+        <span class="comment">//println!(&quot;{:?}&quot;, stack);</span>
+        <span class="kw">while</span> <span class="op">!</span><span class="ident">stack</span>.<span class="ident">is_empty</span>() {
+            <span class="comment">//println!(&quot;stack1 {:?} {:?}&quot;, stack, num_depends);</span>
+            <span class="ident">edge</span> <span class="op">=</span> <span class="ident">stack</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>();
+            <span class="comment">//TODO Only if it was not added as a candidate to find one more edge.</span>
+            <span class="ident">unfix_edge</span>(<span class="kw-2">&amp;mut</span> <span class="ident">fixed</span>, <span class="kw-2">&amp;mut</span> <span class="ident">num_depends</span>, <span class="ident">edge</span>);
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">found_edge</span>) <span class="op">=</span> <span class="ident">find_edge</span>(<span class="ident">g</span>, <span class="kw-2">&amp;mut</span> <span class="ident">fixed</span>, <span class="kw-2">&amp;mut</span> <span class="ident">num_depends</span>, <span class="ident">edge</span>) {
+                <span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">found_edge</span>);
+                <span class="kw">if</span> <span class="ident">stack</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="ident">e</span> <span class="kw">as</span> <span class="ident">usize</span> {
+                    <span class="ident">ng</span> <span class="op">=</span> <span class="ident">g</span>.<span class="ident">into</span>();
+                    <span class="kw">for</span> (<span class="ident">x</span>,<span class="ident">y</span>) <span class="kw">in</span> <span class="ident">stack</span>.<span class="ident">iter</span>() {
+                        <span class="ident">ng</span>.<span class="ident">remove_edge</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="kw-2">*</span><span class="ident">y</span>);
+                    }
+                    <span class="ident">ng</span>.<span class="ident">set_name</span>(<span class="macro">format!</span>(<span class="string">&quot;remove_{}_edges&quot;</span>, <span class="ident">e</span>));
+                    <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">ng</span>);
+                } <span class="kw">else</span> {
+                    <span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">found_edge</span>);
+                    <span class="ident">fix_edge</span>(<span class="kw-2">&amp;mut</span> <span class="ident">fixed</span>, <span class="kw-2">&amp;mut</span> <span class="ident">num_depends</span>, <span class="ident">found_edge</span>);
+                }
+            }
+            <span class="comment">//println!(&quot;stack2 {:?}&quot;, stack);</span>
+        }
+        <span class="ident">res</span>
+    }
+}
+
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">GraphTransformation</span>;
-    <span class="kw">use</span> <span class="ident">GraphNauty</span>;
-    <span class="kw">use</span> <span class="ident">format</span>::{<span class="ident">from_g6</span>, <span class="ident">to_g6</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::GraphTransformation</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::GraphNauty</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::format</span>::{<span class="ident">from_g6</span>, <span class="ident">to_g6</span>};
 
-    <span class="kw">fn</span> <span class="ident">test_transfo</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">sig</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">trsf</span>: <span class="ident">F</span>, <span class="ident">expected</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>)
-        <span class="kw">where</span> <span class="ident">F</span>: <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">GraphNauty</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GraphTransformation</span><span class="op">&gt;</span>
+    <span class="kw">fn</span> <span class="ident">test_transfo</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">sig</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">trsf</span>: <span class="ident">F</span>, <span class="ident">expected</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>)
+        <span class="kw">where</span> <span class="ident">F</span>: <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">GraphNauty</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GraphTransformation</span><span class="op">&gt;</span>
     {
-        <span class="kw">let</span> <span class="ident">g</span>: <span class="ident">GraphNauty</span> <span class="op">=</span> <span class="ident">from_g6</span>(<span class="kw-2">&amp;</span><span class="ident">String</span>::<span class="ident">from</span>(<span class="ident">sig</span>)).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">g</span>: <span class="ident">GraphNauty</span> <span class="op">=</span> <span class="ident">from_g6</span>(<span class="kw-2">&amp;</span><span class="ident">String::from</span>(<span class="ident">sig</span>)).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">r</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GraphTransformation</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">trsf</span>(<span class="kw-2">&amp;</span><span class="ident">g</span>);
         <span class="kw">for</span> <span class="ident">rg</span> <span class="kw">in</span> <span class="ident">r</span>.<span class="ident">iter_mut</span>() {
             <span class="ident">rg</span>.<span class="ident">canon</span>();
         }
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">r</span>.<span class="ident">len</span>(), <span class="ident">expected</span>.<span class="ident">len</span>());
+        <span class="macro">assert_eq!</span>(<span class="ident">r</span>.<span class="ident">len</span>(), <span class="ident">expected</span>.<span class="ident">len</span>());
         <span class="kw">for</span> <span class="ident">rg</span> <span class="kw">in</span> <span class="ident">r</span>.<span class="ident">iter_mut</span>() {
             <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">to_g6</span>(<span class="kw-2">&amp;</span><span class="ident">rg</span>.<span class="ident">final_graph</span>());
-            <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">expected</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">s</span>.<span class="ident">as_str</span>()));
+            <span class="macro">assert!</span>(<span class="ident">expected</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">s</span>.<span class="ident">as_str</span>()));
             <span class="kw">let</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">expected</span>.<span class="ident">iter</span>()
                 .<span class="ident">enumerate</span>()
                 .<span class="ident">skip_while</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="number">1</span> <span class="op">!</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">s</span>)
@@ -500,78 +915,119 @@ removes all its edges).&quot;</span>,
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_add_edge</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;D@K&quot;</span>, <span class="string">&quot;DAK&quot;</span>, <span class="string">&quot;D?[&quot;</span>, <span class="string">&quot;D@o&quot;</span>];
-        <span class="ident">test_transfo</span>(<span class="string">&quot;D?K&quot;</span>, <span class="kw">super</span>::<span class="ident">add_edge</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">expected</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;D@K&quot;</span>, <span class="string">&quot;DAK&quot;</span>, <span class="string">&quot;D?[&quot;</span>, <span class="string">&quot;D@o&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;D?K&quot;</span>, <span class="ident"><span class="kw">super</span>::add_edge</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_remove_edge</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;DAK&quot;</span>, <span class="string">&quot;D@o&quot;</span>];
-        <span class="ident">test_transfo</span>(<span class="string">&quot;DDW&quot;</span>, <span class="kw">super</span>::<span class="ident">remove_edge</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">expected</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;DAK&quot;</span>, <span class="string">&quot;D@o&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;DDW&quot;</span>, <span class="ident"><span class="kw">super</span>::remove_edge</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_remove_vertex</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;C^&quot;</span>,<span class="string">&quot;CB&quot;</span>,<span class="string">&quot;CN&quot;</span>,<span class="string">&quot;CF&quot;</span>];
-        <span class="ident">test_transfo</span>(<span class="string">&quot;DB{&quot;</span>, <span class="kw">super</span>::<span class="ident">remove_vertex</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">expected</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;C^&quot;</span>,<span class="string">&quot;CB&quot;</span>,<span class="string">&quot;CN&quot;</span>,<span class="string">&quot;CF&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;DB{&quot;</span>, <span class="ident"><span class="kw">super</span>::remove_vertex</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_rotation</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;DD[&quot;</span>, <span class="string">&quot;DD[&quot;</span>, <span class="string">&quot;D`[&quot;</span>, <span class="string">&quot;D`[&quot;</span>, <span class="string">&quot;DqK&quot;</span>, <span class="string">&quot;D@{&quot;</span>, <span class="string">&quot;DBw&quot;</span>, <span class="string">&quot;DBw&quot;</span>, <span class="string">&quot;DBw&quot;</span>,
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;DD[&quot;</span>, <span class="string">&quot;DD[&quot;</span>, <span class="string">&quot;D`[&quot;</span>, <span class="string">&quot;D`[&quot;</span>, <span class="string">&quot;DqK&quot;</span>, <span class="string">&quot;D@{&quot;</span>, <span class="string">&quot;DBw&quot;</span>, <span class="string">&quot;DBw&quot;</span>, <span class="string">&quot;DBw&quot;</span>,
         <span class="string">&quot;DB[&quot;</span>];
-        <span class="ident">test_transfo</span>(<span class="string">&quot;DBw&quot;</span>, <span class="kw">super</span>::<span class="ident">rotation</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">expected</span>);
+        <span class="ident">test_transfo</span>(<span class="string">&quot;DBw&quot;</span>, <span class="ident"><span class="kw">super</span>::rotation</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_move_distinct</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;DJk&quot;</span>, <span class="string">&quot;Dd[&quot;</span>, <span class="string">&quot;DB{&quot;</span>];
-        <span class="ident">test_transfo</span>(<span class="string">&quot;Dd[&quot;</span>, <span class="kw">super</span>::<span class="ident">move_distinct</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">expected</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;DJk&quot;</span>, <span class="string">&quot;Dd[&quot;</span>, <span class="string">&quot;DB{&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;Dd[&quot;</span>, <span class="ident"><span class="kw">super</span>::move_distinct</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_slide</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;DFw&quot;</span>, <span class="string">&quot;Dd[&quot;</span>, <span class="string">&quot;DJk&quot;</span>, <span class="string">&quot;Dd[&quot;</span>, <span class="string">&quot;D`{&quot;</span>, <span class="string">&quot;DB{&quot;</span>];
-        <span class="ident">test_transfo</span>(<span class="string">&quot;Dd[&quot;</span>, <span class="kw">super</span>::<span class="ident">slide</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">expected</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;DFw&quot;</span>, <span class="string">&quot;Dd[&quot;</span>, <span class="string">&quot;DJk&quot;</span>, <span class="string">&quot;Dd[&quot;</span>, <span class="string">&quot;D`{&quot;</span>, <span class="string">&quot;DB{&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;Dd[&quot;</span>, <span class="ident"><span class="kw">super</span>::slide</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_two_opt</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;E@hO&quot;</span>, <span class="string">&quot;E@N?&quot;</span>, <span class="string">&quot;E@hO&quot;</span>, <span class="string">&quot;E`GW&quot;</span>, <span class="string">&quot;E@hO&quot;</span>, <span class="string">&quot;E@hO&quot;</span>];
-        <span class="ident">test_transfo</span>(<span class="string">&quot;E@hO&quot;</span>, <span class="kw">super</span>::<span class="ident">two_opt</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">expected</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;E@hO&quot;</span>, <span class="string">&quot;E@N?&quot;</span>, <span class="string">&quot;E@hO&quot;</span>, <span class="string">&quot;E`GW&quot;</span>, <span class="string">&quot;E@hO&quot;</span>, <span class="string">&quot;E@hO&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;E@hO&quot;</span>, <span class="ident"><span class="kw">super</span>::two_opt</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_detour</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;DR{&quot;</span>, <span class="string">&quot;DR{&quot;</span>];
-        <span class="ident">test_transfo</span>(<span class="string">&quot;Dd[&quot;</span>, <span class="kw">super</span>::<span class="ident">detour</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">expected</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;DR{&quot;</span>, <span class="string">&quot;DR{&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;Dd[&quot;</span>, <span class="ident"><span class="kw">super</span>::detour</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_shortcut</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;DBw&quot;</span>, <span class="string">&quot;DB[&quot;</span>, <span class="string">&quot;D`[&quot;</span>];
-        <span class="ident">test_transfo</span>(<span class="string">&quot;Dd[&quot;</span>, <span class="kw">super</span>::<span class="ident">shortcut</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">expected</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;DBw&quot;</span>, <span class="string">&quot;DB[&quot;</span>, <span class="string">&quot;D`[&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;Dd[&quot;</span>, <span class="ident"><span class="kw">super</span>::shortcut</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_disco_twins</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;E?~w&quot;</span>,<span class="string">&quot;E@~o&quot;</span>];
-        <span class="ident">test_transfo</span>(<span class="string">&quot;E@~w&quot;</span>, <span class="kw">super</span>::<span class="ident">disco_twins</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">expected</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;E?~w&quot;</span>,<span class="string">&quot;E@~o&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;E@~w&quot;</span>, <span class="ident"><span class="kw">super</span>::disco_twins</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_isolate</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;EILw&quot;</span>, <span class="string">&quot;E@LW&quot;</span>, <span class="string">&quot;EALw&quot;</span>, <span class="string">&quot;EGSw&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;EMlw&quot;</span>, <span class="ident"><span class="kw">super</span>::isolate</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_isolate_twin</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;E?Dg&quot;</span>,<span class="string">&quot;E@LW&quot;</span>];
-        <span class="ident">test_transfo</span>(<span class="string">&quot;EC\\w&quot;</span>, <span class="kw">super</span>::<span class="ident">isolate_twin</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">expected</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;E?Dg&quot;</span>,<span class="string">&quot;E@LW&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;EC\\w&quot;</span>, <span class="ident"><span class="kw">super</span>::isolate_twin</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_isolate_incl</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;G?CHIk&quot;</span>,<span class="string">&quot;G?@Hh{&quot;</span>,<span class="string">&quot;G@GQW{&quot;</span>,<span class="string">&quot;G@GQY{&quot;</span>];
-        <span class="ident">test_transfo</span>(<span class="string">&quot;G@IIi{&quot;</span>, <span class="kw">super</span>::<span class="ident">isolate_incl</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">expected</span>);
-        <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-        <span class="ident">test_transfo</span>(<span class="string">&quot;E???&quot;</span>, <span class="kw">super</span>::<span class="ident">isolate_incl</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">expected</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;G?CHIk&quot;</span>,<span class="string">&quot;G?@Hh{&quot;</span>,<span class="string">&quot;G@GQW{&quot;</span>,<span class="string">&quot;G@GQY{&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;G@IIi{&quot;</span>, <span class="ident"><span class="kw">super</span>::isolate_incl</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
+        <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;E???&quot;</span>, <span class="ident"><span class="kw">super</span>::isolate_incl</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_isolate_incl_adj</span>() {
+        <span class="ident">test_transfo</span>(<span class="string">&quot;A_&quot;</span>, <span class="ident"><span class="kw">super</span>::isolate_incl_adj</span>, <span class="kw-2">&amp;mut</span> <span class="macro">vec!</span>[]);
+        <span class="ident">test_transfo</span>(<span class="string">&quot;Bw&quot;</span>, <span class="ident"><span class="kw">super</span>::isolate_incl_adj</span>, <span class="kw-2">&amp;mut</span> <span class="macro">vec!</span>[<span class="string">&quot;BG&quot;</span>]);
+        <span class="ident">test_transfo</span>(<span class="string">&quot;BG&quot;</span>, <span class="ident"><span class="kw">super</span>::isolate_incl_adj</span>, <span class="kw-2">&amp;mut</span> <span class="macro">vec!</span>[]);
+        <span class="ident">test_transfo</span>(<span class="string">&quot;C~&quot;</span>, <span class="ident"><span class="kw">super</span>::isolate_incl_adj</span>, <span class="kw-2">&amp;mut</span> <span class="macro">vec!</span>[<span class="string">&quot;CJ&quot;</span>]);
+        <span class="ident">test_transfo</span>(<span class="string">&quot;DBw&quot;</span>, <span class="ident"><span class="kw">super</span>::isolate_incl_adj</span>, <span class="kw-2">&amp;mut</span> <span class="macro">vec!</span>[]);
+        <span class="ident">test_transfo</span>(<span class="string">&quot;DB{&quot;</span>, <span class="ident"><span class="kw">super</span>::isolate_incl_adj</span>, <span class="kw-2">&amp;mut</span> <span class="macro">vec!</span>[<span class="string">&quot;D?[&quot;</span>, <span class="string">&quot;D@[&quot;</span>]);
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_remove_incl_adj</span>() {
+        <span class="ident">test_transfo</span>(<span class="string">&quot;A_&quot;</span>, <span class="ident"><span class="kw">super</span>::remove_incl_adj</span>, <span class="kw-2">&amp;mut</span> <span class="macro">vec!</span>[]);
+        <span class="ident">test_transfo</span>(<span class="string">&quot;Bw&quot;</span>, <span class="ident"><span class="kw">super</span>::remove_incl_adj</span>, <span class="kw-2">&amp;mut</span> <span class="macro">vec!</span>[<span class="string">&quot;A_&quot;</span>]);
+        <span class="ident">test_transfo</span>(<span class="string">&quot;BG&quot;</span>, <span class="ident"><span class="kw">super</span>::remove_incl_adj</span>, <span class="kw-2">&amp;mut</span> <span class="macro">vec!</span>[]);
+        <span class="ident">test_transfo</span>(<span class="string">&quot;C~&quot;</span>, <span class="ident"><span class="kw">super</span>::remove_incl_adj</span>, <span class="kw-2">&amp;mut</span> <span class="macro">vec!</span>[<span class="string">&quot;Bw&quot;</span>]);
+        <span class="ident">test_transfo</span>(<span class="string">&quot;DBw&quot;</span>, <span class="ident"><span class="kw">super</span>::remove_incl_adj</span>, <span class="kw-2">&amp;mut</span> <span class="macro">vec!</span>[]);
+        <span class="ident">test_transfo</span>(<span class="string">&quot;DB{&quot;</span>, <span class="ident"><span class="kw">super</span>::remove_incl_adj</span>, <span class="kw-2">&amp;mut</span> <span class="macro">vec!</span>[<span class="string">&quot;CF&quot;</span>, <span class="string">&quot;CN&quot;</span>]);
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_add_vertex</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;DJ[&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;C~&quot;</span>, <span class="ident"><span class="kw">super</span>::add_isolated_vertex</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
+        <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;E@Kw&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;DJ[&quot;</span>, <span class="ident"><span class="kw">super</span>::add_isolated_vertex</span>, <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_remove_n_edges</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;D@K&quot;</span>, <span class="string">&quot;D?[&quot;</span>, <span class="string">&quot;DAK&quot;</span>, <span class="string">&quot;DAK&quot;</span>, <span class="string">&quot;DAK&quot;</span>, <span class="string">&quot;D@o&quot;</span>, <span class="string">&quot;D@o&quot;</span>, <span class="string">&quot;D@o&quot;</span>, <span class="string">&quot;DAK&quot;</span>, <span class="string">&quot;DAK&quot;</span>, <span class="string">&quot;D@o&quot;</span>, <span class="string">&quot;DAK&quot;</span>];
+        <span class="ident">test_transfo</span>(<span class="string">&quot;Dd[&quot;</span>, <span class="op">|</span><span class="ident">g</span><span class="op">|</span> <span class="ident"><span class="kw">super</span>::remove_num_edges</span>(<span class="ident">g</span>, <span class="number">3</span>), <span class="kw-2">&amp;mut</span> <span class="ident">expected</span>);
     }
 }
-</pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "graph";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</code></pre></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="graph" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0 (9d1b2106e 2022-02-23)" ></div>
+</body></html>
