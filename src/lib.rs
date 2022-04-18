@@ -1195,7 +1195,9 @@ impl Graph for GraphNauty {
                 self.data = newdata;
                 self.w = neww;
             }
-            self.data.push(0);
+            for _ in 0..self.w {
+                self.data.push(0);
+            }
             self.n += 1;
         }
     }
