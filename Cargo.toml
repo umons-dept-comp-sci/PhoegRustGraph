@@ -1,6 +1,6 @@
 [package]
 name = "graph"
-version = "2.0.0-alpha"
+version = "3.1.0-alpha"
 authors = ["Gauvain Devillez <gauvain.devillez@umons.ac.be>"]
 build = "build.rs"
 edition="2018"

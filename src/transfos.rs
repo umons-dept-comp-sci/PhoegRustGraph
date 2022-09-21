@@ -222,6 +222,40 @@ pub fn add_isolated_vertex(g: &GraphNauty) -> Vec<GraphTransformation>
     vec![ng]
 }
 
+pub fn make_dominant(g: &GraphNauty) -> Vec<GraphTransformation> {
+    use crate::GraphIter;
+    let mut res = Vec::new();
+    for v in orbits(g, &vec![]) {
+        let mut ng: GraphTransformation = g.into();
+        for u in g.vertices().filter(|x| !g.is_edge(*x, v)) {
+            ng.add_edge(u, v);
+        }
+        res.push(ng);
+    }
+    res
+}
+
+pub fn make_pendant(g: &GraphNauty) -> Vec<GraphTransformation> {
+    use crate::GraphIter;
+    let mut res = Vec::new();
+    let mut fixed = vec![vec![]];
+    for u in orbits(g, &fixed) {
+        fixed[0].push(u);
+        for v in orbits(g, &fixed) {
+            if v != u && g.is_edge(v, u) {
+                let mut ng: GraphTransformation = g.into();
+                for w in g.neighbors(u).filter(|x| *x != v) {
+                    ng.remove_edge(u, w);
+                }
+                res.push(ng);
+            }
+
+        }
+        fixed[0].pop();
+    }
+    res
+}
+
 fn fix_vertex(fixed: &mut Vec<Vec<u64>>, num_depends: &mut[u64], vertex: u64) {
     if num_depends[vertex as usize] == 0 {
         fixed[0].push(vertex);
