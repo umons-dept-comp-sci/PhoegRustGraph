@@ -202,6 +202,9 @@ impl<'a, G> Iterator for CliquesIterator<'a, G>
                     // Unroll the first instructions of the recursive call here.
                     if subg_p.is_empty() {
                         // q is a maximal clique.
+                        // FIXME: it annoys me that we necessarily copy q here.
+                        //  If we only want to count the number of cliques, this
+                        //  is wasting resources.
                         let ret = Some(self.q.clone());
                         self.q.pop();
                         return ret;
