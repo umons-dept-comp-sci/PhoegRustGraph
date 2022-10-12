@@ -142,7 +142,7 @@ impl ::std::cmp::Ord for Distance {
 ///
 /// ```
 /// use std::u64::MAX;
-/// use graph::{Graph,GraphNauty,GraphIter};
+/// use graph::{Graph,GraphConstructible,GraphNauty,GraphIter};
 /// use graph::invariants::floyd_warshall;
 /// use graph::invariants::Distance::{Val,Inf};
 ///
@@ -223,7 +223,7 @@ pub fn floyd_warshall<'a, G>(g: &'a G) -> Vec<Vec<Distance>>
 ///
 /// # Examples
 /// ```
-/// use graph::{Graph,GraphNauty,GraphIter};
+/// use graph::{Graph,GraphConstructible,GraphNauty,GraphIter};
 /// use graph::invariants::{Distance,diameter};
 ///
 /// let mut g = GraphNauty::new(5);
@@ -437,7 +437,7 @@ fn connected_component_with<'a, G>(g: &'a G, u: u64, visited: &mut Vec<bool>) ->
 /// # Examples
 ///
 /// ```
-/// use graph::{Graph,GraphNauty};
+/// use graph::{Graph,GraphConstructible,GraphNauty};
 /// use graph::invariants::connected_components;
 /// let mut g = GraphNauty::new(0);
 /// assert!(connected_components(&g).len() == 0);
@@ -473,7 +473,7 @@ pub fn connected_components<'a, G>(g: &'a G) -> Vec<Vec<u64>>
 /// Tests whether the graph is connected. i.e., if each vertex can reach every other vertex.
 /// # Examples :
 /// ```
-/// use graph::Graph;
+/// use graph::{Graph,GraphConstructible};
 /// use graph::invariants::is_connected;
 /// let mut g = graph::GraphNauty::new(3);
 /// for i in 0..2 {
@@ -529,7 +529,7 @@ fn combine_paths(p1: &[Vec<u64>], p2: &[Vec<u64>]) -> Vec<Vec<u64>> {
 /// # Examples
 ///
 /// ```
-/// use graph::{Graph,GraphNauty};
+/// use graph::{Graph,GraphConstructible,GraphNauty};
 /// use graph::invariants::shortests_paths;
 /// let mut g = GraphNauty::new(0);
 /// for _ in 0..11
@@ -588,7 +588,7 @@ pub fn shortests_paths<'a, G>(g: &'a G) -> Vec<Vec<Vec<Vec<u64>>>>
 /// # Examples
 ///
 /// ```
-/// use graph::{Graph,GraphNauty};
+/// use graph::{Graph,GraphConstructible,GraphNauty};
 /// use graph::invariants::avecc;
 /// let mut g = GraphNauty::new(5);
 /// for i in 0..5 {
@@ -618,7 +618,7 @@ pub fn avecc<'a, G>(g: &'a G) -> f64
 /// # Examples
 ///
 /// ```
-/// use graph::{Graph,GraphNauty};
+/// use graph::{Graph,GraphConstructible,GraphNauty};
 /// use graph::invariants::avdist;
 /// let mut g = GraphNauty::new(5);
 /// for i in 0..5 {
@@ -651,7 +651,7 @@ pub fn avdist<'a, G>(g: &'a G) -> f64
 /// # Examples
 ///
 /// ```
-/// use graph::{Graph,GraphNauty};
+/// use graph::{Graph,GraphConstructible,GraphNauty};
 /// use graph::invariants::minus_avecc_avdist;
 /// let mut g = GraphNauty::new(5);
 /// for i in 0..3
@@ -692,7 +692,7 @@ pub fn minus_avecc_avdist<'a, G>(g: &'a G) -> f64
 ///
 /// # Examples
 /// ```
-/// use graph::{Graph,GraphNauty};
+/// use graph::{Graph,GraphConstructible,GraphNauty};
 /// use graph::invariants::eci;
 /// let mut g = GraphNauty::new(5);
 /// for i in 0..4
@@ -736,7 +736,7 @@ pub fn eci<'a, G>(g: &'a G) -> Result<u64, DisconnectedGraph>
 ///
 /// # Examples
 /// ```
-/// use graph::{Graph,GraphNauty};
+/// use graph::{Graph,GraphConstructible,GraphNauty};
 /// use graph::invariants::num_dom;
 /// let mut g = GraphNauty::new(5);
 /// for i in 0..4
@@ -770,7 +770,7 @@ pub fn num_dom<'a, G>(g: &G) -> u64
 ///
 /// # Examples
 /// ```
-/// use graph::{Graph,GraphNauty};
+/// use graph::{Graph,GraphConstructible,GraphNauty};
 /// use graph::invariants::num_pending;
 /// let mut g = GraphNauty::new(5);
 /// for i in 1..5
@@ -802,7 +802,7 @@ pub fn num_pending<'a, G>(g: &G) -> u64
 ///
 /// # Examples
 /// ```
-/// use graph::{Graph,GraphNauty};
+/// use graph::{Graph,GraphConstructible,GraphNauty};
 /// use graph::invariants::dnm;
 /// let mut g = GraphNauty::new(5);
 /// for i in 1..5
@@ -823,7 +823,7 @@ pub fn dnm<G>(g: &G) -> u64
 ///
 /// # Examples
 /// ```
-/// use graph::{Graph,GraphNauty};
+/// use graph::{Graph,GraphConstructible,GraphNauty};
 /// use graph::invariants::deg_max;
 /// let mut g = GraphNauty::new(5);
 /// for i in 1..5
@@ -845,7 +845,7 @@ pub fn deg_max<'a, G>(g: &G) -> u64
 ///
 /// # Examples
 /// ```
-/// use graph::{Graph,GraphNauty};
+/// use graph::{Graph,GraphConstructible,GraphNauty};
 /// use graph::invariants::deg_min;
 /// let mut g = GraphNauty::new(5);
 /// for i in 1..5

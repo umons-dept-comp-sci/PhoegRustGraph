@@ -1,5 +1,5 @@
 use crate::nauty::canon_graph;
-use crate::Set;
+use crate::{GraphConstructible, Set};
 use base64;
 
 fn format_arr_csv_with_sep<T: std::fmt::Debug>(arr: &[T], sep: &str) -> String {
@@ -144,7 +144,7 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::{Graph,GraphNauty};
+    /// use graph::{Graph,GraphConstructible,GraphNauty};
     ///
     /// let mut g = GraphNauty::new(3);
     /// g.add_edge(1, 0);
@@ -171,7 +171,7 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::{Graph,GraphNauty};
+    /// use graph::{Graph,GraphConstructible,GraphNauty};
     ///
     /// let mut g = GraphNauty::new(3);
     /// g.add_edge(1,0);
@@ -213,7 +213,7 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::{Graph,GraphNauty};
+    /// use graph::{Graph,GraphConstructible,GraphNauty};
     ///
     /// let mut g = GraphNauty::new(3);
     /// g.add_edge(1,2);
@@ -258,7 +258,7 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::{Graph,GraphNauty};
+    /// use graph::{Graph,GraphConstructible,GraphNauty};
     ///
     /// let mut g = GraphNauty::new(0);
     /// let mut gt: GraphTransformation = (&g).into();
@@ -312,7 +312,7 @@ impl GraphTransformation {
     ///
     /// ```
     /// use graph::transfo_result::GraphTransformation;
-    /// use graph::{Graph,GraphNauty};
+    /// use graph::{Graph,GraphConstructible,GraphNauty};
     ///
     /// let mut g = GraphNauty::new(4);
     /// g.add_edge(2,1);
@@ -358,7 +358,7 @@ impl GraphTransformation {
     /// # Examples :
     ///
     /// ```
-    /// use graph::{Graph,GraphNauty,GraphIter};
+    /// use graph::{Graph,GraphConstructible,GraphNauty,GraphIter};
     /// use graph::transfo_result::GraphTransformation;
     ///
     /// let g = GraphNauty::new(0);
@@ -459,7 +459,7 @@ impl GraphTransformation {
     ///
     /// # Examples :
     /// ```
-    /// use graph::{Graph,GraphNauty,GraphIter};
+    /// use graph::{Graph,GraphConstructible,GraphNauty,GraphIter};
     /// use graph::transfo_result::GraphTransformation;
     ///
     /// let g = GraphNauty::new(0);

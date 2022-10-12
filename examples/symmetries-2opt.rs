@@ -1,7 +1,7 @@
 use graph::nauty::orbits;
 use graph::subgraphs::subgraphs_orbits;
 use graph::GraphNauty;
-use graph::{Graph, GraphIter};
+use graph::{Graph, GraphConstructible, GraphIter};
 use std::collections::HashMap;
 use std::time::Instant;
 use std::ops::Deref;

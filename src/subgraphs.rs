@@ -1,6 +1,7 @@
 //! Module containing algorithms to compute the occurences of an induced subgraph in a bigger graph.
 use crate::nauty;
 use crate::Graph;
+use crate::GraphConstructible;
 use crate::GraphIter;
 use crate::GraphNauty;
 use std::collections::{HashMap, HashSet};
