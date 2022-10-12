@@ -2,7 +2,7 @@
 
 use crate::Graph;
 use crate::GraphIter;
-use crate::algorithm::{bfs, dfs, Visitor};
+use crate::algorithm::{bfs, dfs, Visitor, cliques};
 use crate::errors::*;
 use std::f64;
 use std::u64::MAX;
@@ -899,4 +899,27 @@ pub fn irregularity<'a, G>(g: &'a G) -> u64
         }
     }
     sum
+}
+
+// TODO: documentation and test
+pub fn avg_clique_size<'a, G>(g: &'a G) -> f64
+    where G: Graph + GraphIter<'a> {
+    let (nb_cliques, total_cliques_size) = cliques(g).fold(
+        (0, 0),
+        |(nb_cliques, total_cliques_size), clique|
+            (nb_cliques + 1, total_cliques_size + clique.len() as u64)
+    );
+    return (total_cliques_size as f64) / (nb_cliques as f64);
+}
+
+// TODO: documentation and test
+pub fn avg_indep_size<'a, G>(g: &'a G) -> f64
+    where G: Graph + GraphIter<'a> {
+    let n = g.order();
+    let (nb_cliques, total_cliques_size) = cliques(g).fold(
+        (0, 0),
+        |(nb_cliques, total_cliques_size), clique|
+            (nb_cliques + 1, total_cliques_size + (n - clique.len() as u64))
+    );
+    return (total_cliques_size as f64) / (nb_cliques as f64);
 }
