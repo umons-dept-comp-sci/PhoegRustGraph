@@ -1,6 +1,6 @@
 use graph::nauty::canon_graph;
 use graph::GraphNauty;
-use graph::{Graph, GraphIter};
+use graph::{Graph, GraphConstructible, GraphIter};
 use graph::transfo_result::GraphTransformation;
 use graph::format;
 use graph::transfos::remove_edge;

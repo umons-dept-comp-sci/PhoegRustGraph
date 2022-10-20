@@ -1,7 +1,7 @@
 use graph::format::from_g6;
 use graph::nauty::orbits;
 use graph::subgraphs::{subgraphs, subgraphs_orbits, subgraphs_symm};
-use graph::{Graph, GraphNauty};
+use graph::{Graph, GraphConstructible, GraphNauty};
 use indicatif::{ProgressBar, ProgressIterator};
 use std::fs::File;
 use std::io::{Write, BufReader, BufRead};

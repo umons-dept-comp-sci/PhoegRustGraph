@@ -30,7 +30,7 @@ fn length_g6(n: u64) -> u64 {
 /// # Examples
 ///
 /// ```
-/// use graph::{Graph,GraphNauty,GraphIter};
+/// use graph::{Graph,GraphConstructible,GraphNauty,GraphIter};
 /// use graph::format;
 /// let mut g = GraphNauty::new(0);
 /// assert!("?" == format::to_g6(&g));

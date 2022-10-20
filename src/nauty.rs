@@ -5,6 +5,7 @@ use super::{graph, int};
 use crate::transfo_result::GraphTransformation;
 use crate::Graph;
 use crate::GraphNauty;
+use crate::GraphConstructible;
 
 #[allow(non_camel_case_types)]
 type long = libc::c_ulonglong;
@@ -73,7 +74,7 @@ fn init_fixed(n: u64, fixed: &[Vec<u64>]) -> (Vec<i32>, Vec<i32>) {
 ///
 /// ```
 /// use graph::nauty::canon_graph_fixed;
-/// use graph::{Graph,GraphNauty};
+/// use graph::{Graph,GraphConstructible,GraphNauty};
 /// let mut g = GraphNauty::new(5);
 /// let (_,_,orbits) = canon_graph_fixed(&g, &vec![vec![1]]);
 /// let exp_orbits = vec![0,1,0,0,0];
@@ -179,7 +180,7 @@ fn orbits_sample(orbits: &[u64]) -> Vec<u64> {
 /// Example:
 ///
 /// ```
-/// use graph::{Graph,GraphNauty};
+/// use graph::{Graph,GraphConstructible,GraphNauty};
 /// use graph::nauty::orbits;
 /// let mut g = GraphNauty::new(5);
 /// let fixed: Vec<Vec<u64>> = vec![];
