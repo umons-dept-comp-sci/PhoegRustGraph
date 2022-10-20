@@ -756,8 +756,8 @@ pub fn eci<'a, G>(g: &'a G) -> Result<u64, DisconnectedGraph>
 /// }
 /// assert!(num_dom(&g) == 3);
 /// ```
-pub fn num_dom<'a, G>(g: &G) -> u64
-    where G: GraphIter<'a>
+pub fn num_dom<G>(g: &G) -> u64
+    where G: for<'b> GraphIter<'b>
 {
     let n = g.order();
     g.vertices()
@@ -785,8 +785,8 @@ pub fn num_dom<'a, G>(g: &G) -> u64
 /// g.add_edge(4,1);
 /// assert!(num_pending(&g) == 0);
 /// ```
-pub fn num_pending<'a, G>(g: &G) -> u64
-    where G: GraphIter<'a>
+pub fn num_pending<G>(g: &G) -> u64
+    where G: for<'b> GraphIter<'b>
 {
     g.vertices()
         .map(|x| g.neighbors(x).count() as u64)
@@ -832,8 +832,8 @@ pub fn dnm<G>(g: &G) -> u64
 /// }
 /// assert!(deg_max(&g) == 4);
 /// ```
-pub fn deg_max<'a, G>(g: &G) -> u64
-    where G: GraphIter<'a>
+pub fn deg_max<G>(g: &G) -> u64
+    where G: for<'b> GraphIter<'b>
 {
     g.vertices()
         .map(|x| g.neighbors(x).count() as u64)
@@ -854,8 +854,8 @@ pub fn deg_max<'a, G>(g: &G) -> u64
 /// }
 /// assert!(deg_min(&g) == 1);
 /// ```
-pub fn deg_min<'a, G>(g: &G) -> u64
-    where G: GraphIter<'a>
+pub fn deg_min<G>(g: &G) -> u64
+    where G: for<'b> GraphIter<'b>
 {
     g.vertices()
         .map(|x| g.neighbors(x).count() as u64)
@@ -882,8 +882,8 @@ pub fn deg_min<'a, G>(g: &G) -> u64
 /// g = from_g6(&"D??".to_string()).unwrap();
 /// assert!(irregularity(&g) == 0);
 /// ```
-pub fn irregularity<'a, G>(g: &'a G) -> u64
-    where G: GraphIter<'a>
+pub fn irregularity<G>(g: &G) -> u64
+    where G: for<'b> GraphIter<'b>
 {
     let degrees = g.vertices()
         .map(|x| g.neighbors(x).count() as isize)
@@ -902,8 +902,9 @@ pub fn irregularity<'a, G>(g: &'a G) -> u64
 }
 
 // TODO: documentation and test
-pub fn avg_clique_size<'a, G>(g: &'a G) -> f64
-    where G: Graph + GraphIter<'a> {
+pub fn avg_clique_size<G>(g: &G) -> f64
+    where G: for<'b> GraphIter<'b>
+{
     let (nb_cliques, total_cliques_size) = cliques(g).fold(
         (0, 0),
         |(nb_cliques, total_cliques_size), clique|
@@ -913,8 +914,9 @@ pub fn avg_clique_size<'a, G>(g: &'a G) -> f64
 }
 
 // TODO: documentation and test
-pub fn avg_indep_size<'a, G>(g: &'a G) -> f64
-    where G: Graph + GraphIter<'a> {
+pub fn avg_indep_size<G>(g: &G) -> f64
+    where G: for<'b> GraphIter<'b>
+{
     let n = g.order();
     let (nb_cliques, total_cliques_size) = cliques(g).fold(
         (0, 0),

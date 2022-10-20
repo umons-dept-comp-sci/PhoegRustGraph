@@ -114,11 +114,12 @@ pub fn dfs<'a, G, V>(g: &'a G, visitor: &mut V, start: Option<u64>)
 ///     assert!(!g.is_edge(3,i));
 /// }
 /// ```
-pub fn isolate<'a, G>(g: &mut G, u: u64)
-    where G: GraphIter<'a>
+pub fn isolate<G>(g: &mut G, u: u64)
+    where G: for<'b> GraphIter<'b>
 {
-    for x in g.neighbors(u) {
-        g.remove_edge(u, x);
+    let neighbors = { g.neighbors(u).collect::<Vec<u64>>() };
+    for w in neighbors {
+        g.remove_edge(u, w);
     }
 }
 
@@ -133,10 +134,9 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
 }
 
 
-pub struct CliquesIterator<'a, G>
-    where G: Graph + GraphIter<'a>
+pub struct CliquesIterator
 {
-    g: &'a G,
+    // g: &'a G,
     // u64 should be something like Graph::index_type
     q: Vec<u64>,
     // Cache the adjacency sets as in NetworkX implementation of Bron-Kerbosch.
@@ -147,11 +147,10 @@ pub struct CliquesIterator<'a, G>
     stack: Vec<(HashSet<u64>, HashSet<u64>, Vec<u64>)>,
 }
 
-impl<'a, G> CliquesIterator<'a, G>
-    where G: Graph + GraphIter<'a>
-{
-    fn new(g: &'a G, q: Vec<u64>, subg: HashSet<u64>, cand: HashSet<u64>)
-           -> CliquesIterator<'a, G> {
+impl CliquesIterator {
+    fn new<G>(g: &G, q: Vec<u64>, subg: HashSet<u64>, cand: HashSet<u64>)
+              -> CliquesIterator
+        where G: for<'b> GraphIter<'b> {
         let mut adj = Vec::<HashSet<u64>>::with_capacity(
             g.order() as usize);
         for v in 0..g.order() {
@@ -161,13 +160,11 @@ impl<'a, G> CliquesIterator<'a, G>
             |u| (&cand & &adj[*u as usize]).len()).unwrap();
         let ext_u = Vec::from_iter(&cand - &adj[u as usize]);
         let stack = vec![(subg, cand, ext_u)];
-        return CliquesIterator { g, q, adj, stack };
+        CliquesIterator { q, adj, stack }
     }
 }
 
-impl<'a, G> Iterator for CliquesIterator<'a, G>
-    where G: Graph + GraphIter<'a>
-{
+impl Iterator for CliquesIterator {
     // FIXME: if we agree to invalidate the cliques vectors between each
     //   iteration step, we may return a ref here and avoid potentially useless
     //   copies?
@@ -272,8 +269,8 @@ impl<'a, G> Iterator for CliquesIterator<'a, G>
 ///     " (left: result, right: expected)")
 /// );
 /// ```
-pub fn cliques<'a, G>(g: &'a G) -> CliquesIterator<'a, G>
-    where G: Graph + GraphIter<'a>
+pub fn cliques<G>(g: &G) -> CliquesIterator
+    where G: for<'b> GraphIter<'b>
 {
     let subg = HashSet::from_iter(0..g.order());
     let cand = subg.clone();

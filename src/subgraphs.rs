@@ -167,7 +167,7 @@ impl<'a> VF2Data for VF2DataImpl<'a> {
     }
 
     fn compute_pairs(&self) -> Vec<(u64, u64)> {
-        self.compute_pairs_internal(&self.g1.vertices().collect::<Vec<_>>().as_slice())
+        self.compute_pairs_internal(self.g1.vertices().collect::<Vec<_>>().as_slice())
     }
 
     fn get_vertex_depth_G1(&self, n: u64) -> u64 {
