@@ -14,7 +14,7 @@ fn fibonacci(n: u64) -> u64 {
 }
 
 fn get_lines() -> Vec<String> {
-    let file = File::open("biggraphs.g6").unwrap();
+    let file = File::open("benches/biggraphs.g6").unwrap();
     let lines: Vec<String> = io::BufReader::new(file).lines().map(|x| x.unwrap()).collect();
     lines
 }
