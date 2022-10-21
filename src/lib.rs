@@ -20,7 +20,7 @@ pub mod algorithm;
 pub mod subgraphs;
 pub mod transfo_result;
 pub mod transfos;
-pub mod graphrust;
+//pub mod graphrust;
 
 use errors::InvalidBinary;
 use std::fmt;
