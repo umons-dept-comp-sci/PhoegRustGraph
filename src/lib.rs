@@ -757,13 +757,13 @@ pub trait GraphConstructible: Graph {
 }
 
 //pub trait GraphIter: Graph {
-pub trait GraphIter<'a>: Graph {
-    type VertIter: Iterator<Item=u64> + Clone + 'a;
-    type EdgeIter: Iterator<Item=(u64, u64)> + 'a;
-    type NeighIter: Iterator<Item=u64> + 'a;
-    fn vertices(&'a self) -> Self::VertIter;
-    fn edges(&'a self) -> Self::EdgeIter;
-    fn neighbors(&'a self, u: u64) -> Self::NeighIter;
+pub trait GraphIter: Graph {
+    type VertIter<'a>: Iterator<Item=u64> + Clone where Self: 'a;
+    type EdgeIter<'a>: Iterator<Item=(u64, u64)> where Self: 'a;
+    type NeighIter<'a>: Iterator<Item=u64> where Self: 'a;
+    fn vertices<'a>(&'a self) -> Self::VertIter<'a>;
+    fn edges<'a>(&'a self) -> Self::EdgeIter<'a>;
+    fn neighbors<'a>(&'a self, u: u64) -> Self::NeighIter<'a>;
 }
 
 pub trait GraphFormat: Graph {
@@ -1504,12 +1504,12 @@ impl<'a, G: Graph> Iterator for EdgeIterator<'a, G> {
 }
 
 //impl<'a> GraphIter for GraphNauty {
-impl<'a> GraphIter<'a> for GraphNauty {
-    type VertIter = std::ops::Range<u64>;
+impl GraphIter for GraphNauty {
+    type VertIter<'a> = std::ops::Range<u64>;
 
-    type EdgeIter = EdgeIterator<'a, Self>;
+    type EdgeIter<'a> = EdgeIterator<'a, Self>;
 
-    type NeighIter = SetIter<'a>;
+    type NeighIter<'a> = SetIter<'a>;
     /// Returns an iterator over the vertices of the graph.
     ///
     /// # Examples
@@ -1525,7 +1525,7 @@ impl<'a> GraphIter<'a> for GraphNauty {
     /// }
     /// assert_eq!(i, g.order());
     /// ```
-    fn vertices(&self) -> Self::VertIter {
+    fn vertices<'a>(&'a self) -> Self::VertIter<'a> {
         0..self.n
     }
 
@@ -1575,7 +1575,7 @@ impl<'a> GraphIter<'a> for GraphNauty {
     /// }
     /// assert_eq!(i, neighs.len());
     /// ```
-    fn neighbors(&'a self, u: u64) -> Self::NeighIter {
+    fn neighbors<'a>(&'a self, u: u64) -> Self::NeighIter<'a> {
         let begin = (u * self.w) as usize;
         let end = ((u + 1) * self.w) as usize;
         SetIter::new(&self.data[begin..end])
