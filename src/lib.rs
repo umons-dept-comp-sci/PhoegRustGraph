@@ -23,8 +23,8 @@ pub mod transfos;
 //pub mod graphrust;
 
 use errors::InvalidBinary;
-use std::fmt;
 use libc::c_ulonglong;
+use std::fmt;
 
 #[allow(non_camel_case_types)]
 type set = c_ulonglong;
@@ -99,8 +99,8 @@ pub struct Set {
 
 impl Set {
     fn initfill<PF>(maxelem: u64, pfunc: PF, val: set, numelem: u64) -> Set
-        where
-            PF: Fn(u64) -> set,
+    where
+        PF: Fn(u64) -> set,
     {
         unsafe {
             if maxelem > 0 {
@@ -359,7 +359,7 @@ impl Set {
     ///     assert_eq!(e,elements[i]);
     /// }
     /// ```
-    pub fn iter(&self) -> impl Iterator<Item=u64> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = u64> + '_ {
         SetIter::new(&self.data)
     }
 
@@ -447,8 +447,8 @@ impl Set {
     }
 
     fn combine<C>(first: &mut Set, other: &Set, comb: C)
-        where
-            C: Fn(&set, &set) -> set,
+    where
+        C: Fn(&set, &set) -> set,
     {
         for (i, a) in first
             .data
@@ -587,7 +587,6 @@ impl<'a> From<&'a [u64]> for Set {
     }
 }
 
-
 // impl<'a> std::iter::IntoIterator for &'a Set {
 //     type Item = u64;
 //     type IntoIter = SetIter<'a>;
@@ -622,7 +621,8 @@ impl<'a> Iterator for SetIter<'a> {
 
     fn next(&mut self) -> Option<u64> {
         unsafe {
-            let p = detail::nextelement(self.data.as_ptr(), self.data.len() as int, self.pos as int);
+            let p =
+                detail::nextelement(self.data.as_ptr(), self.data.len() as int, self.pos as int);
             self.pos = i64::from(p);
             if self.pos < 0 {
                 None
@@ -644,7 +644,9 @@ pub trait Graph: Sized {
     fn remove_edge(&mut self, u: u64, w: u64);
 
     fn add_edges_from<I>(&mut self, edges: I)
-        where I: IntoIterator<Item=(u64, u64)> {
+    where
+        I: IntoIterator<Item = (u64, u64)>,
+    {
         for (u, v) in edges {
             self.add_edge(u, v);
         }
@@ -758,9 +760,15 @@ pub trait GraphConstructible: Graph {
 
 //pub trait GraphIter: Graph {
 pub trait GraphIter: Graph {
-    type VertIter<'a>: Iterator<Item=u64> + Clone where Self: 'a;
-    type EdgeIter<'a>: Iterator<Item=(u64, u64)> where Self: 'a;
-    type NeighIter<'a>: Iterator<Item=u64> where Self: 'a;
+    type VertIter<'a>: Iterator<Item = u64> + Clone
+    where
+        Self: 'a;
+    type EdgeIter<'a>: Iterator<Item = (u64, u64)>
+    where
+        Self: 'a;
+    type NeighIter<'a>: Iterator<Item = u64>
+    where
+        Self: 'a;
     fn vertices<'a>(&'a self) -> Self::VertIter<'a>;
     fn edges<'a>(&'a self) -> Self::EdgeIter<'a>;
     fn neighbors<'a>(&'a self, u: u64) -> Self::NeighIter<'a>;
@@ -824,8 +832,8 @@ impl GraphNauty {
     /// assert!(!g.are_twins(5,29),"big graph, not twins");
     /// ```
     fn compare_matrix_lines<F>(&self, u: u64, v: u64, comp: F) -> bool
-        where
-            F: Fn(set, set) -> bool,
+    where
+        F: Fn(set, set) -> bool,
     {
         unsafe {
             let (mut u, mut v) = (u, v); //We need to change them later
@@ -1185,7 +1193,7 @@ impl Graph for GraphNauty {
                     p -= 1;
                     if p == 0 {
                         newdata.push(0); //The increase can only be one since we only add one
-                        // vertex
+                                         // vertex
                         p = self.w;
                     }
                 }
@@ -1464,7 +1472,6 @@ impl GraphConstructible for GraphNauty {
         ng
     }
 }
-
 
 pub struct EdgeIterator<'a, G: Graph> {
     g: &'a G,

@@ -1,9 +1,9 @@
-use std::collections::{HashSet, VecDeque};
-use std::collections::hash_set::Iter;
-use std::iter::FromIterator;
 use crate::transfo_result::GraphTransformation;
 use crate::Graph;
 use crate::GraphIter;
+use std::collections::hash_set::Iter;
+use std::collections::{HashSet, VecDeque};
+use std::iter::FromIterator;
 
 pub trait Visitor<G: Graph> {
     fn visit_vertex(&mut self, g: &G, u: u64);
@@ -49,10 +49,10 @@ impl Queue for Fifo {
 }
 
 fn visit<'a, G, V, Q>(g: &'a G, visitor: &mut V, queue: &mut Q, start: Option<u64>)
-    where
-        G: GraphIter<'a>,
-        V: Visitor<G>,
-        Q: Queue,
+where
+    G: GraphIter,
+    V: Visitor<G>,
+    Q: Queue,
 {
     if g.order() > 0 {
         let start = start.unwrap_or(0);
@@ -76,18 +76,18 @@ fn visit<'a, G, V, Q>(g: &'a G, visitor: &mut V, queue: &mut Q, start: Option<u6
 }
 
 pub fn bfs<'a, G, V>(g: &'a G, visitor: &mut V, start: Option<u64>)
-    where
-        V: Visitor<G>,
-        G: Graph + GraphIter<'a>,
+where
+    V: Visitor<G>,
+    G: Graph + GraphIter,
 {
     let mut queue = VecDeque::new();
     visit(g, visitor, &mut queue, start);
 }
 
 pub fn dfs<'a, G, V>(g: &'a G, visitor: &mut V, start: Option<u64>)
-    where
-        G: Graph + GraphIter<'a>,
-        V: Visitor<G>,
+where
+    G: Graph + GraphIter,
+    V: Visitor<G>,
 {
     let mut queue = Fifo { v: VecDeque::new() };
     visit(g, visitor, &mut queue, start);
@@ -115,9 +115,10 @@ pub fn dfs<'a, G, V>(g: &'a G, visitor: &mut V, start: Option<u64>)
 /// }
 /// ```
 pub fn isolate<G>(g: &mut G, u: u64)
-    where G: for<'b> GraphIter<'b>
+where
+    G: GraphIter,
 {
-    let neighbors = { g.neighbors(u).collect::<Vec<u64>>() };
+    let neighbors = g.neighbors(u).collect::<Vec<u64>>();
     for w in neighbors {
         g.remove_edge(u, w);
     }
@@ -133,9 +134,7 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
     }
 }
 
-
-pub struct CliquesIterator
-{
+pub struct CliquesIterator {
     // g: &'a G,
     // u64 should be something like Graph::index_type
     q: Vec<u64>,
@@ -148,16 +147,19 @@ pub struct CliquesIterator
 }
 
 impl CliquesIterator {
-    fn new<G>(g: &G, q: Vec<u64>, subg: HashSet<u64>, cand: HashSet<u64>)
-              -> CliquesIterator
-        where G: for<'b> GraphIter<'b> {
-        let mut adj = Vec::<HashSet<u64>>::with_capacity(
-            g.order() as usize);
+    fn new<G>(g: &G, q: Vec<u64>, subg: HashSet<u64>, cand: HashSet<u64>) -> CliquesIterator
+    where
+        G: GraphIter,
+    {
+        let mut adj = Vec::<HashSet<u64>>::with_capacity(g.order() as usize);
         for v in 0..g.order() {
             adj.push(HashSet::<u64>::from_iter(g.neighbors(v)));
         }
-        let u = subg.iter().cloned().max_by_key(
-            |u| (&cand & &adj[*u as usize]).len()).unwrap();
+        let u = subg
+            .iter()
+            .cloned()
+            .max_by_key(|u| (&cand & &adj[*u as usize]).len())
+            .unwrap();
         let ext_u = Vec::from_iter(&cand - &adj[u as usize]);
         let stack = vec![(subg, cand, ext_u)];
         CliquesIterator { q, adj, stack }
@@ -172,16 +174,13 @@ impl Iterator for CliquesIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         // Fetch recursive-loop-unrolled stack frames.
-        loop
-        {
+        loop {
             if self.stack.is_empty() {
                 // Search finished, all pseudo-recursive calls have returned.
                 return None;
             }
             // Take a peek at the frame.
-            let (ref subg,
-                ref mut cand,
-                ref mut ext_u) = self.stack.last_mut().unwrap();
+            let (ref subg, ref mut cand, ref mut ext_u) = self.stack.last_mut().unwrap();
             match ext_u.pop() {
                 None => {
                     // We have expanded all vertices of cand - adj[u].
@@ -212,11 +211,12 @@ impl Iterator for CliquesIterator {
                         // recursive call. That is: add the corresponding frame
                         // on the stack.
                         let adj = &self.adj;
-                        let u = subg_p.iter().cloned().max_by_key(
-                            |u| (&cand_p & &adj[*u as usize])
-                                .len()).unwrap();
-                        let ext_u_p = Vec::from_iter(
-                            &cand_p - &self.adj[u as usize]);
+                        let u = subg_p
+                            .iter()
+                            .cloned()
+                            .max_by_key(|u| (&cand_p & &adj[*u as usize]).len())
+                            .unwrap();
+                        let ext_u_p = Vec::from_iter(&cand_p - &self.adj[u as usize]);
                         self.stack.push((subg_p, cand_p, ext_u_p));
                     }
                 }
@@ -270,7 +270,8 @@ impl Iterator for CliquesIterator {
 /// );
 /// ```
 pub fn cliques<G>(g: &G) -> CliquesIterator
-    where G: for<'b> GraphIter<'b>
+where
+    G: GraphIter,
 {
     let subg = HashSet::from_iter(0..g.order());
     let cand = subg.clone();
