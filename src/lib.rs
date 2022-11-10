@@ -769,9 +769,9 @@ pub trait GraphIter: Graph {
     type NeighIter<'a>: Iterator<Item = u64>
     where
         Self: 'a;
-    fn vertices<'a>(&'a self) -> Self::VertIter<'a>;
-    fn edges<'a>(&'a self) -> Self::EdgeIter<'a>;
-    fn neighbors<'a>(&'a self, u: u64) -> Self::NeighIter<'a>;
+    fn vertices(&'_ self) -> Self::VertIter<'_>;
+    fn edges(&'_ self) -> Self::EdgeIter<'_>;
+    fn neighbors(&'_ self, u: u64) -> Self::NeighIter<'_>;
 }
 
 pub trait GraphFormat: Graph {
@@ -1532,7 +1532,7 @@ impl GraphIter for GraphNauty {
     /// }
     /// assert_eq!(i, g.order());
     /// ```
-    fn vertices<'a>(&'a self) -> Self::VertIter<'a> {
+    fn vertices(&'_ self) -> Self::VertIter<'_> {
         0..self.n
     }
 
@@ -1582,7 +1582,7 @@ impl GraphIter for GraphNauty {
     /// }
     /// assert_eq!(i, neighs.len());
     /// ```
-    fn neighbors<'a>(&'a self, u: u64) -> Self::NeighIter<'a> {
+    fn neighbors(&'_ self, u: u64) -> Self::NeighIter<'_> {
         let begin = (u * self.w) as usize;
         let end = ((u + 1) * self.w) as usize;
         SetIter::new(&self.data[begin..end])

@@ -134,20 +134,20 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
     }
 }
 
-pub struct CliquesIterator {
+pub struct CliquesIterator<'a, G: LightGraph> {
     // g: &'a G,
     // u64 should be something like Graph::index_type
     q: Vec<u64>,
     // Cache the adjacency sets as in NetworkX implementation of Bron-Kerbosch.
     // TODO: benchmark HashSet vs BTreeSet.
-    adj: Vec<HashSet<u64>>,
+    adj: &'a G,
     // Stack used to unroll the recursive algorithm arguments and state.
     // A stack frame represents (subg, cand, partial (cand - adj[u])).
     stack: Vec<(HashSet<u64>, HashSet<u64>, Vec<u64>)>,
 }
 
-impl CliquesIterator {
-    fn new<G>(g: &G, q: Vec<u64>, subg: HashSet<u64>, cand: HashSet<u64>) -> CliquesIterator
+impl<S: CliqueSet> CliquesIterator<S> {
+    fn new<G>(g: &G, q: Vec<u64>, subg: HashSet<u64>, cand: HashSet<u64>) -> CliquesIterator<S>
     where
         G: GraphIter,
     {
@@ -166,7 +166,29 @@ impl CliquesIterator {
     }
 }
 
-impl Iterator for CliquesIterator {
+trait LightGraph {
+    type Set: CliqueSet;
+    fn neighbors(&self, p: u64) -> Self::Set;
+}
+
+use std::ops::BitAnd;
+trait CliqueSet: BitAnd<Self> {
+    type Iter<'a>: Iterator<Item=u64> where Self: 'a;
+
+    fn is_empty(&self) -> bool;
+    fn len(&self) -> usize;
+    fn iter(&'_ self) -> Self::Iter<'_>;
+}
+
+impl LightGraph for Vec<HashSet<u64>> {
+    type Set = HashSet<u64>;
+
+    fn neighbors(&self, p: u64) -> Self::Set {
+        self[p as usize]
+    }
+}
+
+impl<'a, S: CliqueSet> Iterator for CliquesIterator<'a, S> {
     // FIXME: if we agree to invalidate the cliques vectors between each
     //   iteration step, we may return a ref here and avoid potentially useless
     //   copies?
@@ -269,7 +291,7 @@ impl Iterator for CliquesIterator {
 ///     " (left: result, right: expected)")
 /// );
 /// ```
-pub fn cliques<G>(g: &G) -> CliquesIterator
+pub fn cliques<'a, G: LightGraph>(g: &'a G) -> CliquesIterator<'a, G>
 where
     G: GraphIter,
 {
