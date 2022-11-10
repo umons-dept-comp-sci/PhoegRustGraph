@@ -1,7 +1,6 @@
 use crate::transfo_result::GraphTransformation;
 use crate::Graph;
 use crate::GraphIter;
-use std::collections::hash_set::Iter;
 use std::collections::{HashSet, VecDeque};
 use std::iter::FromIterator;
 
@@ -134,22 +133,144 @@ pub fn isolate_transfo(g: &mut GraphTransformation, u: u64) {
     }
 }
 
-pub struct CliquesIterator<'a, G: LightGraph> {
+use std::ops::{BitAnd, Sub};
+pub trait CliqueSet: Sized
+{
+    type Iter<'a>: Iterator<Item=u64> where Self: 'a;
+
+    fn is_empty(&self) -> bool;
+    fn len(&self) -> usize;
+    fn iter(&'_ self) -> Self::Iter<'_>;
+    fn remove(&mut self, p: u64);
+}
+
+use std::iter::Copied;
+impl CliqueSet for HashSet<u64> {
+    type Iter<'a> = Copied<std::collections::hash_set::Iter<'a, u64>>;
+
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
+
+    fn len(&self) -> usize {
+        self.len()
+    }
+
+    fn iter(&'_ self) -> Self::Iter<'_> {
+        self.iter().copied()
+    }
+
+    fn remove(&mut self, p: u64) {
+        self.remove(&p);
+    }
+}
+
+use crate::Set;
+use crate::SetIter;
+
+impl CliqueSet for Set {
+    type Iter<'a> = SetIter<'a>;
+
+    fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+
+    fn len(&self) -> usize {
+        self.size() as usize
+    }
+
+    fn iter(&'_ self) -> Self::Iter<'_> {
+        SetIter::new(&self.data)
+    }
+
+    fn remove(&mut self, p: u64) {
+        self.remove(p)
+    }
+}
+
+impl<'b> BitAnd<&'b Set> for &'b Set {
+    type Output = Set;
+
+    fn bitand(self, rhs: &'b Set) -> Self::Output {
+        let mut res = self.clone();
+        res.inter(rhs);
+        res
+    }
+}
+
+impl<'b> Sub<&'b Set> for &'b Set {
+    type Output = Set;
+
+    fn sub(self, rhs: &'b Set) -> Self::Output {
+        let mut res = self.clone();
+        Set::combine(&mut res, rhs, |a, b| a & !b);
+        if self.data.len() > rhs.data.len() {
+            for i in rhs.data.len()..self.data.len() {
+                res.data[i] = 0;
+            }
+        }
+        unsafe {
+            res.size = crate::detail::setsize(self.data.as_ptr(), self.data.len() as crate::int) as u64;
+        }
+        res
+    }
+}
+
+use std::borrow::Cow;
+pub trait LightGraph {
+    type Set: CliqueSet + Clone;
+    fn neighbors(&'_ self, p: u64) -> Cow<'_, Self::Set>;
+}
+
+impl LightGraph for Vec<HashSet<u64>> {
+    type Set = HashSet<u64>;
+
+    fn neighbors(&'_ self, p: u64) -> Cow<'_, Self::Set> {
+        Cow::Borrowed(&self[p as usize])
+    }
+}
+
+use crate::GraphNauty;
+impl LightGraph for GraphNauty {
+    type Set = crate::Set;
+
+    fn neighbors(&'_ self, p: u64) -> Cow<'_, Self::Set> {
+        let begin = (p * self.w) as usize;
+        let end = ((p + 1) * self.w) as usize;
+        let data = &self.data[begin..end];
+        let size = unsafe {
+            crate::detail::setsize(data.as_ptr(), data.len() as crate::int) as u64
+        };
+        Cow::Owned(Set {
+            data: data.to_vec(),
+            maxm: self.order(),
+            size 
+        })
+    }
+}
+
+impl LightGraph for &GraphNauty {
+    type Set = crate::Set;
+
+    fn neighbors(&'_ self, p: u64) -> Cow<'_, Self::Set> {
+        LightGraph::neighbors(*self, p)
+    }
+}
+
+pub struct CliquesIterator<G: LightGraph> {
     // g: &'a G,
     // u64 should be something like Graph::index_type
     q: Vec<u64>,
     // Cache the adjacency sets as in NetworkX implementation of Bron-Kerbosch.
     // TODO: benchmark HashSet vs BTreeSet.
-    adj: &'a G,
+    adj: G,
     // Stack used to unroll the recursive algorithm arguments and state.
     // A stack frame represents (subg, cand, partial (cand - adj[u])).
-    stack: Vec<(HashSet<u64>, HashSet<u64>, Vec<u64>)>,
+    stack: Vec<(G::Set, G::Set, Vec<u64>)>,
 }
 
-impl<S: CliqueSet> CliquesIterator<S> {
-    fn new<G>(g: &G, q: Vec<u64>, subg: HashSet<u64>, cand: HashSet<u64>) -> CliquesIterator<S>
-    where
-        G: GraphIter,
+impl CliquesIterator<Vec<HashSet<u64>>> {
+    fn new<H: GraphIter>(g: &H, q: Vec<u64>, subg: HashSet<u64>, cand: HashSet<u64>) -> Self
     {
         let mut adj = Vec::<HashSet<u64>>::with_capacity(g.order() as usize);
         for v in 0..g.order() {
@@ -166,29 +287,23 @@ impl<S: CliqueSet> CliquesIterator<S> {
     }
 }
 
-trait LightGraph {
-    type Set: CliqueSet;
-    fn neighbors(&self, p: u64) -> Self::Set;
-}
-
-use std::ops::BitAnd;
-trait CliqueSet: BitAnd<Self> {
-    type Iter<'a>: Iterator<Item=u64> where Self: 'a;
-
-    fn is_empty(&self) -> bool;
-    fn len(&self) -> usize;
-    fn iter(&'_ self) -> Self::Iter<'_>;
-}
-
-impl LightGraph for Vec<HashSet<u64>> {
-    type Set = HashSet<u64>;
-
-    fn neighbors(&self, p: u64) -> Self::Set {
-        self[p as usize]
+impl<'a> CliquesIterator<&'a GraphNauty> {
+    fn without_cache(g: &'a GraphNauty, q: Vec<u64>, subg: Set, cand: Set) -> Self
+    {
+        let u = subg
+            .iter()
+            .max_by_key(|u| (&cand & &*LightGraph::neighbors(g, *u)).len())
+            .unwrap();
+        let ext_u = Vec::from_iter((&cand - &*LightGraph::neighbors(g,u)).iter());
+        let stack = vec![(subg, cand, ext_u)];
+        CliquesIterator { q, adj: g, stack }
     }
 }
 
-impl<'a, S: CliqueSet> Iterator for CliquesIterator<'a, S> {
+impl<G: LightGraph> Iterator for CliquesIterator<G>
+    where for <'b> &'b G::Set : BitAnd<&'b G::Set, Output=G::Set>,
+          for <'c> &'c G::Set : Sub<&'c G::Set, Output=G::Set>
+{
     // FIXME: if we agree to invalidate the cliques vectors between each
     //   iteration step, we may return a ref here and avoid potentially useless
     //   copies?
@@ -214,8 +329,8 @@ impl<'a, S: CliqueSet> Iterator for CliquesIterator<'a, S> {
                 // We're in the for loop, iterating over cand - adj[u].
                 Some(p) => {
                     self.q.push(p);
-                    cand.remove(&p);
-                    let adj_p = &self.adj[p as usize];
+                    cand.remove(p);
+                    let adj_p = &self.adj.neighbors(p);
                     let subg_p = subg & adj_p;
                     // Unroll the first instructions of the recursive call here.
                     if subg_p.is_empty() {
@@ -227,7 +342,7 @@ impl<'a, S: CliqueSet> Iterator for CliquesIterator<'a, S> {
                         self.q.pop();
                         return ret;
                     } else {
-                        let cand_p = adj_p & cand;
+                        let cand_p = &**adj_p & cand;
                         // FIXME: should we cut if cand_p is empty ?
                         // prepare the "for p in cand - adj[u]" loop of the
                         // recursive call. That is: add the corresponding frame
@@ -235,10 +350,9 @@ impl<'a, S: CliqueSet> Iterator for CliquesIterator<'a, S> {
                         let adj = &self.adj;
                         let u = subg_p
                             .iter()
-                            .cloned()
-                            .max_by_key(|u| (&cand_p & &adj[*u as usize]).len())
+                            .max_by_key(|u| (&cand_p & &*adj.neighbors(*u)).len())
                             .unwrap();
-                        let ext_u_p = Vec::from_iter(&cand_p - &self.adj[u as usize]);
+                        let ext_u_p = Vec::from_iter((&cand_p - &*self.adj.neighbors(u)).iter());
                         self.stack.push((subg_p, cand_p, ext_u_p));
                     }
                 }
@@ -291,11 +405,62 @@ impl<'a, S: CliqueSet> Iterator for CliquesIterator<'a, S> {
 ///     " (left: result, right: expected)")
 /// );
 /// ```
-pub fn cliques<'a, G: LightGraph>(g: &'a G) -> CliquesIterator<'a, G>
+pub fn cliques<H>(g: &H) -> CliquesIterator<Vec<HashSet<u64>>>
 where
-    G: GraphIter,
+    H: GraphIter,
 {
     let subg = HashSet::from_iter(0..g.order());
     let cand = subg.clone();
-    return CliquesIterator::new(g, vec![], subg, cand);
+    CliquesIterator::new(g, vec![], subg, cand)
+}
+
+/// Iterate over the maximal cliques of the graph without using a cache.
+/// TODO: add support for an optional argument specifying a set of nodes to
+/// expand (iterate on the max cliques containing the given set of vertices).
+///
+/// # Examples
+/// ```
+/// use graph::{Graph,GraphConstructible,GraphNauty};
+/// use graph::algorithm::cliques_without_cache;
+/// use std::collections::{BTreeSet};
+/// use std::iter::FromIterator;
+///
+/// let mut g = GraphNauty::new(9);
+/// g.add_edges_from([
+///     (0, 1), (0, 8),
+///     (1, 2), (1, 8),
+///     (2, 3), (2, 7), (2, 8),
+///     (3, 4), (3, 5), (3, 6), (3, 7),
+///     (4, 5),
+///     (5, 6), (5, 7),
+///     (6, 7),
+/// ]);
+/// let expected: Vec<Vec<u64>> = vec![
+///     vec![3, 5, 6, 7],
+///     vec![3, 5, 4],
+///     vec![3, 2, 7],
+///     vec![0, 1, 8],
+///     vec![1, 2, 8]];
+///
+/// let g_cliques: Vec<Vec<u64>> = cliques_without_cache(&g).collect();
+/// // FIXME: factor that.
+/// let g_cliques_sets: BTreeSet<BTreeSet<u64>> = BTreeSet::from_iter(
+///     g_cliques.iter().map(
+///         |clique|
+///             BTreeSet::from_iter(clique.iter().cloned())));
+/// let expected_cliques_set: BTreeSet<BTreeSet<u64>> = BTreeSet::from_iter(
+///     expected.iter().map(
+///         |clique|
+///             BTreeSet::from_iter(clique.iter().cloned())));
+/// assert_eq!(
+///     g_cliques_sets, expected_cliques_set,
+///     concat!("testing if the set of cliques matches",
+///     " (left: result, right: expected)")
+/// );
+/// ```
+pub fn cliques_without_cache(g: &'_ GraphNauty) -> CliquesIterator<&'_ GraphNauty>
+{
+    let subg = Set::full(g.order());
+    let cand = subg.clone();
+    CliquesIterator::without_cache(g, vec![], subg, cand)
 }
