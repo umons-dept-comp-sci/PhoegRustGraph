@@ -320,12 +320,8 @@ impl Set {
     ///     }
     /// }
     /// ```
-    ///
-    /// Panics :
-    /// if `elem > set.getmax()`
     pub fn contains(&self, elem: u64) -> bool {
-        assert!(elem < self.maxm);
-        unsafe { detail::iselement(self.data.as_ptr(), elem as int) }
+        elem < self.maxm && unsafe { detail::iselement(self.data.as_ptr(), elem as int) }
     }
 
     /// Returns the number of elements in the set.
