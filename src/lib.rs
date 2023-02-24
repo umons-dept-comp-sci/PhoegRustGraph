@@ -723,12 +723,21 @@ pub trait GraphConstructible: Graph {
     ///         assert_eq!(g.is_edge(i,j), expected.is_edge(i,j), "edge {} {}", i, j);
     ///     }
     /// }
+    /// let g: GraphNauty = from_g6("DGs").unwrap();
+    /// let g = g.contract(4, 2);
+    /// let expected: GraphNauty = from_g6("CX").unwrap();
+    /// assert_eq!(expected.order(), g.order(), "order");
+    /// assert_eq!(expected.size(), g.size(), "size");
+    /// for i in 1..g.order() {
+    ///     for j in 0..i {
+    ///         assert_eq!(g.is_edge(i,j), expected.is_edge(i,j), "edge {} {}", i, j);
+    ///     }
+    /// }
     /// ```
     fn contract(&self, u: u64, v: u64) -> Self {
         //TODO check u and v ok and maybe panic ?
         let mut res = Self::new(self.order() - 1);
-        let u = std::cmp::min(u, v);
-        let v = std::cmp::max(u, v);
+        let (u, v) = (std::cmp::min(u, v), std::cmp::max(u, v));
         for i in 1..self.order() {
             for j in 0..i {
                 if (j != u || i != v) && self.is_edge(i, j) {
